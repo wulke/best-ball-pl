@@ -1,32 +1,166 @@
+/**
+ * ETL entry point (`npm run etl`): pulls the FPL API surface needed for the
+ * pre-draft cheat sheet and writes the committed `data/snapshot.json`.
+ *
+ * Shape (see ./types.ts for the full contract):
+ *   - bootstrap-static: identity, position, team, price, status for all players
+ *   - element-summary/{id} per player (concurrency-capped, disk-cached):
+ *     labeled multi-season stat lines — the historical baseline's source
+ *   - fixtures: full-season fixture list with per-fixture difficulty ratings
+ *
+ * Idempotent and cheap to re-run draft-to-draft: raw responses are cached in
+ * `.etl-cache/` (bootstrap/fixtures 5 min, element-summaries 24h). ETL_FRESH=1
+ * forces cache misses. Current-season (2026/27) per-GW stats are NOT pulled
+ * yet — they land with the in-season refresh slice once GW1 is played.
+ */
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FplApi } from './fpl.js';
+import type {
+  Position,
+  SeasonStatLine,
+  Snapshot,
+  SnapshotFixture,
+  SnapshotPlayer,
+} from './types.js';
+import type {
+  RawElement,
+  RawElementSummary,
+  RawFixture,
+  RawHistoryPastSeason,
+  RawTeam,
+} from './fpl.js';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const SNAPSHOT_PATH = path.join(repoRoot, 'data/snapshot.json');
 
-export const SNAPSHOT_MISSING_MESSAGE =
-  'data/snapshot.json not found — run npm run etl first';
+const POSITION_BY_ELEMENT_TYPE: Record<number, Position> = {
+  1: 'G',
+  2: 'D',
+  3: 'MD',
+  4: 'FW',
+};
 
-/**
- * ETL entry point. Skeleton state: writes a placeholder snapshot so the UI and
- * static build have a valid contract to compile against.
- *
- * The real FPL pull lands with the ETL slice (blocked on the FPL API research
- * ticket — see the wayfinder map). Sources are added one module per slice under
- * src/etl/ and orchestrated here.
- */
+function toPosition(elementType: number): Position {
+  const position = POSITION_BY_ELEMENT_TYPE[elementType];
+  if (!position) throw new Error(`Unknown FPL element_type ${elementType}`);
+  return position;
+}
+
+/** FPL ships xG/xA as decimal strings; tolerate absence and junk. */
+function decimalOrNull(value: string | undefined): number | null {
+  if (value == null || value === '') return null;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toSeasonStatLine(raw: RawHistoryPastSeason): SeasonStatLine {
+  return {
+    season: raw.season_name,
+    minutes: raw.minutes,
+    starts: raw.starts,
+    goals: raw.goals_scored,
+    assists: raw.assists,
+    cleanSheets: raw.clean_sheets,
+    goalsConceded: raw.goals_conceded,
+    saves: raw.saves,
+    penaltiesSaved: raw.penalties_saved,
+    xg: decimalOrNull(raw.expected_goals),
+    xa: decimalOrNull(raw.expected_assists),
+    fplPoints: raw.total_points,
+  };
+}
+
+function toSnapshotPlayer(
+  element: RawElement,
+  teamShortName: string,
+  summary: RawElementSummary | null,
+): SnapshotPlayer {
+  return {
+    id: String(element.id),
+    name: element.web_name,
+    fullName: `${element.first_name} ${element.second_name}`.trim(),
+    position: toPosition(element.element_type),
+    team: teamShortName,
+    price: element.now_cost / 10,
+    status: element.status as SnapshotPlayer['status'],
+    news: element.news ?? '',
+    seasons: (summary?.history_past ?? []).map(toSeasonStatLine),
+  };
+}
+
+function toSnapshotFixture(raw: RawFixture, shortNames: Map<number, string>): SnapshotFixture {
+  const home = shortNames.get(raw.team_h);
+  const away = shortNames.get(raw.team_a);
+  if (!home || !away) throw new Error(`Fixture ${raw.id} references unknown team ids`);
+  return {
+    id: raw.id,
+    event: raw.event,
+    home,
+    away,
+    homeDifficulty: raw.team_h_difficulty,
+    awayDifficulty: raw.team_a_difficulty,
+    kickoff: raw.kickoff_time,
+  };
+}
+
 async function main() {
-  const snapshot = {
+  const api = new FplApi();
+
+  console.log('[ETL] Fetching bootstrap-static (players, teams) and fixtures…');
+  const bootstrap = await api.fetchBootstrap();
+  const rawFixtures = await api.fetchFixtures();
+
+  const shortNames = new Map<number, string>(bootstrap.teams.map((t: RawTeam) => [t.id, t.short_name]));
+  const elements = bootstrap.elements;
+  console.log(`[ETL] ${elements.length} players, ${bootstrap.teams.length} teams, ${rawFixtures.length} fixtures.`);
+
+  console.log('[ETL] Fetching per-player season history (element-summary)…');
+  const summaries = await api.fetchElementSummaries(
+    elements.map((e) => e.id),
+    8,
+    (done, total) => {
+      if (done % 100 === 0 || done === total) console.log(`[ETL]   ${done}/${total}`);
+    },
+  );
+  const failedSummaries = [...summaries.values()].filter((s) => s === null).length;
+  if (failedSummaries > 0) {
+    console.warn(`[ETL] ${failedSummaries} element-summary fetch(es) failed — those players get empty seasons.`);
+  }
+
+  const players = elements.map((element) =>
+    toSnapshotPlayer(element, shortNames.get(element.team) ?? '???', summaries.get(element.id) ?? null),
+  );
+  const fixtures = rawFixtures.map((f) => toSnapshotFixture(f, shortNames));
+
+  const positionCounts = players.reduce(
+    (acc, p) => ({ ...acc, [p.position]: (acc[p.position] ?? 0) + 1 }),
+    {} as Record<Position, number>,
+  );
+  const playersWithHistory = players.filter((p) => p.seasons.length > 0).length;
+
+  const snapshot: Snapshot = {
     generated_at: new Date().toISOString(),
-    players: [],
+    meta: { playersWithHistory, positionCounts },
+    players,
+    fixtures,
   };
 
   fs.mkdirSync(path.dirname(SNAPSHOT_PATH), { recursive: true });
   fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(snapshot, null, 2)}\n`);
 
-  console.log('[ETL] Placeholder snapshot written to data/snapshot.json');
-  console.log('[ETL] Real FPL pull pending — see the wayfinder map\'s FPL ETL ticket.');
+  const seasonRows = players.reduce((sum, p) => sum + p.seasons.length, 0);
+  console.log(`[ETL] Snapshot written to ${path.relative(repoRoot, SNAPSHOT_PATH)}`);
+  console.log(
+    `[ETL] ${players.length} players (${playersWithHistory} with history, ${seasonRows} season rows) · ${fixtures.length} fixtures.`,
+  );
+  console.log(
+    `[ETL] Positions: ${Object.entries(positionCounts)
+      .map(([pos, count]) => `${pos}=${count}`)
+      .join(' ')}`,
+  );
 }
 
 main().catch((err) => {

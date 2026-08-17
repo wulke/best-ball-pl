@@ -9,5 +9,8 @@ node_modules/
 dist/
 coverage/
 
+# ETL cache (raw FPL responses; safe to delete, refetched on next run)
+.etl-cache/
+
 # OS
 .DS_Store
