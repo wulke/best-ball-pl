@@ -60,8 +60,8 @@ export function PlayerTable({ players, drafted, onToggleDrafted, groupByTier }: 
 
   const pushBand = (tier: number, from: number, toExclusive: number) => {
     const group = rows.slice(from, toExclusive);
-    const hi = group[0].player.projection?.points.p50 ?? 0;
-    const lo = group[group.length - 1].player.projection?.points.p50 ?? 0;
+    const hi = group[0].player.projection?.tournamentScore ?? 0;
+    const lo = group[group.length - 1].player.projection?.tournamentScore ?? 0;
     body.push(
       <tr key={`band-${tier}`} className="border-y border-default bg-surface-raised print:static">
         <td colSpan={groupByTier ? 10 : 11} className="px-2 py-1">
@@ -105,7 +105,10 @@ export function PlayerTable({ players, drafted, onToggleDrafted, groupByTier }: 
             <th className={`${TH_BASE} w-6`} title="Toggle drafted (kept in localStorage)">
               ✓
             </th>
-            <th className={`${TH_BASE} w-8 text-right`} title="Rank (by projected p50 points)">
+            <th
+              className={`${TH_BASE} w-8 text-right`}
+              title="Rank by tournament-adjusted score (ceiling-weighted toward p90, dampened for durability risk)"
+            >
               #
             </th>
             <th className={`${TH_BASE} text-left`}>Player</th>
@@ -116,14 +119,14 @@ export function PlayerTable({ players, drafted, onToggleDrafted, groupByTier }: 
             </th>
             <th
               className={`${TH_BASE} w-14 text-right`}
-              title="Projected season points (p50 scenario)"
+              title="Projected season points (p50 scenario) — raw, unadjusted"
             >
               Pts
             </th>
             {!groupByTier && (
               <th
                 className={`${TH_BASE} w-8 text-right`}
-                title="Tier within position (natural breaks in projected p50)"
+                title="Tier within position (natural breaks in tournament-adjusted score)"
               >
                 T
               </th>
@@ -139,7 +142,7 @@ export function PlayerTable({ players, drafted, onToggleDrafted, groupByTier }: 
             </th>
             <th
               className={`${TH_BASE} w-10 text-right`}
-              title="Projected points per £M of price (p50)"
+              title="Tournament-adjusted score per £M — ceiling-weighted toward p90, dampened for durability risk; raw Pts is the unadjusted figure"
             >
               Val
             </th>
@@ -230,6 +233,14 @@ function PlayerRow({
               className="rounded border border-negative/30 bg-negative/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-negative"
             >
               L
+            </span>
+          )}
+          {projection.durabilityRisk && (
+            <span
+              title="Durability risk: thin projected minutes/start rate for the 26-week Round 1 grind — ceiling boost dampened"
+              className="rounded border border-info/30 bg-info/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info"
+            >
+              R
             </span>
           )}
         </div>

@@ -30,6 +30,8 @@ type Row = {
   conf: string;
   tier: number;
   minutes: number;
+  tScore: number;
+  risk: boolean;
 };
 
 function toRows(snapshot: Snapshot): Row[] {
@@ -49,18 +51,20 @@ function toRows(snapshot: Snapshot): Row[] {
       conf: p.projection!.confidence,
       tier: p.projection!.tier,
       minutes: p.projection!.minutes,
+      tScore: p.projection!.tournamentScore,
+      risk: p.projection!.durabilityRisk,
     }));
 }
 
 function printTable(title: string, rows: Row[]): void {
   console.log(`\n${title}`);
   console.log(
-    '  rank name                 pos team  price   expMin    p10    p50    p90   /90  tier conf',
+    '  rank name                 pos team  price   expMin    p10    p50    p90   /90 tScr tier conf risk',
   );
-  console.log('  ' + '-'.repeat(94));
+  console.log('  ' + '-'.repeat(104));
   for (const r of rows) {
     console.log(
-      `  ${String(r.rank).padStart(4)} ${r.name.padEnd(20)} ${r.pos.padEnd(3)} ${r.team.padEnd(5)} ${r.price.toFixed(1).padStart(5)} ${String(r.minutes).padStart(7)} ${r.p10.toFixed(0).padStart(6)} ${r.p50.toFixed(0).padStart(6)} ${r.p90.toFixed(0).padStart(6)} ${r.per90.toFixed(2).padStart(5)} ${String(r.tier).padStart(4)} ${r.conf.padEnd(4)}`,
+      `  ${String(r.rank).padStart(4)} ${r.name.padEnd(20)} ${r.pos.padEnd(3)} ${r.team.padEnd(5)} ${r.price.toFixed(1).padStart(5)} ${String(r.minutes).padStart(7)} ${r.p10.toFixed(0).padStart(6)} ${r.p50.toFixed(0).padStart(6)} ${r.p90.toFixed(0).padStart(6)} ${r.per90.toFixed(2).padStart(5)} ${r.tScore.toFixed(0).padStart(4)} ${String(r.tier).padStart(4)} ${r.conf.padEnd(4)} ${r.risk ? 'R' : ''}`,
     );
   }
 }
@@ -93,7 +97,7 @@ function main() {
   printTeamContext(teamContexts);
 
   printTable(
-    `TOP 25 OVERALL (p50 season points) — as of ${snapshot.generated_at.slice(0, 10)} — tier = within-position cluster`,
+    `TOP 25 OVERALL (ranked by tournament-adjusted score) — as of ${snapshot.generated_at.slice(0, 10)} — tier = within-position cluster`,
     rows.slice(0, 25),
   );
 
@@ -105,7 +109,7 @@ function main() {
   }
 
   printTable(
-    'VALUE PICKS — top 10 by p50 per £M (price ≤ 6.0, high/med confidence)',
+    'VALUE PICKS — top 10 by tournament-adjusted score per £M (price ≤ 6.0, high/med confidence)',
     rows
       .filter((r) => r.price <= 6.0 && r.conf !== 'low')
       .sort((a, b) => b.value - a.value)

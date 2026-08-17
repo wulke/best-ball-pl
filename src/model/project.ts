@@ -11,6 +11,9 @@
  *   defense  : team CS/GC/win-rate priors from the 2025/26 primary keeper,
  *              regressed to league mean; GK saves from personal history
  *   tiers    : parametric minutes/burst scenarios — no Monte Carlo (out of scope)
+ *   tournament: (#10) rank/tier/value key off tournamentScore, not raw p50 —
+ *              ceiling-weighted toward p90, dampened for durability-risk
+ *              players; p50 stays visible unadjusted as the raw "Pts" column
  */
 
 import type { PlayerStatus, Position, SnapshotPlayer } from '../etl/types.js';
@@ -422,17 +425,34 @@ export function buildProjections(
           ? 'medium'
           : 'low';
 
+    // Durability/minutes-risk (#10): thin projected playing time or start
+    // rate for the 26-week Round 1 grind, independent of the injury/status
+    // flag (that covers today's news, this covers season-long role security).
+    const tCfg = cfg.tournament;
+    const durabilityRisk =
+      minutes / cfg.minutes.maxMinutes < tCfg.minutesShareRiskThreshold ||
+      rates.startFraction < tCfg.startFractionRiskThreshold;
+
+    // Ceiling weighting: best-ball rewards boom weeks, so rank on a score
+    // blended toward p90, not raw mean output. Risk-flagged players get a
+    // dampened boost — a spike proxy is only worth drafting toward if the
+    // player is trusted to be on the pitch.
+    const ceilingWeight = tCfg.ceilingWeight * (durabilityRisk ? tCfg.riskCeilingDampen : 1);
+    const tournamentScore = round2(p50 + ceilingWeight * (p90 - p50));
+
     return {
       points: { p10, p50, p90 },
       statline: base,
       per90: round2(minutes > 0 ? (p50 / minutes) * 90 : 0),
       ceilingPer90: round2(p90Line.minutes > 0 ? (p90 / p90Line.minutes) * 90 : 0),
       minutes: Math.round(minutes),
-      value: round2(player.price > 0 ? p50 / player.price : 0),
+      value: round2(player.price > 0 ? tournamentScore / player.price : 0),
       posRank: 0,
       overallRank: 0,
       tier: 0,
       confidence,
+      tournamentScore,
+      durabilityRisk,
     } satisfies PlayerProjection;
   });
 
@@ -446,8 +466,11 @@ function blend(x: number | null, actual: number, xWeight: number): number {
 }
 
 function assignRanks(players: SnapshotPlayer[], projections: PlayerProjection[], cfg: ModelConfig): void {
-  const byP50 = (a: number, b: number) => projections[b].points.p50 - projections[a].points.p50;
-  const overall = players.map((_, i) => i).sort(byP50);
+  // Rank/tier on tournamentScore (ceiling-weighted, risk-dampened) — the
+  // best-ball-relevant value, not raw mean points (see #10).
+  const byScore = (a: number, b: number) =>
+    projections[b].tournamentScore - projections[a].tournamentScore;
+  const overall = players.map((_, i) => i).sort(byScore);
   overall.forEach((index, rank) => {
     projections[index].overallRank = rank + 1;
   });
@@ -456,7 +479,7 @@ function assignRanks(players: SnapshotPlayer[], projections: PlayerProjection[],
     const inPos = players
       .map((_, i) => i)
       .filter((i) => players[i].position === pos)
-      .sort(byP50);
+      .sort(byScore);
     inPos.forEach((index, rank) => {
       projections[index].posRank = rank + 1;
     });
@@ -465,9 +488,10 @@ function assignRanks(players: SnapshotPlayer[], projections: PlayerProjection[],
 }
 
 /** Natural-break tiers over the draftable head: cut where the gap between
- *  p50-neighbors exceeds max(minGap, gapMultiplier × median gap); any tier
- *  larger than maxTierSize (flat plateaus) splits recursively at its largest
- *  internal gap until draft-room sized. Tier 1 is best; past draftableDepth = 9. */
+ *  tournamentScore-neighbors exceeds max(minGap, gapMultiplier × median gap);
+ *  any tier larger than maxTierSize (flat plateaus) splits recursively at its
+ *  largest internal gap until draft-room sized. Tier 1 is best; past
+ *  draftableDepth = 9. */
 function assignNaturalBreakTiers(
   sortedIndices: number[],
   projections: PlayerProjection[],
@@ -475,7 +499,7 @@ function assignNaturalBreakTiers(
   position: Position,
 ): void {
   const draftable = sortedIndices.slice(0, cfg.draftableDepth[position]);
-  const p50s = draftable.map((i) => projections[i].points.p50);
+  const p50s = draftable.map((i) => projections[i].tournamentScore);
   const gaps = p50s.slice(1).map((v, j) => p50s[j] - v);
   const cutSet = new Set<number>();
   if (gaps.length > 0) {

@@ -47,13 +47,21 @@ export type PlayerProjection = {
   minutes: number;
   /** p50 points per £M of draft price. */
   value: number;
-  /** 1-based rank within position and overall, by p50 points. */
+  /** 1-based rank within position and overall, by tournamentScore. */
   posRank: number;
   overallRank: number;
   /** Natural-break tier within position (1 = best): the cluster the player's
-   *  projected p50 falls into — cuts where the p50 gap between neighbors is
+   *  tournamentScore falls into — cuts where the gap between neighbors is
    *  anomalous (see model config `tiering`). */
   tier: number;
   /** History depth behind the projection — surfaced in the UI. */
   confidence: 'high' | 'medium' | 'low';
+  /** Tournament-shape-adjusted season score: p50 blended toward p90 (best-ball
+   *  favors boom weeks over mean output), dampened for durability/minutes-risk
+   *  players (see model config `tournament`). Drives rank, tier, and `value` —
+   *  `points.p50` stays the unadjusted raw expected-points figure. */
+  tournamentScore: number;
+  /** Durability/minutes-risk flag: projected playing time or start rate is
+   *  thin for the 26-week Round 1 grind — gates the ceiling boost above. */
+  durabilityRisk: boolean;
 };

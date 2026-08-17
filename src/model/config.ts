@@ -212,6 +212,34 @@ export const DEFAULT_TIERING: TieringConfig = {
   draftableDepth: { G: 25, D: 50, MD: 70, FW: 50 },
 };
 
+/**
+ * Tournament-shape adjustments (#10): best-ball payouts reward boom weeks, not
+ * mean output, so the sheet ranks on a ceiling-weighted score rather than raw
+ * p50 — while raw p50 stays visible unadjusted (the "Pts" column) so the
+ * adjustment is auditable, not hidden inside a single number.
+ */
+export type TournamentConfig = {
+  /** Blend weight toward p90 in the ranking score: score = p50 + ceilingWeight × (p90 − p50). */
+  ceilingWeight: number;
+  /** A player's projected-minutes share of maxMinutes below this is flagged
+   *  durability/rotation risk for the 26-week Round 1 grind. */
+  minutesShareRiskThreshold: number;
+  /** Multi-season start-rate below this also flags risk (undercuts a healthy
+   *  minutes total padded by garbage-time cameos). */
+  startFractionRiskThreshold: number;
+  /** Ceiling boost applied to flagged players is scaled by this factor
+   *  (0 = no boost, 1 = full boost) — a boom-week proxy is only worth
+   *  drafting toward if the player is trusted to be on the pitch. */
+  riskCeilingDampen: number;
+};
+
+export const DEFAULT_TOURNAMENT: TournamentConfig = {
+  ceilingWeight: 0.2,
+  minutesShareRiskThreshold: 0.5,
+  startFractionRiskThreshold: 0.55,
+  riskCeilingDampen: 0.3,
+};
+
 export type ModelConfig = {
   scoring: ScoringConfig;
   conversions: ConversionConfig;
@@ -221,6 +249,7 @@ export type ModelConfig = {
   scenarios: ScenarioConfig;
   team: TeamRegression;
   tiering: TieringConfig;
+  tournament: TournamentConfig;
 };
 
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
@@ -232,4 +261,5 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   scenarios: DEFAULT_SCENARIOS,
   team: DEFAULT_TEAM_REGRESSION,
   tiering: DEFAULT_TIERING,
+  tournament: DEFAULT_TOURNAMENT,
 };
