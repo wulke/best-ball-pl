@@ -11,3 +11,4 @@ export type {
   SnapshotFixture,
   SnapshotMeta,
 } from '../etl/types.js';
+export type { PlayerProjection, ProjectedStatline, ProjectionScenario } from '../model/types.js';

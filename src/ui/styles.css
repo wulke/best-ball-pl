@@ -16,6 +16,57 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Anchor scrolls clear of the sticky controls bar + table header. */
+html {
+  scroll-padding-top: 6rem;
+}
+
 button {
   font: inherit;
+}
+
+/* ─── Print: light paper, dark ink ────────────────────────────────────────
+ * The whole app colors through the token layer, so overriding the variables
+ * flips every theme to a print-friendly light sheet without touching
+ * components. Interactive controls hide via Tailwind's print:hidden.
+ */
+@media print {
+  :root,
+  [data-theme] {
+    color-scheme: light;
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-raised: #f2f2f2;
+    --color-surface-hover: #f2f2f2;
+    --color-border: #8a8a8a;
+    --color-border-strong: #4a4a4a;
+    --color-text-primary: #000000;
+    --color-text-secondary: #1f1f1f;
+    --color-text-muted: #555555;
+    --color-accent: #111111;
+    --color-accent-hover: #111111;
+    --color-accent-rgb: 17 17 17;
+    --color-accent-fg: #ffffff;
+    --color-positive: #14622f;
+    --color-positive-rgb: 20 98 47;
+    --color-negative: #9c1c1c;
+    --color-negative-rgb: 156 28 28;
+    --color-info: #1c4f9c;
+    --color-info-rgb: 28 79 156;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  /* Dense rows on paper — more players per printed page. */
+  .player-table td,
+  .player-table th {
+    padding-top: 1px;
+    padding-bottom: 1px;
+  }
+
+  .player-table {
+    font-size: 0.8rem;
+  }
 }
