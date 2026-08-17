@@ -18,6 +18,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FplApi } from './fpl.js';
+import { DEFAULT_MODEL_CONFIG } from '../model/config.js';
+import { buildProjections } from '../model/project.js';
 import type {
   Position,
   SeasonStatLine,
@@ -87,7 +89,11 @@ function toSnapshotPlayer(
     price: element.now_cost / 10,
     status: element.status as SnapshotPlayer['status'],
     news: element.news ?? '',
-    seasons: (summary?.history_past ?? []).map(toSeasonStatLine),
+    // FPL ships history_past oldest-first; the contract is most-recent-first.
+    seasons: (summary?.history_past ?? [])
+      .slice()
+      .sort((a, b) => b.season_name.localeCompare(a.season_name))
+      .map(toSeasonStatLine),
   };
 }
 
@@ -135,6 +141,10 @@ async function main() {
   );
   const fixtures = rawFixtures.map((f) => toSnapshotFixture(f, shortNames));
 
+  console.log('[ETL] Projecting season-long False Nine points (p10/p50/p90)…');
+  const { projections } = buildProjections(players, DEFAULT_MODEL_CONFIG);
+  const playersWithProjections = players.map((p, i) => ({ ...p, projection: projections[i] }));
+
   const positionCounts = players.reduce(
     (acc, p) => ({ ...acc, [p.position]: (acc[p.position] ?? 0) + 1 }),
     {} as Record<Position, number>,
@@ -144,7 +154,7 @@ async function main() {
   const snapshot: Snapshot = {
     generated_at: new Date().toISOString(),
     meta: { playersWithHistory, positionCounts },
-    players,
+    players: playersWithProjections,
     fixtures,
   };
 
@@ -154,7 +164,7 @@ async function main() {
   const seasonRows = players.reduce((sum, p) => sum + p.seasons.length, 0);
   console.log(`[ETL] Snapshot written to ${path.relative(repoRoot, SNAPSHOT_PATH)}`);
   console.log(
-    `[ETL] ${players.length} players (${playersWithHistory} with history, ${seasonRows} season rows) · ${fixtures.length} fixtures.`,
+    `[ETL] ${players.length} players (${playersWithHistory} with history, ${seasonRows} season rows) · ${fixtures.length} fixtures · ${playersWithProjections.length} projected.`,
   );
   console.log(
     `[ETL] Positions: ${Object.entries(positionCounts)
