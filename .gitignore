@@ -1,0 +1,13 @@
+# Environment
+.env
+.envrc
+.env.*
+!.env.example
+
+# Dependencies / build
+node_modules/
+dist/
+coverage/
+
+# OS
+.DS_Store

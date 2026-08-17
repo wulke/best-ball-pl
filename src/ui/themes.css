@@ -1,0 +1,90 @@
+/* Design system theme definitions.
+ * Each theme sets the full CSS custom property layer consumed by tailwind.config.ts.
+ * Apply a theme by setting data-theme on <html>.
+ * Default theme is "pitch" — set on <html> at app boot.
+ */
+
+/* ─── Pitch (default) ────────────────────────────────────────────────────── */
+[data-theme="pitch"] {
+  --color-bg:             #09090b;
+  --color-surface:        #111113;
+  --color-surface-raised: #18181b;
+  --color-surface-hover:  #27272a;
+  --color-border:         #27272a;
+  --color-border-strong:  #3f3f46;
+  --color-text-primary:   #fafafa;
+  --color-text-secondary: #d4d4d8;
+  --color-text-muted:     #71717a;
+
+  /* Hex for direct CSS usage; RGB for Tailwind opacity modifiers (bg-accent/10) */
+  --color-accent:         #84cc16;
+  --color-accent-rgb:     132 204 22;
+  --color-accent-hover:   #a3e635;
+  --color-accent-fg:      #09090b;
+
+  --color-positive:       #86efac;
+  --color-positive-rgb:   134 239 172;
+  --color-negative:       #fca5a5;
+  --color-negative-rgb:   252 165 165;
+  --color-info:           #93c5fd;
+  --color-info-rgb:       147 197 253;
+
+  --bg-gradient: radial-gradient(circle at top, rgba(132, 204, 22, 0.10), transparent 35%),
+                 linear-gradient(180deg, #111113 0%, #09090b 100%);
+}
+
+/* ─── Ember ──────────────────────────────────────────────────────────────── */
+[data-theme="ember"] {
+  --color-bg:             #0c0a09;
+  --color-surface:        #1c1917;
+  --color-surface-raised: #292524;
+  --color-surface-hover:  #292524;
+  --color-border:         #292524;
+  --color-border-strong:  #44403c;
+  --color-text-primary:   #f5f5f4;
+  --color-text-secondary: #d6d3d1;
+  --color-text-muted:     #78716c;
+
+  --color-accent:         #fcd34d;
+  --color-accent-rgb:     252 211 77;
+  --color-accent-hover:   #fde68a;
+  --color-accent-fg:      #0c0a09;
+
+  --color-positive:       #86efac;
+  --color-positive-rgb:   134 239 172;
+  --color-negative:       #fca5a5;
+  --color-negative-rgb:   252 165 165;
+  --color-info:           #93c5fd;
+  --color-info-rgb:       147 197 253;
+
+  --bg-gradient: radial-gradient(circle at top, rgba(251, 191, 36, 0.12), transparent 35%),
+                 linear-gradient(180deg, #1c1917 0%, #0c0a09 100%);
+}
+
+/* ─── Volt ───────────────────────────────────────────────────────────────── */
+[data-theme="volt"] {
+  --color-bg:             #0a0c10;
+  --color-surface:        #0f1117;
+  --color-surface-raised: #181d27;
+  --color-surface-hover:  #1e2435;
+  --color-border:         #1e2435;
+  --color-border-strong:  #2d3748;
+  --color-text-primary:   #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted:     #64748b;
+
+  --color-accent:         #3b82f6;
+  --color-accent-rgb:     59 130 246;
+  --color-accent-hover:   #60a5fa;
+  --color-accent-fg:      #ffffff;
+
+  --color-positive:       #86efac;
+  --color-positive-rgb:   134 239 172;
+  --color-negative:       #fca5a5;
+  --color-negative-rgb:   252 165 165;
+  --color-info:           #93c5fd;
+  --color-info-rgb:       147 197 253;
+
+  --bg-gradient: radial-gradient(circle at top, rgba(59, 130, 246, 0.10), transparent 35%),
+                 linear-gradient(180deg, #0f1117 0%, #0a0c10 100%);
+}
