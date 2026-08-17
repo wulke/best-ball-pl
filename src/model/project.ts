@@ -15,7 +15,6 @@
 
 import type { PlayerStatus, Position, SnapshotPlayer } from '../etl/types.js';
 import type { ModelConfig } from './config.js';
-import { TIER_BANDS } from './config.js';
 import { scoreStatline } from './scoring.js';
 import type { PlayerProjection, ProjectedStatline } from './types.js';
 
@@ -33,6 +32,8 @@ export type ProjectionResult = {
   projections: PlayerProjection[];
   /** League-mean per-90s actually used (post-computation) — for the report. */
   positionMeans: Record<Position, { goals: number; assists: number }>;
+  /** Team defensive contexts actually used — CS/GC/win-rate priors (report). */
+  teamContexts: Map<string, TeamContext>;
 };
 
 // ---------------------------------------------------------------------------
@@ -318,6 +319,20 @@ export function buildProjections(
   // Expected minutes per player before position-competition adjustments.
   const minutesByPlayer = players.map((p, i) => expectedMinutes(p, raws[i], cfg));
 
+  // Fixture congestion: outfield players on the top-N teams by projected win
+  // rate (Europe/cup proxy) rotate inside MW 1–26 — haircut their minutes.
+  const congestedTeams = new Set(
+    [...teams.entries()]
+      .sort((a, b) => b[1].gkWinRate - a[1].gkWinRate)
+      .slice(0, cfg.minutes.congestion.topTeams)
+      .map(([team]) => team),
+  );
+  players.forEach((p, i) => {
+    if (p.position !== 'G' && congestedTeams.has(p.team)) {
+      minutesByPlayer[i] *= cfg.minutes.congestion.factor;
+    }
+  });
+
   // One team, one starting keeper: if a club's GK minutes sum past a full
   // season's job, scale them proportionally — otherwise every incumbent in a
   // goalkeeping carousel projects as a 3420-minute starter (the ARS 2026/27
@@ -421,8 +436,8 @@ export function buildProjections(
     } satisfies PlayerProjection;
   });
 
-  assignRanks(players, projections);
-  return { projections, positionMeans };
+  assignRanks(players, projections, cfg);
+  return { projections, positionMeans, teamContexts: teams };
 }
 
 function blend(x: number | null, actual: number, xWeight: number): number {
@@ -430,22 +445,96 @@ function blend(x: number | null, actual: number, xWeight: number): number {
   return xWeight * x + (1 - xWeight) * actual;
 }
 
-function assignRanks(players: SnapshotPlayer[], projections: PlayerProjection[]): void {
+function assignRanks(players: SnapshotPlayer[], projections: PlayerProjection[], cfg: ModelConfig): void {
   const byP50 = (a: number, b: number) => projections[b].points.p50 - projections[a].points.p50;
   const overall = players.map((_, i) => i).sort(byP50);
   overall.forEach((index, rank) => {
     projections[index].overallRank = rank + 1;
   });
 
-  (Object.keys(TIER_BANDS) as Position[]).forEach((pos) => {
+  (['G', 'D', 'MD', 'FW'] as Position[]).forEach((pos) => {
     const inPos = players
       .map((_, i) => i)
       .filter((i) => players[i].position === pos)
       .sort(byP50);
     inPos.forEach((index, rank) => {
-      const p = projections[index];
-      p.posRank = rank + 1;
-      p.tier = Math.min(9, Math.floor(rank / TIER_BANDS[pos]) + 1);
+      projections[index].posRank = rank + 1;
     });
+    assignNaturalBreakTiers(inPos, projections, cfg.tiering, pos);
   });
+}
+
+/** Natural-break tiers over the draftable head: cut where the gap between
+ *  p50-neighbors exceeds max(minGap, gapMultiplier × median gap); any tier
+ *  larger than maxTierSize (flat plateaus) splits recursively at its largest
+ *  internal gap until draft-room sized. Tier 1 is best; past draftableDepth = 9. */
+function assignNaturalBreakTiers(
+  sortedIndices: number[],
+  projections: PlayerProjection[],
+  cfg: ModelConfig['tiering'],
+  position: Position,
+): void {
+  const draftable = sortedIndices.slice(0, cfg.draftableDepth[position]);
+  const p50s = draftable.map((i) => projections[i].points.p50);
+  const gaps = p50s.slice(1).map((v, j) => p50s[j] - v);
+  const cutSet = new Set<number>();
+  if (gaps.length > 0) {
+    const medianGap = median(gaps);
+    const threshold = Math.max(cfg.minGap, cfg.gapMultiplier * medianGap);
+    gaps
+      .map((gap, j) => ({ gap, j }))
+      .filter(({ gap }) => gap >= threshold)
+      .sort((a, b) => b.gap - a.gap)
+      .slice(0, cfg.maxTiers - 1)
+      .forEach(({ j }) => cutSet.add(j));
+  }
+
+  // Size-driven splits: keep every run between cuts ≤ maxTierSize.
+  const runs: Array<[number, number]> = [];
+  {
+    let start = 0;
+    for (let j = 0; j < draftable.length; j += 1) {
+      if (cutSet.has(j)) {
+        runs.push([start, j + 1]);
+        start = j + 1;
+      }
+    }
+    if (start < draftable.length) runs.push([start, draftable.length]);
+  }
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (let r = 0; r < runs.length; r += 1) {
+      const [start, end] = runs[r];
+      if (end - start <= cfg.maxTierSize) continue;
+      if (cutSet.size >= cfg.maxTiers - 1) break; // keep the 1..8 + residual-9 invariant
+      let bestJ = start;
+      let bestGap = -Infinity;
+      for (let j = start; j < end - 1; j += 1) {
+        const gap = p50s[j] - p50s[j + 1];
+        if (gap > bestGap) {
+          bestGap = gap;
+          bestJ = j;
+        }
+      }
+      cutSet.add(bestJ);
+      runs.splice(r, 1, [start, bestJ + 1], [bestJ + 1, end]);
+      changed = true;
+      break;
+    }
+  }
+
+  let tier = 1;
+  draftable.forEach((index, j) => {
+    projections[index].tier = tier;
+    if (cutSet.has(j)) tier += 1;
+  });
+  for (const index of sortedIndices.slice(cfg.draftableDepth[position])) {
+    projections[index].tier = 9;
+  }
+}
+
+function median(xs: number[]): number {
+  const sorted = [...xs].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }

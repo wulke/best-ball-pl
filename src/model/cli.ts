@@ -29,6 +29,7 @@ type Row = {
   value: number;
   conf: string;
   tier: number;
+  minutes: number;
 };
 
 function toRows(snapshot: Snapshot): Row[] {
@@ -47,25 +48,40 @@ function toRows(snapshot: Snapshot): Row[] {
       value: p.projection!.value,
       conf: p.projection!.confidence,
       tier: p.projection!.tier,
+      minutes: p.projection!.minutes,
     }));
 }
 
 function printTable(title: string, rows: Row[]): void {
   console.log(`\n${title}`);
   console.log(
-    '  rank name                 pos team  price    p10    p50    p90   /90   val  tier conf',
+    '  rank name                 pos team  price   expMin    p10    p50    p90   /90  tier conf',
   );
   console.log('  ' + '-'.repeat(94));
   for (const r of rows) {
     console.log(
-      `  ${String(r.rank).padStart(4)} ${r.name.padEnd(20)} ${r.pos.padEnd(3)} ${r.team.padEnd(5)} ${r.price.toFixed(1).padStart(5)} ${r.p10.toFixed(0).padStart(6)} ${r.p50.toFixed(0).padStart(6)} ${r.p90.toFixed(0).padStart(6)} ${r.per90.toFixed(2).padStart(5)} ${r.value.toFixed(1).padStart(5)} ${String(r.tier).padStart(4)} ${r.conf.padEnd(4)}`,
+      `  ${String(r.rank).padStart(4)} ${r.name.padEnd(20)} ${r.pos.padEnd(3)} ${r.team.padEnd(5)} ${r.price.toFixed(1).padStart(5)} ${String(r.minutes).padStart(7)} ${r.p10.toFixed(0).padStart(6)} ${r.p50.toFixed(0).padStart(6)} ${r.p90.toFixed(0).padStart(6)} ${r.per90.toFixed(2).padStart(5)} ${String(r.tier).padStart(4)} ${r.conf.padEnd(4)}`,
+    );
+  }
+}
+
+function printTeamContext(
+  teamContexts: Map<string, { cleanSheetRate: number; goalsConcededPerMatch: number; gkWinRate: number }>,
+): void {
+  console.log('\nTEAM DEFENSIVE CONTEXT (p50 priors — CS/GC from the 2025/26 primary keeper, regressed; win rate from projected GF−GC)');
+  console.log('  team  CS/m  GC/m  win%');
+  console.log('  ' + '-'.repeat(26));
+  const rows = [...teamContexts.entries()].sort((a, b) => b[1].cleanSheetRate - a[1].cleanSheetRate);
+  for (const [team, ctx] of rows) {
+    console.log(
+      `  ${team.padEnd(5)} ${ctx.cleanSheetRate.toFixed(2).padStart(4)} ${ctx.goalsConcededPerMatch.toFixed(2).padStart(5)} ${(ctx.gkWinRate * 100).toFixed(0).padStart(4)}%`,
     );
   }
 }
 
 function main() {
   const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8')) as Snapshot;
-  const { projections } = buildProjections(snapshot.players, DEFAULT_MODEL_CONFIG);
+  const { projections, teamContexts } = buildProjections(snapshot.players, DEFAULT_MODEL_CONFIG);
 
   const players = snapshot.players.map((p, i) => ({ ...p, projection: projections[i] }));
   const out: Snapshot = { ...snapshot, players, generated_at: snapshot.generated_at };
@@ -74,8 +90,10 @@ function main() {
 
   const rows = toRows(out).sort((a, b) => a.rank - b.rank);
 
+  printTeamContext(teamContexts);
+
   printTable(
-    `TOP 25 OVERALL (p50 season points) — as of ${snapshot.generated_at.slice(0, 10)}`,
+    `TOP 25 OVERALL (p50 season points) — as of ${snapshot.generated_at.slice(0, 10)} — tier = within-position cluster`,
     rows.slice(0, 25),
   );
 

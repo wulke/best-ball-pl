@@ -50,7 +50,9 @@ export type PlayerProjection = {
   /** 1-based rank within position and overall, by p50 points. */
   posRank: number;
   overallRank: number;
-  /** Talent band within position (1 = best); band sizes in model config. */
+  /** Natural-break tier within position (1 = best): the cluster the player's
+   *  projected p50 falls into — cuts where the p50 gap between neighbors is
+   *  anomalous (see model config `tiering`). */
   tier: number;
   /** History depth behind the projection — surfaced in the UI. */
   confidence: 'high' | 'medium' | 'low';

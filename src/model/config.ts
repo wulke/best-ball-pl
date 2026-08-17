@@ -95,6 +95,13 @@ export type MinutesConfig = {
   statusFactors: { i: number; d: number };
   /** Hard cap: 38 × 90. */
   maxMinutes: number;
+  /**
+   * Fixture-congestion rotation: outfield players on the top-N teams by
+   * projected win rate (proxy for European/domestic-cup football — those are
+   * the squads that rotate inside MW 1–26) take a minutes haircut. GKs are
+   * exempt: cup rotation rests outfield legs, not the league #1 keeper.
+   */
+  congestion: { topTeams: number; factor: number };
 };
 
 export const DEFAULT_MINUTES: MinutesConfig = {
@@ -103,6 +110,7 @@ export const DEFAULT_MINUTES: MinutesConfig = {
   noHistoryMinutes: 850,
   statusFactors: { i: 0.5, d: 0.8 },
   maxMinutes: 3420,
+  congestion: { topTeams: 6, factor: 0.95 },
 };
 
 /** Rate estimation knobs (per-90 attacking terms). */
@@ -174,8 +182,35 @@ export const DEFAULT_TEAM_REGRESSION: TeamRegression = {
   meanSavesPer90: 3.1,
 };
 
-/** Tier band sizes within position (tier = ⌊(posRank−1)/band⌋ + 1). */
-export const TIER_BANDS: Record<Position, number> = { G: 5, D: 8, MD: 10, FW: 6 };
+/**
+ * Tiering: natural breaks in the projected p50 distribution within each
+ * position — tiers are the clusters that emerge from the model's own
+ * estimates (forward-looking), never from fixed band sizes or price/value.
+ * A break lands where the gap between consecutive players exceeds
+ * max(minGap, gapMultiplier × mean gap); only the largest gaps survive up to
+ * maxTiers. An isolated elite (e.g. a Haaland-sized gap) legitimately forms
+ * a one-player tier.
+ */
+export type TieringConfig = {
+  gapMultiplier: number;
+  minGap: number;
+  maxTiers: number;
+  /** Flat-position plateaus (mid-tier D/MD blobs): any tier larger than this
+   *  splits recursively at its largest internal gap, so tiers stay draft-room
+   *  sized even where the projection distribution is honest-but-flat. */
+  maxTierSize: number;
+  /** Players beyond this position depth (by posRank) fall into residual tier 9
+   *  — tiers exist where the draft happens, not down the bench-fodder tail. */
+  draftableDepth: Record<Position, number>;
+};
+
+export const DEFAULT_TIERING: TieringConfig = {
+  gapMultiplier: 2.5,
+  minGap: 8,
+  maxTiers: 8,
+  maxTierSize: 15,
+  draftableDepth: { G: 25, D: 50, MD: 70, FW: 50 },
+};
 
 export type ModelConfig = {
   scoring: ScoringConfig;
@@ -185,6 +220,7 @@ export type ModelConfig = {
   rates: RateConfig;
   scenarios: ScenarioConfig;
   team: TeamRegression;
+  tiering: TieringConfig;
 };
 
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
@@ -195,4 +231,5 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   rates: DEFAULT_RATES,
   scenarios: DEFAULT_SCENARIOS,
   team: DEFAULT_TEAM_REGRESSION,
+  tiering: DEFAULT_TIERING,
 };

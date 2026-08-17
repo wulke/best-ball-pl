@@ -60,11 +60,14 @@ docs/
 
 ### Model v1 shape (`src/model/`)
 
-- **Minutes**: recency-weighted (55/30/15) durability prior, injury-status haircuts, and a per-team **goalkeeper job-share cap** (one team = one ~3450-minute starting job, shared proportionally to priors).
+- **Minutes**: recency-weighted (55/30/15) durability prior, injury-status haircuts, a **fixture-congestion haircut** for outfield players on top-6 win-rate teams (Europe/cup rotation proxy, inside MW 1–26), and a per-team **goalkeeper job-share cap** (one team = one ~3450-minute starting job, shared proportionally to priors).
 - **Attacking rates**: xG/xA-weighted per-90s (70/30 blend with actuals), regressed toward position mean by sample size.
 - **Volume terms** FPL can't express (SoT, chances created, crosses, tackles, passes): league-average conversions (SoT ≈ xG/0.30, KP ≈ xA×7.7) plus per-position baselines — the documented slot for a future FBref per-player upgrade.
 - **Defense**: team CS/GC/win-rate priors from the 2025/26 primary keeper (regressed to league mean; promoted teams get the mean), personal saves rate for GKs.
-- **Tiers**: parametric p10/p50/p90 scenarios (minutes/burst/stable/team-form factors — burst widest for FW), no Monte Carlo. Every constant lives in `src/model/config.ts`; tune and re-run `npm run model`.
+- **Scenarios**: parametric p10/p50/p90 (minutes 0.6×/1.0×/1.1×, burst 0.88×/1.0×/1.2–1.25× by position, team-form on CS/wins) — no Monte Carlo (out of scope per the map).
+- **Tiers**: **natural breaks in each position's projected-p50 distribution** — cut where the neighbor gap exceeds max(8, 2.5 × median gap); flat plateaus split at their largest internal gap up to 15-wide tiers; past the position's draft depth everything is residual tier 9. Forward-looking by construction: tiers are the clusters the model's own estimates form, never price/value bands.
+
+Every constant lives in `src/model/config.ts`; tune and re-run `npm run model`, which also prints a **team defensive context table** (projected CS/match, GC/match, GK win rate) for clean-sheet-first drafting.
 
 ## Design
 
