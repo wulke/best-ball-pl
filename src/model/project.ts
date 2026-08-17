@@ -6,8 +6,11 @@
  * Model shape (see #8 and docs/research/historical-baseline-modeling.md):
  *   minutes  : recency-weighted multi-season durability prior, status-haircut
  *   rates    : xG/xA-blended per-90s, regressed to position mean by sample
- *   volume   : FPL-invisible terms (SoT/KP/Crs/TklW/pass) from league-average
- *              conversions + per-position baselines — the FBref upgrade slot
+ *   volume   : FPL-invisible terms (SoT/KP/Crs/TklW/pass) — per-player
+ *              recency-weighted FBref rates shrunk to the position mean,
+ *              per term, when that term has data (#21); league-average
+ *              conversions + per-position baselines for uncovered terms
+ *              (the v1 fallback path)
  *   defense  : team CS/GC/win-rate priors from the 2025/26 primary keeper,
  *              regressed to league mean; GK saves from personal history
  *   tiers    : parametric minutes/burst scenarios — no Monte Carlo (out of scope)
@@ -128,7 +131,33 @@ type RawRates = {
   startFraction: number;
   penaltiesSavedRate: number; // expected per full-season share
   seasonCount: number;
+  /** FBref per-90 volume rates, recency-weighted over enriched seasons. */
+  volume: VolumeRates | null;
 };
+
+/** Recency-weighted per-90 rate for one FBref volume term, plus the weighted
+ *  minutes behind it (the shrinkage sample size). */
+export type VolumeField = {
+  min: number;
+  per90: number;
+};
+
+/** Recency-weighted per-90 volume terms from FBref-enriched season rows.
+ *  A field is null when that term has NO league-wide data (its page wasn't
+ *  parsed for any season) — buildStatline falls back to league-average
+ *  conversions + position baselines for those fields instead of treating
+ *  missing data as zero volume. */
+export type VolumeRates = {
+  shots: VolumeField | null;
+  shotsOnTarget: VolumeField | null;
+  keyPasses: VolumeField | null;
+  crosses: VolumeField | null;
+  tacklesWon: VolumeField | null;
+  passesCompleted: VolumeField | null;
+};
+
+/** Term keys of VolumeRates — also the league-coverage mask keys. */
+export type VolumeTerm = keyof VolumeRates;
 
 function recencyWeightedTotal(
   seasons: SnapshotPlayer['seasons'],
@@ -170,6 +199,42 @@ function rawRates(player: SnapshotPlayer, cfg: ModelConfig): RawRates {
   const penaltyTotals = seasons.reduce((a, s) => a + s.penaltiesSaved, 0);
   const penaltyMinutes = seasons.reduce((a, s) => a + s.minutes, 0);
 
+  // FBref volume terms: recency-weight each field's totals and divide by the
+  // SAME rows' weighted minutes — a field only counts seasons where that
+  // field was actually parsed (a page set can legitimately cover only some
+  // terms). Small samples are handled downstream by shrinkage toward the
+  // position volume mean.
+  const acc = (): VolumeField => ({ min: 0, per90: 0 });
+  const add = (a: VolumeField, v: number | undefined, w: number, min: number) => {
+    if (v == null) return;
+    a.min += w * min;
+    a.per90 += w * v;
+  };
+  const sh = acc(), sot = acc(), kp = acc(), crs = acc(), tklw = acc(), cmp = acc();
+  seasons.slice(0, 3).forEach((s, i) => {
+    if (s.fbrefMinutes == null || s.fbrefMinutes <= 0) return;
+    const w = weights[i];
+    add(sh, s.shots, w, s.fbrefMinutes);
+    add(sot, s.shotsOnTarget, w, s.fbrefMinutes);
+    add(kp, s.keyPasses, w, s.fbrefMinutes);
+    add(crs, s.crosses, w, s.fbrefMinutes);
+    add(tklw, s.tacklesWon, w, s.fbrefMinutes);
+    add(cmp, s.passesCompleted, w, s.fbrefMinutes);
+  });
+  const field = (a: VolumeField): VolumeField | null =>
+    a.min > 0 ? { min: a.min, per90: (a.per90 / a.min) * 90 } : null;
+  const volume: VolumeRates | null =
+    field(sh) || field(sot) || field(kp) || field(crs) || field(tklw) || field(cmp)
+      ? {
+          shots: field(sh),
+          shotsOnTarget: field(sot),
+          keyPasses: field(kp),
+          crosses: field(crs),
+          tacklesWon: field(tklw),
+          passesCompleted: field(cmp),
+        }
+      : null;
+
   return {
     weightedMinutes: recencyWeightedTotal(seasons, weights, (s) => s.minutes).total,
     goalsPer90: per90(goals),
@@ -180,6 +245,7 @@ function rawRates(player: SnapshotPlayer, cfg: ModelConfig): RawRates {
     startFraction: starts.minutes > 0 ? Math.min(1, Math.max(0.3, starts.total)) : 0.85,
     penaltiesSavedRate: penaltyMinutes > 0 ? penaltyTotals / (penaltyMinutes / SEASON_MINUTES) : 0,
     seasonCount: seasons.length,
+    volume,
   };
 }
 
@@ -217,21 +283,64 @@ function buildStatline(
   attack: AttackRates,
   team: TeamContext,
   cfg: ModelConfig,
+  volume: VolumeRates | null,
 ): ProjectedStatline {
   const matches = minutes / 90;
-  const volume = cfg.volume[position];
+  const baseline = cfg.volume.baselines[position];
 
   const goals = (attack.goals / 90) * matches;
   const assists = (attack.assists / 90) * matches;
-  const shotsOnTarget = goals / cfg.conversions.goalsPerSoT;
-  const shotsOffTarget =
-    shotsOnTarget *
-    cfg.conversions.offTargetPerSoT *
-    (cfg.scoring.blockedShotsCountOffTarget ? 1.9 : 1.0);
-  const chancesCreated = Math.max(
-    assists * cfg.conversions.kpPerAssist,
-    volume.chancesCreatedFloor * matches,
-  );
+
+  let shotsOnTarget: number;
+  let shotsOffTarget: number;
+  let chancesCreated: number;
+  let crosses: number;
+  let tackles: number;
+  let passes: number;
+  if (volume) {
+    // FBref per-player rates — but only for terms whose page was parsed
+    // (covered league-wide); everything else keeps the v1 conversion/baseline
+    // math, so a partial page set can't silently zero out volume terms.
+    const sot = volume.shotsOnTarget?.per90 ?? null;
+    const sh = volume.shots?.per90 ?? null;
+    shotsOnTarget = sot != null ? sot * matches : goals / cfg.conversions.goalsPerSoT;
+    if (sh != null) {
+      const misses = Math.max(0, sh - (sot ?? 0)) * matches;
+      shotsOffTarget = cfg.scoring.blockedShotsCountOffTarget
+        ? misses
+        : misses * cfg.volume.offTargetShareOfMisses;
+    } else {
+      shotsOffTarget =
+        shotsOnTarget *
+        cfg.conversions.offTargetPerSoT *
+        (cfg.scoring.blockedShotsCountOffTarget ? 1.9 : 1.0);
+    }
+    const kp = volume.keyPasses?.per90 ?? null;
+    chancesCreated =
+      kp != null
+        ? kp * matches
+        : Math.max(assists * cfg.conversions.kpPerAssist, baseline.chancesCreatedFloor * matches);
+    const crs = volume.crosses?.per90 ?? null;
+    crosses = crs != null ? crs * matches : baseline.crosses * matches;
+    const tklw = volume.tacklesWon?.per90 ?? null;
+    tackles = tklw != null ? tklw * matches : baseline.tackles * matches;
+    const cmp = volume.passesCompleted?.per90 ?? null;
+    passes = cmp != null ? cmp * matches : baseline.passes * matches;
+  } else {
+    // No FBref rows: league-average conversions + position baselines (v1 path).
+    shotsOnTarget = goals / cfg.conversions.goalsPerSoT;
+    shotsOffTarget =
+      shotsOnTarget *
+      cfg.conversions.offTargetPerSoT *
+      (cfg.scoring.blockedShotsCountOffTarget ? 1.9 : 1.0);
+    chancesCreated = Math.max(
+      assists * cfg.conversions.kpPerAssist,
+      baseline.chancesCreatedFloor * matches,
+    );
+    crosses = baseline.crosses * matches;
+    tackles = baseline.tackles * matches;
+    passes = baseline.passes * matches;
+  }
 
   // Defensive/team terms — G and D only for CS/GC.
   const csEligible = position === 'G' ? 0.95 : 0.25 + 0.75 * rates.startFraction;
@@ -250,9 +359,9 @@ function buildStatline(
     shotsOnTarget: round2(shotsOnTarget),
     shotsOffTarget: round2(shotsOffTarget),
     chancesCreated: round2(chancesCreated),
-    crosses: round2(volume.crosses * matches),
-    tackles: round2(volume.tackles * matches),
-    passes: Math.round(volume.passes * matches),
+    crosses: round2(crosses),
+    tackles: round2(tackles),
+    passes: Math.round(passes),
     cleanSheets: round2(position === 'G' || position === 'D' ? cleanSheets : 0),
     goalsConceded: round2(position === 'G' || position === 'D' ? goalsConceded : 0),
     saves: round2(saves),
@@ -383,6 +492,79 @@ export function buildProjections(
     return s.n > 0 ? s[key] / s.n : 0;
   }
 
+  // League-wide coverage per term: is there ANY season row carrying this
+  // FBref field? A term without coverage (its page was never parsed) must
+  // fall back to the conversion/baseline path for every player — never be
+  // treated as zero volume.
+  const coverage: Record<VolumeTerm, boolean> = {
+    shots: false, shotsOnTarget: false, keyPasses: false,
+    crosses: false, tacklesWon: false, passesCompleted: false,
+  };
+  for (const p of players) {
+    for (const s of p.seasons) {
+      if (s.shots != null) coverage.shots = true;
+      if (s.shotsOnTarget != null) coverage.shotsOnTarget = true;
+      if (s.keyPasses != null) coverage.keyPasses = true;
+      if (s.crosses != null) coverage.crosses = true;
+      if (s.tacklesWon != null) coverage.tacklesWon = true;
+      if (s.passesCompleted != null) coverage.passesCompleted = true;
+    }
+  }
+
+  // Position volume means per term, over players with ≥ minMeanMinutes of
+  // recency-weighted FBref minutes behind that term — the shrinkage target
+  // for per-player rates.
+  const emptySums = (): VolSums => ({
+    shots: emptyFieldSum(), shotsOnTarget: emptyFieldSum(), keyPasses: emptyFieldSum(),
+    crosses: emptyFieldSum(), tacklesWon: emptyFieldSum(), passesCompleted: emptyFieldSum(),
+  });
+  const volSums: Record<Position, VolSums> = {
+    G: emptySums(), D: emptySums(), MD: emptySums(), FW: emptySums(),
+  };
+  const leagueVol = emptySums();
+  players.forEach((p, i) => {
+    const v = raws[i].volume;
+    if (!v) return;
+    for (const target of [volSums[p.position], leagueVol]) {
+      for (const t of Object.keys(coverage) as VolumeTerm[]) {
+        const f = v[t];
+        if (f && f.min >= cfg.volume.minMeanMinutes) {
+          target[t].total += f.per90;
+          target[t].n += 1;
+        }
+      }
+    }
+  });
+  const volumeMeans: Record<Position, VolumeMean | null> = {
+    G: toVolMean(volSums.G), D: toVolMean(volSums.D), MD: toVolMean(volSums.MD), FW: toVolMean(volSums.FW),
+  };
+  const leagueVolumeMean = toVolMean(leagueVol);
+
+  // Per-player shrunk rates. Terms without league coverage become null →
+  // buildStatline falls back to conversions/baselines for them. A covered
+  // term the player is missing data for shrinks fully to the position mean.
+  const volumeRates: (VolumeRates | null)[] = players.map((p, i) => {
+    const v = raws[i].volume;
+    if (!v) return null;
+    const mean = volumeMeans[p.position] ?? leagueVolumeMean;
+    const shrink = (t: VolumeTerm, f: VolumeField | null): VolumeField | null => {
+      if (!coverage[t]) return null;
+      const m = mean ? mean[t] : null;
+      if (!f) return m ? { min: 0, per90: m } : null; // missing row → position mean
+      if (m == null) return f; // nobody to shrink toward — raw rates
+      const k = f.min / (f.min + cfg.volume.regressionMinutes);
+      return { min: f.min, per90: k * f.per90 + (1 - k) * m };
+    };
+    return {
+      shots: shrink('shots', v.shots),
+      shotsOnTarget: shrink('shotsOnTarget', v.shotsOnTarget),
+      keyPasses: shrink('keyPasses', v.keyPasses),
+      crosses: shrink('crosses', v.crosses),
+      tacklesWon: shrink('tacklesWon', v.tacklesWon),
+      passesCompleted: shrink('passesCompleted', v.passesCompleted),
+    };
+  });
+
   const projections = players.map((player, i) => {
     const rates = raws[i];
     const team = teams.get(player.team) ?? fallbackTeam;
@@ -399,7 +581,7 @@ export function buildProjections(
     };
 
     const minutes = minutesByPlayer[i];
-    const base = buildStatline(minutes, player.position, rates, attack, team, cfg);
+    const base = buildStatline(minutes, player.position, rates, attack, team, cfg, volumeRates[i]);
 
     const p10Line = applyScenario(base, cfg.scenarios.p10, cfg.minutes.maxMinutes);
     const p90Cfg = cfg.scenarios.p90;
@@ -463,6 +645,32 @@ export function buildProjections(
 function blend(x: number | null, actual: number, xWeight: number): number {
   if (x == null) return actual;
   return xWeight * x + (1 - xWeight) * actual;
+}
+
+type FieldSum = { total: number; n: number };
+
+type VolSums = Record<VolumeTerm, FieldSum>;
+
+function emptyFieldSum(): FieldSum {
+  return { total: 0, n: 0 };
+}
+
+type VolumeMean = Record<VolumeTerm, number>;
+
+function toVolMean(s: VolSums): VolumeMean | null {
+  const out: VolumeMean = {
+    shots: 0, shotsOnTarget: 0, keyPasses: 0,
+    crosses: 0, tacklesWon: 0, passesCompleted: 0,
+  };
+  let any = false;
+  for (const t of Object.keys(s) as VolumeTerm[]) {
+    const f = s[t];
+    if (f.n > 0) {
+      out[t] = f.total / f.n;
+      any = true;
+    }
+  }
+  return any ? out : null;
 }
 
 function assignRanks(players: SnapshotPlayer[], projections: PlayerProjection[], cfg: ModelConfig): void {

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "etl": "node --import tsx src/etl/index.ts",
+    "fbref": "node --import tsx src/etl/fbref-merge.ts",
     "model": "node --import tsx src/model/cli.ts",
     "dev": "vite --config src/ui/vite.config.ts",
     "build": "vite build --config src/ui/vite.config.ts",

@@ -37,6 +37,30 @@ export type SeasonStatLine = {
   xa: number | null;
   /** FPL fantasy points for the season — cross-check vs Underdog scoring, not a target. */
   fplPoints: number;
+
+  /**
+   * FBref league-page volume terms (optional — merged in by `npm run fbref`
+   * from manually saved pages in data/fbref-raw/, parsed output committed as
+   * data/fbref.json). Season totals. Absent when the player didn't match or
+   * the season wasn't pulled — the model falls back to league-average
+   * conversions + position baselines for those rows.
+   */
+  /** FBref Sh (all shots, incl. blocked). */
+  shots?: number;
+  /** FBref SoT. */
+  shotsOnTarget?: number;
+  /** FBref KP (key passes — the "chance created" term). */
+  keyPasses?: number;
+  /** FBref Crs (crosses, pass-types page). */
+  crosses?: number;
+  /** FBref TklW (tackles won). */
+  tacklesWon?: number;
+  /** FBref total pass Cmp. */
+  passesCompleted?: number;
+  /** FBref keeper W (parsed for cross-checks; scoring still uses the team win-rate prior). */
+  gkWins?: number;
+  /** Minutes as FBref reports them — cross-check vs FPL `minutes` for match QA. */
+  fbrefMinutes?: number;
 };
 
 export type SnapshotPlayer = {

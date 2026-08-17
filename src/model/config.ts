@@ -64,23 +64,46 @@ export const DEFAULT_CONVERSIONS: ConversionConfig = {
 };
 
 /**
- * Volume baselines FPL cannot express, per position, per 90. These shift
- * cross-position value (a passing D banks ~1.9 pts/90 before anything else);
- * within-position they're near-constant, so per-player ranking inside a
- * position is driven by G/A/xG terms — the honest v1 given FPL-only data.
- * The FBref upgrade path (per-player SoT/KP/Crs/TklW/Cmp) replaces these
- * constants without reshaping the contract.
+ * Volume baselines FPL cannot express, per position, per 90. FALLBACK ONLY —
+ * used where FBref rows are missing (promoted squads, deep history, unmatched
+ * names). The FBref slice (`npm run fbref`) supplies per-player
+ * SoT/KP/Crs/TklW/Cmp per-90s that replace these outright.
  */
 export type VolumeBaselines = Record<
   Position,
   { passes: number; crosses: number; tackles: number; chancesCreatedFloor: number }
 >;
 
+/** Volume model knobs — real per-player rates when FBref data exists. */
+export type VolumeConfig = {
+  /** League-average per-position per-90 baselines — fallback only. */
+  baselines: VolumeBaselines;
+  /** Shrinkage toward the position's FBref-covered volume mean:
+   *  k = fbrefWeightedMinutes / (fbrefWeightedMinutes + this). */
+  regressionMinutes: number;
+  /** Minimum recency-weighted FBref minutes behind a player's per-90 term
+   *  before they may define the position's volume mean (the shrinkage
+   *  target) for that term. */
+  minMeanMinutes: number;
+  /** FBref Sh−SoT conflates blocked and genuinely-off-target shots. When
+   *  blockedShotsCountOffTarget=false (default), this share of the miss
+   *  count is scored as off-target; the rest is blocked (0 pts). ~2/3 league
+   *  eyeball — sensitivity-flagged, not Opta-verified. */
+  offTargetShareOfMisses: number;
+};
+
 export const DEFAULT_VOLUME: VolumeBaselines = {
   G: { passes: 26, crosses: 0, tackles: 0, chancesCreatedFloor: 0 },
   D: { passes: 38, crosses: 2.2, tackles: 2.1, chancesCreatedFloor: 0.3 },
   MD: { passes: 42, crosses: 1.8, tackles: 1.5, chancesCreatedFloor: 0.5 },
   FW: { passes: 22, crosses: 1.0, tackles: 0.8, chancesCreatedFloor: 0.4 },
+};
+
+export const DEFAULT_VOLUME_CONFIG: VolumeConfig = {
+  baselines: DEFAULT_VOLUME,
+  regressionMinutes: 1800,
+  minMeanMinutes: 900,
+  offTargetShareOfMisses: 0.67,
 };
 
 /** Minutes / durability model knobs. */
@@ -243,7 +266,7 @@ export const DEFAULT_TOURNAMENT: TournamentConfig = {
 export type ModelConfig = {
   scoring: ScoringConfig;
   conversions: ConversionConfig;
-  volume: VolumeBaselines;
+  volume: VolumeConfig;
   minutes: MinutesConfig;
   rates: RateConfig;
   scenarios: ScenarioConfig;
@@ -255,7 +278,7 @@ export type ModelConfig = {
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   scoring: DEFAULT_SCORING,
   conversions: DEFAULT_CONVERSIONS,
-  volume: DEFAULT_VOLUME,
+  volume: DEFAULT_VOLUME_CONFIG,
   minutes: DEFAULT_MINUTES,
   rates: DEFAULT_RATES,
   scenarios: DEFAULT_SCENARIOS,
