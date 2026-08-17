@@ -64,6 +64,14 @@ function norm(name: string): string {
     .replace(/[^a-z]/g, '');
 }
 
+/** Normalized whitespace-delimited tokens ("A.Becker" → ["abecker"]). */
+function tokensOf(name: string): string[] {
+  return name
+    .split(/\s+/)
+    .map(norm)
+    .filter((t) => t.length > 0);
+}
+
 type Overrides = Record<string, string>; // fbref name → FPL element id
 
 function readOverrides(): Overrides {
@@ -106,9 +114,21 @@ function assembleSeason(pages: Record<string, FbrefPlayerRow[]>): Map<string, Se
       for (const [f, v] of Object.entries(row.values)) {
         if (v !== undefined) values[f as FbrefField] = (values[f as FbrefField] ?? 0) + v;
       }
-      minutes = combined.length
-        ? Math.max(minutes, row.minutes)
-        : minutes + row.minutes;
+      if (combined.length) {
+        // Multi-club aggregate rows: identical full-season totals on every page.
+        minutes = Math.max(minutes, row.minutes);
+      }
+    }
+    if (!combined.length) {
+      // Per-club rows: the same player appears once per PAGE with identical
+      // season minutes for their club — take the max per club, then sum across
+      // clubs (a player can have two rows on one page after a mid-season move).
+      const perClubMinutes = new Map<string, number>();
+      for (const row of perClub) {
+        const s = row.squad as string;
+        perClubMinutes.set(s, Math.max(perClubMinutes.get(s) ?? 0, row.minutes));
+      }
+      minutes = [...perClubMinutes.values()].reduce((a, b) => a + b, 0);
     }
     byName.set(name, { name, squads, minutes, values });
   }
@@ -149,6 +169,38 @@ function matchPlayer(
   const web = byNormWeb.get(norm(fbrefName)) ?? [];
   if (web.length === 1) return web[0];
   if (web.length > 1) return tiebreakBySquad(web, squads) ?? null;
+
+  // Surname tier: FBref writes "First Last" while FPL often lists only the
+  // last name ("Caicedo") or a fuller name ("Kepa Arrizabalaga Revuelta",
+  // "Josh Acheampong" vs FBref "Joshua Acheampong"). Match the FBref name's
+  // FINAL token to the FPL web name or full-name suffix, then require a
+  // NON-surname token overlap (one a prefix of the other) as a sanity check —
+  // that stops same-surname strangers ("Jacob Bruun Larsen" ≠ Strand Larsen)
+  // being paired while tolerating nicknames ("Josh" vs "Joshua").
+  const fbTokens = tokensOf(fbrefName);
+  if (fbTokens.length >= 2) {
+    const last = fbTokens[fbTokens.length - 1];
+    const candidates = players.filter((p) => {
+      if (norm(p.name) !== last && !norm(p.fullName).endsWith(last)) return false;
+      const cand = tokensOf(`${p.name} ${p.fullName}`);
+      const nonSurnameFb = fbTokens.slice(0, -1);
+      const nonSurnameCand = cand.filter((t) => t !== last);
+      return nonSurnameFb.some((t) => nonSurnameCand.some((c) => c.startsWith(t) || t.startsWith(c)));
+    });
+    if (candidates.length === 1) return candidates[0];
+    if (candidates.length > 1) return tiebreakBySquad(candidates, squads) ?? null;
+  }
+
+  // First-name-only tier: FBref sometimes uses a single token ("Alisson")
+  // while FPL has "A.Becker" / "Alisson Becker". Match a full-name prefix.
+  if (fbTokens.length === 1) {
+    const only = fbTokens[0];
+    const candidates = players.filter(
+      (p) => norm(p.fullName).startsWith(only) && norm(p.fullName) !== only,
+    );
+    if (candidates.length === 1) return candidates[0];
+    if (candidates.length > 1) return tiebreakBySquad(candidates, squads) ?? null;
+  }
 
   return null;
 }

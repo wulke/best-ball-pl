@@ -38,44 +38,56 @@ export type FbrefField =
   | 'gkWins';
 
 type PageSpec = {
-  /** Raw-filename suffix: `<season>_<page>.html`. */
+  /** Canonical URL slug for this page type on FBref ("shooting", "passing",
+   *  "passing_types", "defense", "keepers") — used to identify saved files
+   *  by their content, since browsers name the files however they like. */
+  slug: string;
+  /** Legacy raw-filename suffix: `<season>_<page>.html` (still honoured as a
+   *  fallback when the canonical URL can't be read). Also the cache key. */
   file: string;
   /** field → candidate `data-stat` names (first hit in the table wins). */
   dataStats: Partial<Record<FbrefField, string[]>>;
-  /** field → exact thead label (last header row), fallback when data-stat misses. */
-  headers: Partial<Record<FbrefField, string>>;
+  /** field → thead labels (last header row), fallback when data-stat misses.
+   *  Both short column forms (SoT, KP, Crs) and full display labels
+   *  ("Shots on Target") are accepted — FBref varies by page and season. */
+  headers: Partial<Record<FbrefField, string[]>>;
 };
 
-/** Column guesses from FBref's documented data-stat vocabulary; header text
- *  (SoT, KP, Crs, TklW, Cmp, W) is the fallback if names drift. */
+/** Column guesses from FBref's documented data-stat vocabulary; thead labels
+ *  (SoT, KP, Crs, TklW, Cmp, W) are the fallback if names drift. */
 const PAGE_SPECS: PageSpec[] = [
   {
+    slug: 'shooting',
     file: 'shooting',
     dataStats: { shots: ['shots'], shotsOnTarget: ['shots_on_target'] },
-    headers: { shots: 'Sh', shotsOnTarget: 'SoT' },
+    headers: { shots: ['Sh', 'Shots Total'], shotsOnTarget: ['SoT', 'Shots on Target'] },
   },
   {
+    slug: 'passing',
     file: 'passing',
     dataStats: {
       passesCompleted: ['passes_completed'],
       keyPasses: ['assisted_shots', 'key_passes'],
     },
-    headers: { passesCompleted: 'Cmp', keyPasses: 'KP' },
+    headers: { passesCompleted: ['Cmp', 'Passes Completed'], keyPasses: ['KP', 'Key Passes'] },
   },
   {
+    slug: 'passing_types',
     file: 'passing_types',
     dataStats: { crosses: ['crosses'] },
-    headers: { crosses: 'Crs' },
+    headers: { crosses: ['Crs', 'Crosses'] },
   },
   {
+    slug: 'defense',
     file: 'defense',
     dataStats: { tacklesWon: ['tackles_won'] },
-    headers: { tacklesWon: 'TklW' },
+    headers: { tacklesWon: ['TklW', 'Tackles Won'] },
   },
   {
+    slug: 'keepers',
     file: 'keeper',
     dataStats: { gkWins: ['gk_wins'] },
-    headers: { gkWins: 'W' },
+    headers: { gkWins: ['W', 'Wins'] },
   },
 ];
 
@@ -143,13 +155,27 @@ type ExtractedTable = {
 };
 
 async function extractTable(html: string, spec: PageSpec): Promise<ExtractedTable> {
+  // FBref delivers its player tables inside an HTML comment block (a script
+  // swaps them in on load), so the raw browser DOM only shows the squad
+  // summary tables. Pull the `stats_<page>` table straight out of the raw
+  // HTML instead; fall back to the full page when the regex misses.
+  const playerTableMatch = html.match(
+    new RegExp(`<table[^>]*id="stats_${spec.file}"[^>]*>[\\s\\S]*?</table>`),
+  );
+  const content = playerTableMatch
+    ? `<!doctype html><html><body>${playerTableMatch[0]}</body></html>`
+    : html;
   const browser = await launchLocalChromium();
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    await page.setContent(content, { waitUntil: 'domcontentloaded' });
     return await page.evaluate((specInner: PageSpec) => {
-      const table = document.querySelector('table[id^="stats_"]');
-      if (!table) return { rows: [], availableStats: [], availableHeaders: [], missing: 'table' } as ExtractedTable & { missing?: string };
+      // Pick the PLAYER table. FBref pages also carry squad-summary tables
+      // (stats_squads_*) whose rows have no player cell — skip those. The
+      // player cell is a <td data-stat="player"> (the <th> is the ranker).
+      const tables = [...document.querySelectorAll('table[id^="stats_"]')];
+      const table = tables.find((t) => t.querySelector('tbody tr [data-stat="player"]'));
+      if (!table) return { rows: [], availableStats: [], availableHeaders: [], missing: 'player-table' } as ExtractedTable & { missing?: string };
 
       // Align cells with the LAST header row's labels (FBref stacks over-headers).
       const headerRows = table.querySelectorAll('thead tr');
@@ -170,8 +196,8 @@ async function extractTable(html: string, spec: PageSpec): Promise<ExtractedTabl
           const stats = specInner.dataStats[field] ?? [];
           let idx = tds.findIndex((td) => stats.includes(td.getAttribute('data-stat') ?? ''));
           if (idx === -1) {
-            const label = specInner.headers[field];
-            if (label) idx = labels.findIndex((l) => l === label);
+            const candidates = specInner.headers[field] ?? [];
+            if (candidates.length) idx = labels.findIndex((l) => candidates.includes(l));
           }
           if (idx !== -1) colIndexByField.set(field, idx);
         }
@@ -179,14 +205,22 @@ async function extractTable(html: string, spec: PageSpec): Promise<ExtractedTabl
 
       const rows: FbrefPlayerRow[] = [];
       for (const tr of table.querySelectorAll('tbody tr')) {
-        const th = tr.querySelector('th[data-stat="player"]');
+        const playerCell = tr.querySelector('[data-stat="player"]');
         const tds = [...tr.querySelectorAll('td')];
-        if (!th || tds.length === 0) continue;
-        const name = (th.textContent ?? '').replace(/[*†]/g, '').trim();
+        if (!playerCell || tds.length === 0) continue;
+        const name = (playerCell.textContent ?? '').replace(/[*†]/g, '').trim();
         if (!name) continue;
-        const squadRaw = tds.find((td) => td.getAttribute('data-stat') === 'squad')?.textContent?.trim() ?? '';
-        const minutesText = tds.find((td) => td.getAttribute('data-stat') === 'minutes')?.textContent ?? '0';
+        const squadRaw =
+          tds.find((td) => ['squad', 'team'].includes(td.getAttribute('data-stat') ?? ''))?.textContent?.trim() ?? '';
+        // FBref's player tables sometimes drop the raw minutes column; 90s × 90
+        // is the same number modulo display rounding (±45 min, below the QA
+        // threshold of 90).
+        const minutesText = tds.find((td) => td.getAttribute('data-stat') === 'minutes')?.textContent;
         const n90Text = tds.find((td) => td.getAttribute('data-stat') === 'minutes_90s')?.textContent ?? '0';
+        const minutes =
+          minutesText != null && minutesText.trim() !== ''
+            ? Number.parseFloat(minutesText.replace(/,/g, ''))
+            : Number.parseFloat(n90Text.replace(/,/g, '')) * 90;
         const values: Partial<Record<FbrefField, number>> = {};
         for (const [field, idx] of colIndexByField) {
           const raw = tds[idx]?.textContent ?? '';
@@ -198,7 +232,7 @@ async function extractTable(html: string, spec: PageSpec): Promise<ExtractedTabl
         rows.push({
           name,
           squad: squadRaw === '' || squadRaw === '2 clubs' || squadRaw === '3 clubs' ? null : squadRaw,
-          minutes: Number.parseFloat(minutesText.replace(/,/g, '')) || 0,
+          minutes: Number.isFinite(minutes) ? minutes : 0,
           n90: Number.parseFloat(n90Text) || 0,
           values,
         });
@@ -216,46 +250,94 @@ async function extractTable(html: string, spec: PageSpec): Promise<ExtractedTabl
 }
 
 // ---------------------------------------------------------------------------
-// Public entry: parse every file that exists in data/fbref-raw/
+// Public entry: parse every saved page in data/fbref-raw/
 // ---------------------------------------------------------------------------
+
+/** Identify which (season, page) a saved file is. The page's canonical URL is
+ *  authoritative (browsers name files arbitrarily); the legacy
+ *  `<season>_<page>.html` convention is the fallback. */
+function detectPage(
+  fileName: string,
+  html: string,
+  onLog: (msg: string) => void,
+): { seasonUrl: string; spec: PageSpec } | null {
+  const canonical = html.match(/rel="canonical"\s+href="([^"]+)"/)?.[1];
+  if (canonical) {
+    const m = canonical.match(/\/comps\/9\/(\d{4}-\d{4})\/([a-z_]+)\//);
+    if (m) {
+      const [, seasonUrl, slug] = m;
+      if (!SEASON_LABELS[seasonUrl]) {
+        onLog(`[fbref] skip ${fileName}: season ${seasonUrl} isn't in the model window`);
+        return null;
+      }
+      const spec = PAGE_SPECS.find((s) => s.slug === slug);
+      if (spec) return { seasonUrl, spec };
+      onLog(`[fbref] skip ${fileName}: "${slug}" page isn't one of the volume pages`);
+      return null;
+    }
+  }
+  const base = path.basename(fileName).toLowerCase();
+  for (const [seasonUrl] of Object.entries(SEASON_LABELS)) {
+    for (const spec of PAGE_SPECS) {
+      if (base === `${seasonUrl}_${spec.file}.html`) return { seasonUrl, spec };
+    }
+  }
+  return null;
+}
 
 export async function parseFbrefRawDir(onLog: (msg: string) => void = console.log): Promise<FbrefParsed> {
   const parsed: FbrefParsed = { generated_at: new Date().toISOString(), seasons: {} };
-  const missing: string[] = [];
+  for (const label of Object.values(SEASON_LABELS)) parsed.seasons[label] = {};
+  const seen = new Set<string>();
 
+  const files = fs.existsSync(FBREF_RAW_DIR)
+    ? fs.readdirSync(FBREF_RAW_DIR).filter((f) => f.endsWith('.html')).sort()
+    : [];
+  if (!files.length) {
+    onLog('[fbref] no .html files in data/fbref-raw/');
+    return parsed;
+  }
+
+  for (const f of files) {
+    const fullPath = path.join(FBREF_RAW_DIR, f);
+    const html = fs.readFileSync(fullPath, 'utf8');
+    const detected = detectPage(f, html, onLog);
+    if (!detected) continue;
+    const { seasonUrl, spec } = detected;
+    const seasonLabel = SEASON_LABELS[seasonUrl];
+
+    const table = await extractTable(html, spec);
+    if (!table.rows.length) {
+      throw new Error(
+        `No player stats table found in ${f} (detected as ${seasonLabel} ${spec.slug}) — the page may not have ` +
+          `loaded before saving (or Cloudflare's "Just a moment…" wall was saved). Re-save that page. ` +
+          `Available headers: ${table.availableHeaders.join(', ')}`,
+      );
+    }
+    const wanted = Object.keys(spec.dataStats) as FbrefField[];
+    const resolved = wanted.filter((field) => table.rows.some((r) => field in r.values));
+    if (resolved.length === 0) {
+      throw new Error(
+        `None of ${wanted.join('/')} found in ${f} (detected as ${seasonLabel} ${spec.slug}). ` +
+          `data-stats present: ${table.availableStats.slice(0, 40).join(', ')}; headers: ${table.availableHeaders.join(' | ')}`,
+      );
+    }
+    const unresolved = wanted.filter((field) => !resolved.includes(field));
+    if (unresolved.length) onLog(`[fbref] warn: ${unresolved.join('/')} unresolved in ${spec.slug}`);
+    const key = spec.file;
+    if (parsed.seasons[seasonLabel][key]) onLog(`[fbref] note: ${f} duplicates ${seasonLabel} ${key} — last one wins`);
+    parsed.seasons[seasonLabel][key] = table.rows;
+    seen.add(`${seasonLabel}/${key}`);
+    onLog(`[fbref] ${seasonLabel} ${spec.slug}: ${table.rows.length} rows (fields: ${resolved.join(', ')})`);
+  }
+
+  const missing: string[] = [];
   for (const [seasonUrl, seasonLabel] of Object.entries(SEASON_LABELS)) {
-    parsed.seasons[seasonLabel] = {};
     for (const spec of PAGE_SPECS) {
-      const file = path.join(FBREF_RAW_DIR, `${seasonUrl}_${spec.file}.html`);
-      if (!fs.existsSync(file)) {
-        missing.push(path.basename(file));
-        continue;
-      }
-      const html = fs.readFileSync(file, 'utf8');
-      const table = await extractTable(html, spec);
-      if (!table.rows.length) {
-        throw new Error(
-          `No stats table found in ${path.basename(file)} — the page may not have loaded before saving ` +
-            `(or Cloudflare's "Just a moment…" wall was saved). Re-save that page. Available headers: ${table.availableHeaders.join(', ')}`,
-        );
-      }
-      const wanted = Object.keys(spec.dataStats) as FbrefField[];
-      const resolved = wanted.filter((f) => table.rows.some((r) => f in r.values));
-      if (resolved.length === 0) {
-        throw new Error(
-          `None of ${wanted.join('/')} found in ${path.basename(file)}. data-stats present: ${table.availableStats.slice(0, 40).join(', ')}; headers: ${table.availableHeaders.join(' | ')}`,
-        );
-      }
-      const unresolved = wanted.filter((f) => !resolved.includes(f));
-      if (unresolved.length) onLog(`[fbref] warn: ${unresolved.join('/')} unresolved in ${spec.file}`);
-      parsed.seasons[seasonLabel][spec.file] = table.rows;
-      onLog(`[fbref] ${seasonLabel} ${spec.file}: ${table.rows.length} rows (fields: ${resolved.join(', ')})`);
+      if (!seen.has(`${seasonLabel}/${spec.file}`)) missing.push(`${seasonUrl}_${spec.file}`);
     }
   }
-
-  if (missing.length) {
-    onLog(`[fbref] missing raw pages (skipped): ${missing.join(', ')}`);
-  }
+  if (missing.length) onLog(`[fbref] still missing (not saved yet): ${missing.join(', ')}`);
   return parsed;
 }
 

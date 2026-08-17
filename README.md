@@ -66,9 +66,11 @@ docs/
 FBref has no API and Cloudflare-blocks automated fetches, so its league pages
 are **saved by hand** from a normal browser and parsed locally: open the ten
 URLs in `data/fbref-raw/README.md`, ⌘S → *HTML Only* into `data/fbref-raw/`
-(exact filenames from the README), then run `npm run fbref`. That parses the
+(filenames don't matter — the parser detects each page by its embedded
+canonical URL), then run `npm run fbref`. That parses the
 pages (local Chromium, zero network), commits `data/fbref.json`, matches
-FBref players to FPL elements (normalized names; hand fixes go in
+FBref players to FPL elements (normalized full-name, web-name, and
+surname-with-sanity-check tiers; hand fixes go in
 `data/fbref-overrides.json` as `{"<fbref name>": "<fpl element id>"}`),
 enriches each season row's volume fields, and reprojects. **Partial page sets
 are fine**: coverage is tracked per term — a term whose page wasn't captured
