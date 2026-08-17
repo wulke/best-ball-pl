@@ -48,6 +48,9 @@ src/
     project.ts  #   Minutes/rates/volume/team priors → p10/p50/p90 projections
     cli.ts      #   npm run model: recompute + ranked report
   ui/         # Browser-only React cheat sheet (Vite)
+    App.tsx         #   Snapshot load, filters/search, sticky controls bar
+    PlayerTable.tsx #   Ranked tier table: bands, rows, flags
+    useDrafted.ts   #   Mark-drafted state persisted to localStorage
 data/
   snapshot.json  # Committed, ETL-generated; the UI's single data source
 docs/
@@ -72,6 +75,18 @@ Every constant lives in `src/model/config.ts`; tune and re-run `npm run model`, 
 ## Design
 
 UI follows the design system in [`DESIGN.md`](DESIGN.md) — data-dense sports analytics, semantic Tailwind tokens, IBM Plex typography, position badges (G/D/MD/FW) fixed across themes.
+
+### Cheat sheet view (v1)
+
+A single ranked table over the snapshot, built for draft day:
+
+- **Ranking**: overall by projected p50 points, or within-position (`posRank`) when a position filter is active.
+- **Tier bands**: in a position-filtered view, natural-break tiers render as labeled divider rows (`Tier 3 · 2 players · 308.8–308.1 pts`); in the overall view tiers interleave across positions, so tier shows as a compact per-row `T4` column instead.
+- **Columns**: pick toggle, rank, player, position, team, £ price, projected p50 points, tier, /90 efficiency, ceiling (p90 per 90 — the best-ball spike proxy), and value (pts per £M).
+- **Flags**: `!` marks non-available status (hover for the injury/suspension news); `M`/`L` chips mark medium/low projection confidence.
+- **Search** matches player name or team; **Hide drafted** (default on) removes picked players from the board.
+- **Mark drafted**: the `✓` toggle per row persists in localStorage across sessions; **Clear** resets the board between practice drafts.
+- **Print-friendly**: printing (or Print preview) flips any theme to light paper/dark ink via a print token override, hides interactive controls, and tightens row density — print with filters active to scope the sheet (e.g. MD-only page).
 
 ## Workflow
 
