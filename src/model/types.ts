@@ -45,7 +45,7 @@ export type PlayerProjection = {
   ceilingPer90: number;
   /** Projected p50 season minutes (durability). */
   minutes: number;
-  /** p50 points per £M of draft price. */
+  /** Tournament-adjusted score (see `tournamentScore`) per £M of draft price. */
   value: number;
   /** 1-based rank within position and overall, by tournamentScore. */
   posRank: number;
