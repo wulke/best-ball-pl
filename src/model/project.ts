@@ -461,12 +461,22 @@ export function buildProjections(
     }
   });
 
-  // One team, one starting keeper: if a club's GK minutes sum past a full
-  // season's job, scale them proportionally — otherwise every incumbent in a
-  // goalkeeping carousel projects as a 3420-minute starter (the ARS 2026/27
-  // Raya/Meslier/Arrizabalaga problem). Outfield competition stays unmodeled
-  // v1 — squads rotate, the #1 job does not.
-  const GK_JOB_MINUTES = 3450;
+  // Goalkeepers: one club, 38 STARTS — and a share of the job is claimed by
+  // recent starting evidence, not by minutes. Prior-season minutes follow the
+  // keeper across transfers, so a proportional minute-split lets stale
+  // cross-club bench minutes steal the #1 job (the ARS 2026/27
+  // Raya/Meslier/Arrizabalaga problem: Raya started 37 and 38 straight
+  // seasons, yet projected behind keepers with 0 and 90 minutes last season).
+  // A keeper claims club starts by starting ≥ gkCredibleStarts matches last
+  // season; claimants split the club's gkStartsPerSeason proportionally to
+  // recency-weighted starts priors (injury risk stays priced — priors sit
+  // under 38), and the bench inherits the residual — the club's 38 starts of
+  // win/CS/save opportunity are counted exactly once, handed to whoever
+  // actually starts. Clubs with no credible claimant (fresh carousel,
+  // promoted room) fall back to a prior-proportional split of the whole job.
+  // Expected wins/CS/saves then follow structurally: matches = starts, club
+  // rates × starts. Outfield competition stays unmodeled v1 — squads rotate,
+  // the #1 GK job does not.
   const gkIndicesByTeam = new Map<string, number[]>();
   players.forEach((p, i) => {
     if (p.position !== 'G') return;
@@ -474,12 +484,68 @@ export function buildProjections(
     list.push(i);
     gkIndicesByTeam.set(p.team, list);
   });
-  for (const [team, indices] of gkIndicesByTeam) {
-    void team;
-    const total = indices.reduce((sum, i) => sum + minutesByPlayer[i], 0);
-    if (total > GK_JOB_MINUTES) {
-      for (const i of indices) minutesByPlayer[i] *= GK_JOB_MINUTES / total;
+  const startsPrior = (p: SnapshotPlayer): number => {
+    // Mirror expectedMinutes' season-count logic in starts: one-season keepers
+    // shrink toward a no-history baseline (their 0.55-weighted row alone
+    // would halve a 34-start #1); multi-season keepers recency-weight.
+    const w = cfg.minutes.recencyWeights;
+    if (p.seasons.length === 0) return 0;
+    if (p.seasons.length === 1) {
+      const observed = p.seasons[0].starts;
+      return (
+        observed * cfg.minutes.singleSeasonShrink +
+        (cfg.minutes.noHistoryMinutes / 90) * (1 - cfg.minutes.singleSeasonShrink)
+      );
     }
+    return p.seasons
+      .slice(0, w.length)
+      .reduce((sum, s, k) => sum + s.starts * w[k], 0);
+  };
+  for (const indices of gkIndicesByTeam.values()) {
+    const priors = indices.map((i) => startsPrior(players[i]));
+    const isClaimant = indices.map(
+      (i) => (players[i].seasons[0]?.starts ?? 0) >= cfg.minutes.gkCredibleStarts,
+    );
+    const starts = new Array<number>(indices.length).fill(0);
+
+    if (isClaimant.some(Boolean)) {
+      const claimantPrior = priors.reduce((sum, prior, k) => sum + (isClaimant[k] ? prior : 0), 0);
+      // Claimants keep their prior expected starts (injury risk priced in) —
+      // scaled down only when the claimant pool overflows the club's job.
+      const scale = Math.min(1, cfg.minutes.gkStartsPerSeason / claimantPrior);
+      indices.forEach((_, k) => {
+        if (isClaimant[k]) starts[k] = priors[k] * scale;
+      });
+      // Bench inherits the club's residual starts (injury cover), split by priors.
+      const assigned = starts.reduce((sum, s) => sum + s, 0);
+      const residual = Math.max(0, cfg.minutes.gkStartsPerSeason - assigned);
+      const bench = indices.map((_, k) => (isClaimant[k] ? 0 : priors[k]));
+      const benchPrior = bench.reduce((sum, b) => sum + b, 0);
+      if (residual > 0) {
+        const benchCount = indices.filter((_, j) => !isClaimant[j]).length;
+        indices.forEach((_, k) => {
+          if (!isClaimant[k]) {
+            starts[k] =
+              benchPrior > 0
+                ? (bench[k] / benchPrior) * residual
+                : residual / Math.max(1, benchCount);
+          }
+        });
+      }
+    } else {
+      // No credible #1: prior-proportional split of the whole job (+1 floor
+      // so a room of all-zero priors doesn't degenerate).
+      const floorPriors = priors.map((prior) => prior + 1);
+      const total = floorPriors.reduce((sum, f) => sum + f, 0);
+      indices.forEach((_, k) => {
+        starts[k] = (floorPriors[k] / total) * cfg.minutes.gkStartsPerSeason;
+      });
+    }
+
+    indices.forEach((i, k) => {
+      const statusFactor = STATUS_FACTORS[players[i].status] ?? 1;
+      minutesByPlayer[i] = starts[k] * 90 * statusFactor;
+    });
   }
 
   // Position means from established players (≥900 recency-weighted minutes).

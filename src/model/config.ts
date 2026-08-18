@@ -125,6 +125,11 @@ export type MinutesConfig = {
    * exempt: cup rotation rests outfield legs, not the league #1 keeper.
    */
   congestion: { topTeams: number; factor: number };
+  /** Goalkeeper job-share: one club hands out this many starts per season. */
+  gkStartsPerSeason: number;
+  /** Starts last season required to claim a share of the club's GK job
+   *  (recent starting evidence — stale cross-club minutes don't count). */
+  gkCredibleStarts: number;
 };
 
 export const DEFAULT_MINUTES: MinutesConfig = {
@@ -134,6 +139,8 @@ export const DEFAULT_MINUTES: MinutesConfig = {
   statusFactors: { i: 0.5, d: 0.8 },
   maxMinutes: 3420,
   congestion: { topTeams: 6, factor: 0.95 },
+  gkStartsPerSeason: 38,
+  gkCredibleStarts: 8,
 };
 
 /** Rate estimation knobs (per-90 attacking terms). */
