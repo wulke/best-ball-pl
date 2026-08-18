@@ -6,6 +6,8 @@ Sibling of [dynastyff](https://github.com/wulke/dynastyff) — same TypeScript/s
 
 > **Time-critical effort.** The 2026-27 EPL season starts Friday 2026-08-21 and drafts are live. Scope is deliberately cut to a usable sheet first; see the wayfinder map issue for the routed plan.
 
+**Live site**: https://wulke.github.io/best-ball-pl/ — redeploys automatically from `main` via GitHub Actions (`.github/workflows/deploy.yml`). It publishes whatever `data/snapshot.json` is committed; run `npm run etl` and commit the refreshed snapshot to update the live data. Pull requests run a separate check workflow (`.github/workflows/ci.yml`: typecheck, test, build) but do not deploy.
+
 ## Prerequisites
 
 - Node.js 20+
