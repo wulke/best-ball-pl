@@ -1,0 +1,946 @@
+Completed
+ChampionsDraftsLiveResultsRankingsNews feed
+$29.20
+HOFF84
+1.1|1
+E. Haaland
+FW - MCI
+BIFFRENYLDS
+1.2|2
+B. Fernandes
+MD - MUN
+JOJODFS
+1.3|3
+D. Szoboszlai
+MD - LIV
+NEXTMYTH
+1.4|4
+B. Saka
+FW - ARS
+BUCKEYEREMUS
+1.5|5
+C. Palmer
+MD - CHE
+WULKE
+1.6|6
+A. Semenyo
+MD - MCI
+DANNYOSHEA23
+1.7|7
+M. Cunha
+FW - MUN
+BFITZER
+1.8|8
+P. Porro
+D - TOT
+POLARJACE
+1.9|9
+B. Mbeumo
+FW - MUN
+JEFONEF
+1.10|10
+A. Isak
+FW - LIV
+JEFONEF
+2.1|11
+J. Pedro
+FW - CHE
+POLARJACE
+2.2|12
+M. Gibbs-White
+MD - NFO
+BFITZER
+2.3|13
+D. Rice
+MD - ARS
+DANNYOSHEA23
+2.4|14
+I. Thiago
+FW - BRE
+WULKE
+2.5|15
+V. Gyokeres
+FW - ARS
+BUCKEYEREMUS
+2.6|16
+F. Wirtz
+MD - LIV
+NEXTMYTH
+2.7|17
+M. Tavernier
+MD - BOU
+JOJODFS
+2.8|18
+N. Williams
+D - NFO
+BIFFRENYLDS
+2.9|19
+R. Cherki
+MD - MCI
+HOFF84
+2.10|20
+D. Raya
+G - ARS
+HOFF84
+3.1|21
+G. Donnarumma
+G - MCI
+BIFFRENYLDS
+3.2|22
+P. Gross
+MD - BHA
+JOJODFS
+3.3|23
+O. Watkins
+FW - AVL
+NEXTMYTH
+3.4|24
+E. Fernandez
+MD - CHE
+BUCKEYEREMUS
+3.5|25
+J. Doku
+FW - MCI
+WULKE
+3.6|26
+J. Pickford
+G - EVE
+DANNYOSHEA23
+3.7|27
+M. Rogers
+MD - CHE
+BFITZER
+3.8|28
+B. Guimaraes
+MD - NEW
+POLARJACE
+3.9|29
+Rayan
+FW - BOU
+JEFONEF
+3.10|30
+P. Foden
+MD - MCI
+JEFONEF
+4.1|31
+C. Gakpo
+FW - LIV
+POLARJACE
+4.2|32
+A. Iwobi
+FW - FUL
+BFITZER
+4.3|33
+A. Stach
+MD - LEE
+DANNYOSHEA23
+4.4|34
+G. Magalhaes
+D - ARS
+WULKE
+4.5|35
+V. Van Dijk
+D - LIV
+BUCKEYEREMUS
+4.6|36
+K. Dewsbury-Hall
+MD - EVE
+NEXTMYTH
+4.7|37
+E. Anderson
+MD - MCI
+JOJODFS
+4.8|38
+E. Martinez
+G - AVL
+BIFFRENYLDS
+4.9|39
+B. Barcola
+FW - PSG
+HOFF84
+4.10|40
+M. Odegaard
+MD - ARS
+HOFF84
+5.1|41
+N. O'Reilly
+D - MCI
+BIFFRENYLDS
+5.2|42
+H. Wilson
+FW - LEE
+JOJODFS
+5.3|43
+D. Ouattara
+FW - BRE
+NEXTMYTH
+5.4|44
+J. Mateta
+FW - CRY
+BUCKEYEREMUS
+5.5|45
+D. Munoz
+D - CRY
+WULKE
+5.6|46
+O. McBurnie
+FW - HUL
+DANNYOSHEA23
+5.7|47
+I. Sarr
+FW - CRY
+BFITZER
+5.8|48
+J. Garner
+MD - EVE
+POLARJACE
+5.9|49
+M. Kudus
+MD - TOT
+JEFONEF
+5.10|50
+E. Le Fee
+MD - SUN
+JEFONEF
+6.1|51
+R. James
+D - CHE
+POLARJACE
+6.2|52
+M. Cash
+D - AVL
+BFITZER
+6.3|53
+A. Truffert
+D - BOU
+DANNYOSHEA23
+6.4|54
+Alisson
+G - LIV
+WULKE
+6.5|55
+M. Guehi
+D - MCI
+BUCKEYEREMUS
+6.6|56
+K. Havertz
+FW - ARS
+NEXTMYTH
+6.7|57
+H. Barnes
+FW - NEW
+JOJODFS
+6.8|58
+D. Calvert-Lewin
+FW - LEE
+BIFFRENYLDS
+6.9|59
+S. Lammens
+G - MUN
+HOFF84
+6.10|60
+A. Robinson
+D - FUL
+HOFF84
+7.1|61
+E. Buendia
+MD - AVL
+BIFFRENYLDS
+7.2|62
+C. Kelleher
+G - BRE
+JOJODFS
+7.3|63
+I. Ndiaye
+FW - EVE
+NEXTMYTH
+7.4|64
+L. Hall
+D - NEW
+BUCKEYEREMUS
+7.5|65
+P. Neto
+FW - CHE
+WULKE
+7.6|66
+E. Eze
+MD - ARS
+DANNYOSHEA23
+7.7|67
+M. Tel
+FW - TOT
+BFITZER
+7.8|68
+B. Verbruggen
+G - BHA
+POLARJACE
+7.9|69
+M. Kerkez
+D - LIV
+JEFONEF
+7.10|70
+J. Maddison
+MD - TOT
+JEFONEF
+8.1|71
+J. Gvardiol
+D - MCI
+POLARJACE
+8.2|72
+J. Timber
+D - ARS
+BFITZER
+8.3|73
+R. Roefs
+G - SUN
+DANNYOSHEA23
+8.4|74
+B. Sesko
+FW - MUN
+WULKE
+8.5|75
+K. Mitoma
+MD - BHA
+BUCKEYEREMUS
+8.6|76
+D. Henderson
+G - CRY
+NEXTMYTH
+8.7|77
+R. Sanchez
+G - CHE
+JOJODFS
+8.8|78
+M. Sels
+G - NFO
+BIFFRENYLDS
+8.9|79
+M. Damsgaard
+FW - BRE
+HOFF84
+8.10|80
+P. Dorgu
+D - MUN
+HOFF84
+9.1|81
+B. Brobbey
+FW - SUN
+BIFFRENYLDS
+9.2|82
+C. Tzolis
+FW - ARS
+JOJODFS
+9.3|83
+Y. Pino
+FW - CRY
+NEXTMYTH
+9.4|84
+I. Maatsen
+D - AVL
+BUCKEYEREMUS
+9.5|85
+D. Petrovic
+G - BOU
+WULKE
+9.6|86
+B. Leno
+G - FUL
+DANNYOSHEA23
+9.7|87
+J. McGinn
+MD - AVL
+BFITZER
+9.8|88
+Y. Tielemans
+MD - MUN
+POLARJACE
+9.9|89
+J. Trafford
+G - MCI
+JEFONEF
+9.10|90
+A. Kinsky
+G - TOT
+JEFONEF
+10.1|91
+Y. Minteh
+FW - BHA
+POLARJACE
+10.2|92
+N. Mukiele Mulere
+D - SUN
+BFITZER
+10.3|93
+A. Garnacho
+FW - CHE
+DANNYOSHEA23
+10.4|94
+W. Osula
+FW - NEW
+WULKE
+10.5|95
+J. Tarkowski
+D - EVE
+BUCKEYEREMUS
+10.6|96
+R. Calafiori
+D - ARS
+NEXTMYTH
+10.7|97
+A. Diallo
+FW - MUN
+JOJODFS
+10.8|98
+A. Wharton
+MD - CRY
+BIFFRENYLDS
+10.9|99
+O. Hutchinson
+MD - NFO
+HOFF84
+10.10|100
+D. Solanke
+FW - TOT
+HOFF84
+11.1|101
+J. Manzambi
+MD - AVL
+BIFFRENYLDS
+11.2|102
+M. De Cuyper
+D - BHA
+JOJODFS
+11.3|103
+G. Xhaka
+MD - SUN
+NEXTMYTH
+11.4|104
+S. Tonali
+MD - TOT
+BUCKEYEREMUS
+11.5|105
+J. Frimpong
+D - LIV
+WULKE
+11.6|106
+Igor Jesus
+FW - NFO
+DANNYOSHEA23
+11.7|107
+A. Mac Allister
+MD - LIV
+BFITZER
+11.8|108
+K. Schade
+FW - BRE
+POLARJACE
+11.9|109
+C. Rushworth
+G - BHA
+JEFONEF
+11.10|110
+L. Davis
+D - IPS
+JEFONEF
+12.1|111
+K. Tzolakis
+G - OLY
+POLARJACE
+12.2|112
+R. Gravenberch
+MD - LIV
+BFITZER
+12.3|113
+D. Dalot
+D - MUN
+DANNYOSHEA23
+12.4|114
+F. Kadioglu
+D - BHA
+WULKE
+12.5|115
+D. Maeda
+MD - IPS
+BUCKEYEREMUS
+12.6|116
+N. Pope
+G - NEW
+NEXTMYTH
+12.7|117
+A. Scott
+MD - BOU
+JOJODFS
+12.8|118
+T. Hume
+D - SUN
+BIFFRENYLDS
+12.9|119
+T. Mitchell
+D - CRY
+HOFF84
+12.10|120
+Estevao
+FW - CHE
+HOFF84
+13.1|121
+Evanilson
+FW - BOU
+BIFFRENYLDS
+13.2|122
+G. Hamer
+MD - SHU
+JOJODFS
+13.3|123
+J. van Hecke
+D - TOT
+NEXTMYTH
+13.4|124
+E. Ampadu
+D - LEE
+BUCKEYEREMUS
+13.5|125
+J. Kluivert
+MD - BOU
+WULKE
+13.6|126
+M. Lacroix
+D - CRY
+DANNYOSHEA23
+13.7|127
+D. Gomez
+MD - BHA
+BFITZER
+13.8|128
+J. Murphy
+MD - NEW
+POLARJACE
+13.9|129
+O. Bobb
+MD - FUL
+JEFONEF
+13.10|130
+M. Palestra
+D - CHE
+JEFONEF
+14.1|131
+M. Grimes
+MD - COV
+POLARJACE
+14.2|132
+Kevin
+FW - FUL
+BFITZER
+14.3|133
+V. Mykolenko
+D - EVE
+DANNYOSHEA23
+14.4|134
+C. Wood
+FW - NFO
+WULKE
+14.5|135
+N. Woltemade
+FW - NEW
+BUCKEYEREMUS
+14.6|136
+G. Rutter
+FW - BHA
+NEXTMYTH
+14.7|137
+M. Kayode
+D - BRE
+JOJODFS
+14.8|138
+M. Wieffer
+D - BHA
+BIFFRENYLDS
+14.9|139
+W. Saliba
+D - ARS
+HOFF84
+14.10|140
+J. Hinshelwood
+MD - BHA
+HOFF84
+15.1|141
+M. Jensen
+MD - BRE
+BIFFRENYLDS
+15.2|142
+E. Kroupi
+FW - BOU
+JOJODFS
+15.3|143
+M. Fernandes
+MD - TOT
+NEXTMYTH
+15.4|144
+M. Nunes
+MD - MCI
+BUCKEYEREMUS
+15.5|145
+M. Thiaw
+D - NEW
+WULKE
+15.6|146
+E. Smith Rowe
+MD - FUL
+DANNYOSHEA23
+15.7|147
+M. van de Ven
+D - TOT
+BFITZER
+15.8|148
+M. Belloumi
+FW - HUL
+POLARJACE
+15.9|149
+O. Aina
+D - NFO
+JEFONEF
+15.10|150
+A. Elanga
+FW - NEW
+JEFONEF
+16.1|151
+J. King
+D - FUL
+POLARJACE
+16.2|152
+L. Shaw
+D - MUN
+BFITZER
+16.3|153
+V. Livramento
+D - NEW
+DANNYOSHEA23
+16.4|154
+M. Caicedo
+MD - CHE
+WULKE
+16.5|155
+A. Robertson
+D - TOT
+BUCKEYEREMUS
+16.6|156
+H. Wright
+FW - COV
+NEXTMYTH
+16.7|157
+N. Okafor
+FW - LEE
+JOJODFS
+16.8|158
+E. Konsa
+D - AVL
+BIFFRENYLDS
+16.9|159
+R. Dias
+D - MCI
+HOFF84
+16.10|160
+R. Muniz
+FW - FUL
+HOFF84
+17.1|161
+P. Hincapie
+D - ARS
+BIFFRENYLDS
+17.2|162
+M. Van Ewijk
+D - COV
+JOJODFS
+17.3|163
+J. Gomes
+MD - AVL
+NEXTMYTH
+17.4|164
+E. Mason-Clark
+FW - COV
+BUCKEYEREMUS
+17.5|165
+Y. Wissa
+FW - NEW
+WULKE
+17.6|166
+R. Araujo
+D - LIV
+DANNYOSHEA23
+17.7|167
+L. Perri
+G - LEE
+BFITZER
+17.8|168
+G. Gudmundsson
+D - LEE
+POLARJACE
+17.9|169
+Beto
+FW - EVE
+JEFONEF
+17.10|170
+Savinho
+MD - MCI
+JEFONEF
+18.1|171
+M. Rashford
+FW - MUN
+POLARJACE
+18.2|172
+Rodri
+MD - MCI
+BFITZER
+18.3|173
+V. Osimhen
+FW - GAL
+DANNYOSHEA23
+18.4|174
+J. Rudoni
+MD - COV
+WULKE
+18.5|175
+H. Ekitike
+FW - LIV
+BUCKEYEREMUS
+18.6|176
+J. Hill
+D - BOU
+NEXTMYTH
+18.7|177
+M. Penders
+G - CHE
+JOJODFS
+18.8|178
+J. Bogle
+D - LEE
+BIFFRENYLDS
+18.9|179
+C. Kostoulas
+FW - BHA
+HOFF84
+18.10|180
+T. Muharemovic
+D - LEE
+Players
+FW
+MD
+D
+G
+My rank
+ADP
+Proj
+Oscar Mingueza
+D
+CRY
+-
+166.9
+112.8
+Jaden Philogene
+FW
+IPS
+-
+178.0
+102.5
+Victor Torp
+MD
+COV
+-
+177.1
+102.3
+Loum Tchaouna
+FW
+COV
+-
+178.5
+101.3
+Yasin Ayari
+MD
+BHA
+-
+166.6
+93.0
+Keane Lewis-Potter
+FW
+BRE
+-
+179.4
+91.8
+Hayden Hackney
+MD
+EVE
+-
+161.0
+90.0
+Brennan Johnson
+FW
+CRY
+-
+178.4
+89.3
+Dan Ndoye
+FW
+NFO
+-
+174.3
+86.8
+Pascal Struijk
+D
+BHA
+-
+178.9
+84.0
+Tatsuhiro Sakamoto
+MD
+COV
+-
+179.7
+83.5
+Queue
+Use the star button in the player list to add a player to your queue.
+Queued players will appear here.
+Completed
+Autopilot
+WULKE
+6
+Pick position
+2,178.10
+Projected
+FW
+5
+MD
+5
+D
+6
+G
+2
+FW
+Viktor Gyokeres
+ARS
+27.2
+ADP
+15
+Pick
+Oli McBurnie
+HUL
+149.5
+ADP
+46
+Pick
+Igor Jesus
+NFO
+109.3
+ADP
+106
+Pick
+Nick Woltemade
+NEW
+138.7
+ADP
+135
+Pick
+Hugo Ekitike
+LIV
+178.2
+ADP
+175
+Pick
+MD
+Antoine Semenyo
+MCI
+8.6
+ADP
+6
+Pick
+Eberechi Eze
+ARS
+86.1
+ADP
+66
+Pick
+Kaoru Mitoma
+BHA
+106.6
+ADP
+75
+Pick
+Daizen Maeda
+IPS
+117.9
+ADP
+115
+Pick
+Emile Smith Rowe
+FUL
+179.1
+ADP
+146
+Pick
+D
+Virgil Van Dijk
+LIV
+49.9
+ADP
+35
+Pick
+Marc Guehi
+MCI
+79.3
+ADP
+55
+Pick
+James Tarkowski
+EVE
+137.8
+ADP
+95
+Pick
+Maxence Lacroix
+CRY
+147.9
+ADP
+126
+Pick
+Andy Robertson
+TOT
+166.2
+ADP
+155
+Pick
+Ronald Araujo
+LIV
+162.4
+ADP
+166
+Pick
+G
+Jordan Pickford
+EVE
+52.6
+ADP
+26
+Pick
+Bernd Leno
+FUL
+83.5
+ADP
+86
+Pick
+Mobile web is coming soon
+We're working to bring you a great mobile web experience on Underdog. Until then we suggest you download the native app for iOS or Android.
+If you're drafting on a desktop, we suggest adjusting the browser size to be wider and to better accommodate the drafting experience.
+.avatarFallbackAthleteBasketballWomen__primary{fill:var(--svg-fill-primary)}
+.avatarFallbackAthleteDartsMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackAthleteEsportsMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackAthleteFootballMen__primary{fill:var(--svg-fill-primary)}
+.avatarFallbackAthleteGolfMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackAthleteHockeyMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackSportBaseball__primary{fill:var(--svg-fill-primary)}
+@keyframes spinner_zKoa{to{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,to{stroke-dasharray:42 150;stroke-dashoffset:-59}}
+Your Privacy
+English
+English
+We value your privacy. We use cookies and similar technologies to enable services and functionality on our site and to understand your interaction with our service. We may collect information about your browsing behavior to personalize content and targeted advertisements across devices. By clicking OK, or turning on option on in your preferences, you agree to this as outlined in our Privacy Policy. To update preferences, please use the preferences button below.
+Privacy Policy
+Accept All
+Essential Only
+Update Preferences

@@ -1,8 +1,8 @@
 /**
  * The Drafts view (#20): room list → paste box → match-confirm preview →
- * pick-your-team → review panel. Intake is paste-parse only (#19); until #22
- * lands the parser, pastes are stored verbatim (the fixture gate) and the dev
- * fixture exercises the full flow.
+ * pick-your-team → review panel. Intake is paste-parse only (#19); the real
+ * recap parser (#22) turns the paste into the full pick log, and the dev
+ * fixture exercises the full flow when no real paste is handy.
  */
 import { useRef, useState } from 'react';
 import type { SnapshotPlayer } from '../types.js';
@@ -23,8 +23,7 @@ type Props = {
 
 type Intake =
   | { stage: 'idle' }
-  | { stage: 'preview'; picks: PreviewPick[]; rawPaste: string; suggestedName: string | null; suggestedUrl: string | null }
-  | { stage: 'unimplemented'; rawPaste: string };
+  | { stage: 'preview'; picks: PreviewPick[]; rawPaste: string; suggestedName: string | null; suggestedUrl: string | null };
 
 const DEV = import.meta.env.DEV;
 const PANEL = 'rounded-md border border-default bg-surface';
@@ -72,11 +71,7 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
   const tryParse = () => {
     const raw = paste.trim();
     if (!raw) return;
-    const result = parseRecap(raw);
-    if (result.status === 'unimplemented') {
-      setIntake({ stage: 'unimplemented', rawPaste: raw });
-      return;
-    }
+    const result = parseRecap(raw, players);
     if (result.status === 'error') {
       setError(result.message);
       return;
@@ -209,29 +204,6 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
               </span>
             )}
           </div>
-
-          {intake.stage === 'unimplemented' && (
-            <div className="rounded border border-info/30 bg-info/10 px-2 py-1.5 text-sm text-info">
-              The recap parser lands with the first real $3 recap (#22).{' '}
-              <button
-                type="button"
-                onClick={() => {
-                  const room = createRoom({
-                    name: `Room ${new Date().toISOString().slice(0, 10)} (paste stored)`,
-                    rawPaste: intake.rawPaste,
-                  });
-                  upsert(room);
-                  setPaste('');
-                  setIntake({ stage: 'idle' });
-                  setOpenId(room.id);
-                }}
-                className="font-semibold underline underline-offset-2"
-              >
-                Store the paste verbatim now
-              </button>{' '}
-              — capturing the first recap is the parser's gate.
-            </div>
-          )}
 
           {intake.stage === 'preview' && (
             <div className="flex flex-col gap-2">

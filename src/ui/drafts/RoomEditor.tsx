@@ -1,11 +1,11 @@
 /**
- * Room editor: the room facts (name/date/cost/URL/raw paste + inert
- * re-parse — #22 lands the parser), the editable pick log, and the review
- * panel. Every change autosaves to the working store.
+ * Room editor: the room facts (name/date/cost/URL/raw paste + re-parse), the
+ * editable pick log, and the review panel. Every change autosaves to the
+ * working store.
  */
 import { useMemo, useState } from 'react';
 import type { SnapshotPlayer } from '../types.js';
-import type { RoomRecord } from './types.js';
+import type { PickLogEntry, PreviewPick, RoomRecord } from './types.js';
 import { teamsInLog } from './types.js';
 import { parseRecap } from './parse.js';
 import { exportRoomFile } from './store.js';
@@ -13,6 +13,25 @@ import { PickTable } from './PickTable.js';
 import { ReviewPanel } from './ReviewPanel.js';
 
 type Tab = 'room' | 'log' | 'review';
+
+/**
+ * Re-parse keeps confirmed inline edits: entries whose (team, rawName) are
+ * unchanged carry their existing match (playerId + unmatched state) over the
+ * fresh parse. Unconfirmed ambiguous picks get fresh candidates; editor-level
+ * player re-matches change rawName to the pool name, so those flow through the
+ * fresh parse by design. myTeam / carryNote / draftUrl are untouched above.
+ */
+function preserveMatches(prev: PickLogEntry[], next: PreviewPick[]): PreviewPick[] {
+  const key = (entry: PickLogEntry): string => `${entry.team}\u0000${entry.rawName}`;
+  const prevByKey = new Map(prev.map((entry) => [key(entry), entry]));
+  return next.map((entry) => {
+    const old = prevByKey.get(key(entry));
+    if (old?.playerId) {
+      return { ...entry, playerId: old.playerId, unmatched: old.unmatched, candidates: undefined };
+    }
+    return entry;
+  });
+}
 
 type Props = {
   room: RoomRecord;
@@ -35,21 +54,17 @@ export function RoomEditor({ room, players, onChange, onClose }: Props) {
   const teams = useMemo(() => teamsInLog(room.picks), [room.picks]);
 
   const reparse = () => {
-    const result = parseRecap(room.rawPaste);
-    if (result.status === 'unimplemented') {
-      setReparseNote(
-        'Parser lands with the first real $3 recap (#22) — the paste is stored verbatim and ready.',
-      );
-    } else if (result.status === 'error') {
+    const result = parseRecap(room.rawPaste, players);
+    if (result.status === 'error') {
       setReparseNote(`Parse failed: ${result.message}`);
-    } else {
-      setReparseNote(null);
-      patch({
-        picks: result.picks,
-        ...(result.suggestedName && room.name === '' ? { name: result.suggestedName } : {}),
-        ...(result.suggestedUrl && !room.draftUrl ? { draftUrl: result.suggestedUrl } : {}),
-      });
+      return;
     }
+    setReparseNote(null);
+    patch({
+      picks: preserveMatches(room.picks, result.picks),
+      ...(result.suggestedName && room.name === '' ? { name: result.suggestedName } : {}),
+      ...(result.suggestedUrl && !room.draftUrl ? { draftUrl: result.suggestedUrl } : {}),
+    });
   };
 
   return (
