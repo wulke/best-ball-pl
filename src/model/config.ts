@@ -130,6 +130,11 @@ export type MinutesConfig = {
   /** Starts last season required to claim a share of the club's GK job
    *  (recent starting evidence — stale cross-club minutes don't count). */
   gkCredibleStarts: number;
+  /** Newcomer (no FPL history) minutes prior: per-position price → minutes
+   *  fit over established players, discounted for survivorship + unproven
+   *  status. floor/cap clamp the estimate; minSamples guards thin positions
+   *  (falls back to noHistoryMinutes). */
+  newcomer: { discount: number; floorMinutes: number; capMinutes: number; minSamples: number };
 };
 
 export const DEFAULT_MINUTES: MinutesConfig = {
@@ -141,6 +146,7 @@ export const DEFAULT_MINUTES: MinutesConfig = {
   congestion: { topTeams: 6, factor: 0.95 },
   gkStartsPerSeason: 38,
   gkCredibleStarts: 8,
+  newcomer: { discount: 0.85, floorMinutes: 400, capMinutes: 3300, minSamples: 8 },
 };
 
 /** Rate estimation knobs (per-90 attacking terms). */

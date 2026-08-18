@@ -184,7 +184,13 @@ function rawRates(player: SnapshotPlayer, cfg: ModelConfig): RawRates {
   const weights: [number, number, number] = [w0, w1, w2];
   // Contract says most-recent-first; sort defensively so a stale snapshot
   // (written before the ETL ordering fix) can't silently re-weight careers.
-  const seasons = [...player.seasons].sort((a, b) => b.season.localeCompare(a.season));
+  // A <90-minute season is missing data, not zero output — cameo/no-show
+  // rows (loan, injury, non-selection at a prior club) would otherwise eat a
+  // recency weight slot and halve real signal (the Philogene trap: one real
+  // 796-minute season averaged with two ~zero rows).
+  const seasons = [...player.seasons]
+    .sort((a, b) => b.season.localeCompare(a.season))
+    .filter((s) => s.minutes >= 90);
 
   const goals = recencyWeightedTotal(seasons, weights, (s) => s.goals);
   const xg = recencyWeightedTotal(seasons, weights, (s) => s.xg);
@@ -265,13 +271,21 @@ function rawRates(player: SnapshotPlayer, cfg: ModelConfig): RawRates {
   };
 }
 
-function expectedMinutes(player: SnapshotPlayer, rates: RawRates, cfg: ModelConfig): number {
+function expectedMinutes(
+  player: SnapshotPlayer,
+  rates: RawRates,
+  cfg: ModelConfig,
+  newcomerPrior: number,
+): number {
   let minutes: number;
   if (rates.seasonCount === 0) {
-    minutes = cfg.minutes.noHistoryMinutes;
+    // Price-informed prior (see buildProjections) — a flat baseline buried
+    // every newcomer at 850 minutes, which a third of the pool is.
+    minutes = newcomerPrior;
   } else if (rates.seasonCount === 1) {
     const observed = rates.weightedMinutes / cfg.minutes.recencyWeights[0];
-    minutes = observed * cfg.minutes.singleSeasonShrink + cfg.minutes.noHistoryMinutes * (1 - cfg.minutes.singleSeasonShrink);
+    minutes =
+      observed * cfg.minutes.singleSeasonShrink + newcomerPrior * (1 - cfg.minutes.singleSeasonShrink);
   } else {
     minutes = rates.weightedMinutes;
   }
@@ -444,8 +458,55 @@ export function buildProjections(
 
   const raws = players.map((p) => rawRates(p, cfg));
 
+  // Newcomer minutes prior: FPL prices newcomers by expected role, so the
+  // £4→£7 spread across no-history players is a free expected-minutes signal
+  // (a £5.5 new midfielder is priced to start, not to play 850 minutes). Fit
+  // price → recency-weighted minutes per position over established players
+  // (≥900 weighted minutes), then discount: the fit population survived
+  // selection (they played), and a newcomer must still beat incumbents.
+  // Falls back to the flat noHistoryMinutes when a position lacks samples.
+  const priceSamples: Record<Position, { x: number; y: number }[]> = {
+    G: [], D: [], MD: [], FW: [],
+  };
+  players.forEach((p, i) => {
+    if (raws[i].weightedMinutes >= 900) {
+      priceSamples[p.position].push({ x: p.price, y: raws[i].weightedMinutes });
+    }
+  });
+  const fitByPos = new Map<Position, { a: number; b: number }>();
+  for (const pos of Object.keys(priceSamples) as Position[]) {
+    const rows = priceSamples[pos];
+    if (rows.length < cfg.minutes.newcomer.minSamples) continue;
+    const n = rows.length;
+    const mx = rows.reduce((sum, r) => sum + r.x, 0) / n;
+    const my = rows.reduce((sum, r) => sum + r.y, 0) / n;
+    let sxy = 0;
+    let sxx = 0;
+    for (const r of rows) {
+      sxy += (r.x - mx) * (r.y - my);
+      sxx += (r.x - mx) ** 2;
+    }
+    const b = sxx > 0 ? Math.max(0, sxy / sxx) : 0; // monotone: price can't reduce minutes
+    fitByPos.set(pos, { a: my - b * mx, b });
+  }
+  const newcomerPrior = (p: SnapshotPlayer): number => {
+    const fit = fitByPos.get(p.position);
+    if (!fit) return cfg.minutes.noHistoryMinutes;
+    const estimate = fit.a + fit.b * p.price;
+    const clamped = Math.min(
+      cfg.minutes.newcomer.capMinutes,
+      Math.max(cfg.minutes.newcomer.floorMinutes, estimate),
+    );
+    return Math.max(
+      cfg.minutes.newcomer.floorMinutes,
+      clamped * cfg.minutes.newcomer.discount,
+    );
+  };
+
   // Expected minutes per player before position-competition adjustments.
-  const minutesByPlayer = players.map((p, i) => expectedMinutes(p, raws[i], cfg));
+  const minutesByPlayer = players.map((p, i) =>
+    expectedMinutes(p, raws[i], cfg, newcomerPrior(p)),
+  );
 
   // Fixture congestion: outfield players on the top-N teams by projected win
   // rate (Europe/cup proxy) rotate inside MW 1–26 — haircut their minutes.
