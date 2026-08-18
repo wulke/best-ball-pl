@@ -102,14 +102,12 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
     }
   };
 
-  const loadRecapFile = async (file: File) => {
-    setError(null);
-    const rawContent = await file.text();
+  const handleRecapText = (rawContent: string, sourceLabel?: string) => {
     const pasteText = extractRecapText(rawContent);
     const result = parseRecap(pasteText, players);
     setPaste(pasteText);
     if (result.status === 'error') {
-      setError(`${file.name}: ${result.message}`);
+      setError(sourceLabel ? `${sourceLabel}: ${result.message}` : result.message);
       return;
     }
     setIntake({
@@ -118,9 +116,38 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
       rawPaste: pasteText,
       suggestedName: result.suggestedName,
       // The recap page's own text carries no URL — sniff the saved-file header
-      // (Snapshot-Content-Location) as well as anything pasted inline.
+      // (Snapshot-Content-Location) or the bookmarklet's prepended draft URL.
       suggestedUrl: sniffDraftUrl(rawContent) ?? result.suggestedUrl,
     });
+  };
+
+  const loadRecapFile = async (file: File) => {
+    setError(null);
+    try {
+      handleRecapText(await file.text(), file.name);
+    } catch (err) {
+      setError(
+        err instanceof Error ? `Could not read ${file.name}: ${err.message}` : `Could not read ${file.name}`,
+      );
+    }
+  };
+
+  const pasteFromClipboard = async () => {
+    setError(null);
+    try {
+      if (!navigator.clipboard?.readText) {
+        setError('Clipboard reading needs a secure context (https) — paste manually with Cmd+V instead.');
+        return;
+      }
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) {
+        setError('Clipboard is empty — copy the recap first (the Capture bookmarklet does this).');
+        return;
+      }
+      handleRecapText(text);
+    } catch (err) {
+      setError(err instanceof Error ? `Clipboard read failed: ${err.message}` : 'Clipboard read failed');
+    }
   };
 
   const importFile = async (file: File) => {
@@ -222,6 +249,14 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
             </button>
             <button
               type="button"
+              onClick={() => void pasteFromClipboard()}
+              className="rounded border border-default px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-secondary transition hover:border-strong hover:text-primary"
+              title="Read the recap copied by the 'Capture Underdog recap' bookmarklet (see docs/recap-capture.md)"
+            >
+              Paste from clipboard
+            </button>
+            <button
+              type="button"
               onClick={() => recapFileInput.current?.click()}
               className="rounded border border-default px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-secondary transition hover:border-strong hover:text-primary"
               title="Load a saved recap page: Chrome/Edge single-file .mhtml (⌘S → Webpage, Single File), .html, or a .txt paste"
@@ -241,7 +276,7 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
             />
             {intake.stage === 'idle' && (
               <span className="text-xs text-muted">
-                paste or saved-page intake — inline edit is the pressure valve
+                paste, clipboard, or saved-page intake — inline edit is the pressure valve
               </span>
             )}
           </div>
