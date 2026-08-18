@@ -238,7 +238,7 @@ function PlayerRow({
           {projection.durabilityRisk && (
             <span
               title="Durability risk: thin projected minutes/start rate for the 26-week Round 1 grind — ceiling boost dampened"
-              className="rounded border border-dashed border-info/50 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info"
+              className="rounded border border-info/30 bg-info/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info"
             >
               R
             </span>

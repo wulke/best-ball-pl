@@ -14,3 +14,11 @@ coverage/
 
 # OS
 .DS_Store
+
+# Playwright browsers downloaded locally (root cache is not writable)
+.pw-browsers/
+
+# Raw manually-saved FBref HTML — parsed output is committed as data/fbref.json
+# (the capture-instructions README inside stays tracked)
+data/fbref-raw/*
+!data/fbref-raw/README.md
