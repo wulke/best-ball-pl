@@ -31,6 +31,9 @@ type TeamContext = {
   cleanSheetRate: number;
   goalsConcededPerMatch: number;
   gkWinRate: number;
+  /** false for the promoted-team / split-goalkeeping fallback: no team's own
+   *  keeper/squad data behind the priors, pure league-mean substitutes. */
+  observed: boolean;
 };
 
 export type ProjectionResult = {
@@ -94,6 +97,7 @@ function buildTeamContexts(players: SnapshotPlayer[], cfg: ModelConfig): Map<str
         cleanSheetRate: lgCs,
         goalsConcededPerMatch: lgGc,
         gkWinRate: clampWinRate(cfg.team.winRate.intercept + cfg.team.winRate.slope * (lgGf - lgGc), cfg),
+        observed: false,
       });
       continue;
     }
@@ -108,7 +112,7 @@ function buildTeamContexts(players: SnapshotPlayer[], cfg: ModelConfig): Map<str
       cfg,
     );
 
-    ctxs.set(team, { cleanSheetRate: csRate, goalsConcededPerMatch: gcRate, gkWinRate: winRate });
+    ctxs.set(team, { cleanSheetRate: csRate, goalsConcededPerMatch: gcRate, gkWinRate: winRate, observed: true });
   }
   return ctxs;
 }
@@ -454,6 +458,7 @@ export function buildProjections(
     cleanSheetRate: cfg.team.meanCleanSheetRate,
     goalsConcededPerMatch: cfg.team.meanGoalsConcededPerMatch,
     gkWinRate: 0.34,
+    observed: false,
   };
 
   const raws = players.map((p) => rawRates(p, cfg));
@@ -504,8 +509,15 @@ export function buildProjections(
   };
 
   // Expected minutes per player before position-competition adjustments.
+  const newcomerPriorByPlayer = players.map((p) => newcomerPrior(p));
   const minutesByPlayer = players.map((p, i) =>
-    expectedMinutes(p, raws[i], cfg, newcomerPrior(p)),
+    expectedMinutes(p, raws[i], cfg, newcomerPriorByPlayer[i]),
+  );
+  // The prior only actually shaped a player's minutes when seasonCount < 2
+  // (see expectedMinutes) — and never for goalkeepers, whose minutes get
+  // fully overwritten by the starts-claim model below.
+  const newcomerPriorApplied = players.map(
+    (p, i) => p.position !== 'G' && raws[i].seasonCount < 2,
   );
 
   // Fixture congestion: outfield players on the top-N teams by projected win
@@ -516,8 +528,9 @@ export function buildProjections(
       .slice(0, cfg.minutes.congestion.topTeams)
       .map(([team]) => team),
   );
+  const congestionApplied = players.map((p) => p.position !== 'G' && congestedTeams.has(p.team));
   players.forEach((p, i) => {
-    if (p.position !== 'G' && congestedTeams.has(p.team)) {
+    if (congestionApplied[i]) {
       minutesByPlayer[i] *= cfg.minutes.congestion.factor;
     }
   });
@@ -754,10 +767,15 @@ export function buildProjections(
     // rate for the 26-week Round 1 grind, independent of the injury/status
     // flag (that covers today's news, this covers season-long role security).
     const tCfg = cfg.tournament;
+    const durabilityReasons = {
+      thinMinutesShare: minutes / cfg.minutes.maxMinutes < tCfg.minutesShareRiskThreshold,
+      lowStartFraction: rates.startFraction < tCfg.startFractionRiskThreshold,
+      highUnusedSubs: (rates.unusedSubsPer90 ?? 0) > tCfg.unusedSubsRiskPer90,
+    };
     const durabilityRisk =
-      minutes / cfg.minutes.maxMinutes < tCfg.minutesShareRiskThreshold ||
-      rates.startFraction < tCfg.startFractionRiskThreshold ||
-      (rates.unusedSubsPer90 ?? 0) > tCfg.unusedSubsRiskPer90;
+      durabilityReasons.thinMinutesShare ||
+      durabilityReasons.lowStartFraction ||
+      durabilityReasons.highUnusedSubs;
 
     // Ceiling weighting: best-ball rewards boom weeks, so rank on a score
     // blended toward p90, not raw mean output. Risk-flagged players get a
@@ -779,6 +797,12 @@ export function buildProjections(
       confidence,
       tournamentScore,
       durabilityRisk,
+      durabilityReasons,
+      seasonCount: rates.seasonCount,
+      weightedMinutes: round2(rates.weightedMinutes),
+      newcomerPrior: { value: round2(newcomerPriorByPlayer[i]), applied: newcomerPriorApplied[i] },
+      congestionApplied: congestionApplied[i],
+      teamContext: team,
     } satisfies PlayerProjection;
   });
 

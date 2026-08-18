@@ -64,4 +64,35 @@ export type PlayerProjection = {
   /** Durability/minutes-risk flag: projected playing time or start rate is
    *  thin for the 26-week Round 1 grind — gates the ceiling boost above. */
   durabilityRisk: boolean;
+  /** Which specific durabilityRisk threshold(s) tripped — durabilityRisk is
+   *  their OR. */
+  durabilityReasons: {
+    thinMinutesShare: boolean;
+    lowStartFraction: boolean;
+    highUnusedSubs: boolean;
+  };
+  /** History depth behind the projection: seasons with ≥90 minutes played,
+   *  and their recency-weighted minutes total — the sample size `confidence`
+   *  and the minutes/rate regressions are built from. */
+  seasonCount: number;
+  weightedMinutes: number;
+  /** Price-informed minutes prior for no/low-history players (see
+   *  `expectedMinutes` in project.ts), and whether it actually factored into
+   *  this player's final minutes. Never applied for goalkeepers — their
+   *  minutes come from the starts-claim model instead, regardless of
+   *  history depth. */
+  newcomerPrior: { value: number; applied: boolean };
+  /** Whether the high-win-rate-team fixture-congestion minutes haircut fired.
+   *  Outfield only — goalkeeper minutes never go through it. */
+  congestionApplied: boolean;
+  /** The player's team defensive/win-rate priors (clean sheets, goals
+   *  conceded, gk win rate) and whether they came from this team's own
+   *  keeper/squad data (`observed: true`) or the promoted-team league-mean
+   *  fallback (`observed: false`). */
+  teamContext: {
+    cleanSheetRate: number;
+    goalsConcededPerMatch: number;
+    gkWinRate: number;
+    observed: boolean;
+  };
 };
