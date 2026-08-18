@@ -24,6 +24,7 @@ import {
 } from './fbref.js';
 import { buildMatchIndexes, matchPlayer, norm, readOverrides, SQUAD_TO_FPL, type Overrides } from './match.js';
 import { applyPlEnrichment, fetchPlStats } from './pl-stats.js';
+import { fetchUnderstatStats, summarizeValidation, validatePlPassing } from './understat.js';
 import { DEFAULT_MODEL_CONFIG } from '../model/config.js';
 import { buildProjections } from '../model/project.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
@@ -214,6 +215,17 @@ async function main() {
     console.log(
       `[fbref] PL passing filled: ${plReport.enriched.map((e) => `${e.season}=${e.count}`).join(', ')}`,
     );
+
+    // 3b. Best-effort independent cross-check: Understat re-processes the Opta
+    // feed with its own definitions, so drift here means the PL API is off.
+    try {
+      const us = await fetchUnderstatStats();
+      const val = validatePlPassing(plCache, us);
+      console.log(`[fbref] PL↔Understat validation: ${summarizeValidation(val) || 'no comparable seasons'}`);
+      if (val.notes.length) for (const note of val.notes) console.warn(`[fbref]   validation note: ${note}`);
+    } catch (err) {
+      console.warn(`[fbref] Understat validation skipped (${(err as Error).message})`);
+    }
   } catch (err) {
     console.warn(`[fbref] PL stats fetch failed (${(err as Error).message}) — passesCompleted/keyPasses stay on baselines.`);
   }

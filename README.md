@@ -93,7 +93,11 @@ behind premierleague.com — no auth): `npm run fbref` fetches
 `successfulPassesOwnHalf + successfulPassesOppositionHalf` → completed passes
 (`timePlayed` as minutes), matches to FPL players with the same matcher, and
 fills those two fields wherever FBref didn't. The fetch is cached in the
-committed `data/pl-stats.json` so `npm run etl` re-applies it offline. All
+committed `data/pl-stats.json` so `npm run etl` re-applies it offline. Each
+`npm run fbref` also cross-checks the PL key-pass numbers against **Understat**
+(an independent re-processing of the Opta feed — headless pull, best-effort):
+logs the log-correlation, median count ratio and minutes agreement per season,
+and warns if the correlation ever drops or the ratio swings. All
 other volume terms (shots, SoT, crosses, tackles won, GK wins, unused subs)
 stay on the saved FBref pages.
 

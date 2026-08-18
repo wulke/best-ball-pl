@@ -123,7 +123,7 @@ export type FbrefParsed = {
 // Local Chromium (no network)
 // ---------------------------------------------------------------------------
 
-async function launchLocalChromium() {
+export async function launchLocalChromium() {
   try {
     return await chromium.launch();
   } catch {
