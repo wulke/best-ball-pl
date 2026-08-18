@@ -305,6 +305,90 @@ function readMhtmlHtml(filePath: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// CSV (FBref live page → Share & Export → "Get table as CSV")
+// ---------------------------------------------------------------------------
+
+/** RFC-4180-ish parser: quoted fields, "" escapes, \r\n or \n. */
+function parseCsv(text: string): string[][] {
+  const s = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (s[i + 1] === '"') { field += '"'; i++; } else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+/** CSV exports carry the table's full aria labels as headers ("Passes
+ *  Completed", "Key Passes", …). Map each volume field to those labels; the
+ *  first matching column wins. */
+const CSV_FIELD_LABELS: Record<FbrefField, string[]> = {
+  shots: ['Shots Total'],
+  shotsOnTarget: ['Shots on Target'],
+  passesCompleted: ['Passes Completed'],
+  keyPasses: ['Key Passes'],
+  crosses: ['Crosses'],
+  tacklesWon: ['Tackles Won'],
+  gkWins: ['Wins'],
+  unusedSubs: ['Matches as Unused Sub'],
+};
+
+function extractTableFromCsv(text: string, spec: PageSpec): ExtractedTable {
+  const rows = parseCsv(text);
+  const headerIdx = rows.findIndex((r) => r.some((c) => c.trim() === 'Player'));
+  if (headerIdx === -1) return { rows: [], availableStats: [], availableHeaders: [] };
+  const header = rows[headerIdx].map((c) => c.trim());
+  const col = (name: string) => header.findIndex((h) => h === name);
+  const playerIdx = col('Player');
+  const squadIdx = col('Squad');
+  const n90Idx = col('90s Played');
+  const minutesIdx = col('Minutes');
+  const out: FbrefPlayerRow[] = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r.length) continue;
+    const name = (r[playerIdx] ?? '').replace(/[*†]/g, '').trim();
+    if (!name || name.toLowerCase() === 'total') continue;
+    const n90 = parseNumber(n90Idx >= 0 ? (r[n90Idx] ?? '') : '');
+    const minutesText = minutesIdx >= 0 ? (r[minutesIdx] ?? '').trim() : '';
+    const minutes = minutesText !== '' ? parseNumber(minutesText) : n90 * 90;
+    const values: Partial<Record<FbrefField, number>> = {};
+    for (const field of Object.keys(spec.dataStats) as FbrefField[]) {
+      const labels = CSV_FIELD_LABELS[field] ?? [];
+      let idx = -1;
+      for (const l of labels) {
+        idx = header.findIndex((h) => h === l);
+        if (idx !== -1) break;
+      }
+      if (idx === -1) continue;
+      const t = (r[idx] ?? '').replace(/,/g, '').trim();
+      if (t === '' || t === '-') continue;
+      const n = Number.parseFloat(t);
+      if (Number.isFinite(n)) values[field] = n;
+    }
+    out.push({
+      name,
+      squad: squadIdx >= 0 ? (r[squadIdx] ?? '').trim() || null : null,
+      minutes: Number.isFinite(minutes) ? minutes : 0,
+      n90,
+      values,
+    });
+  }
+  return { rows: out, availableStats: Object.keys(CSV_FIELD_LABELS), availableHeaders: header };
+}
+
+// ---------------------------------------------------------------------------
 // Public entry: parse every saved page in data/fbref-raw/
 // ---------------------------------------------------------------------------
 
@@ -334,7 +418,9 @@ function detectPage(
   const base = path.basename(fileName).toLowerCase();
   for (const [seasonUrl] of Object.entries(SEASON_LABELS)) {
     for (const spec of PAGE_SPECS) {
-      if (base === `${seasonUrl}_${spec.file}.html`) return { seasonUrl, spec };
+      if (base === `${seasonUrl}_${spec.file}.html` || base === `${seasonUrl}_${spec.file}.csv`) {
+        return { seasonUrl, spec };
+      }
     }
   }
   return null;
@@ -346,51 +432,64 @@ export async function parseFbrefRawDir(onLog: (msg: string) => void = console.lo
   const seen = new Set<string>();
 
   const files = fs.existsSync(FBREF_RAW_DIR)
-    ? fs.readdirSync(FBREF_RAW_DIR).filter((f) => f.endsWith('.html') || f.endsWith('.mhtml')).sort()
+    ? fs.readdirSync(FBREF_RAW_DIR).filter((f) => /\.(html|mhtml|csv)$/i.test(f)).sort()
     : [];
   if (!files.length) {
-    onLog('[fbref] no saved pages (.html/.mhtml) in data/fbref-raw/');
+    onLog('[fbref] no saved pages (.html/.mhtml/.csv) in data/fbref-raw/');
     return parsed;
   }
 
   for (const f of files) {
     const fullPath = path.join(FBREF_RAW_DIR, f);
-    const raw = fs.readFileSync(fullPath, 'utf8');
-    let html: string;
-    if (f.endsWith('.mhtml')) {
-      html = readMhtmlHtml(fullPath) ?? '';
-      if (!html) {
-        onLog(`[fbref] WARNING: could not decode ${f} as a single-file MHTML — skipped`);
+    const isCsv = f.toLowerCase().endsWith('.csv');
+    let detected: { seasonUrl: string; spec: PageSpec } | null = null;
+    let table: ExtractedTable | null = null;
+    if (isCsv) {
+      const text = fs.readFileSync(fullPath, 'utf8');
+      detected = detectPage(f, text, onLog);
+      if (!detected) continue;
+      table = extractTableFromCsv(text, detected.spec);
+      if (!table.rows.length) {
+        onLog(`[fbref] WARNING: ${f} has no player rows (empty export or missing header) — skipped`);
         continue;
       }
     } else {
-      html = raw;
+      const raw = fs.readFileSync(fullPath, 'utf8');
+      let html: string;
+      if (f.endsWith('.mhtml')) {
+        html = readMhtmlHtml(fullPath) ?? '';
+        if (!html) {
+          onLog(`[fbref] WARNING: could not decode ${f} as a single-file MHTML — skipped`);
+          continue;
+        }
+      } else {
+        html = raw;
+      }
+      detected = detectPage(f, html, onLog);
+      if (!detected) continue;
+      table = await extractTable(html, detected.spec);
+      if (!table.rows.length) {
+        throw new Error(
+          `No player stats table found in ${f} (detected as ${SEASON_LABELS[detected.seasonUrl]} ${detected.spec.slug}) — the page may not have ` +
+            `loaded before saving (or Cloudflare's "Just a moment…" wall was saved). Re-save that page. ` +
+            `Available headers: ${table.availableHeaders.join(', ')}`,
+        );
+      }
     }
-    const detected = detectPage(f, html, onLog);
-    if (!detected) continue;
     const { seasonUrl, spec } = detected;
     const seasonLabel = SEASON_LABELS[seasonUrl];
-
-    const table = await extractTable(html, spec);
-    if (!table.rows.length) {
-      throw new Error(
-        `No player stats table found in ${f} (detected as ${seasonLabel} ${spec.slug}) — the page may not have ` +
-          `loaded before saving (or Cloudflare's "Just a moment…" wall was saved). Re-save that page. ` +
-          `Available headers: ${table.availableHeaders.join(', ')}`,
-      );
-    }
     const wanted = Object.keys(spec.dataStats) as FbrefField[];
     const resolved = wanted.filter((field) => table.rows.some((r) => field in r.values));
     if (resolved.length === 0) {
-      // Graceful degradation: e.g. the passing page's pass columns are
-      // JS-populated and empty in an "HTML Only" save. Keep the rows (the
-      // per-term coverage then falls back to baselines) and warn loudly
-      // instead of killing the whole run.
+      const hint = isCsv
+        ? 'the export may have run before the page finished loading — re-export once numbers show in every column'
+        : 'cells are likely JS-populated (saved as "HTML Only"?) — use the live page\'s "Get table as CSV" export instead';
+      // Graceful degradation: keep the rows (per-term coverage then falls
+      // back to baselines) and warn loudly instead of killing the run.
       onLog(
         `[fbref] WARNING: ${seasonLabel} ${spec.slug} parsed (${table.rows.length} rows) but none of ` +
-          `${wanted.join('/')} have values — cells are likely JS-populated (saved as "HTML Only"?). ` +
-          `That term falls back to league baselines. Re-save this page as "Web Page, Single File" (.mhtml) ` +
-          `to capture the rendered table. data-stats present: ${table.availableStats.slice(0, 30).join(', ')}`,
+          `${wanted.join('/')} have values — ${hint}. That term falls back to league baselines. ` +
+          `data-stats present: ${table.availableStats.slice(0, 30).join(', ')}`,
       );
     }
     const unresolved = wanted.filter((field) => !resolved.includes(field));
