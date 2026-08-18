@@ -30,8 +30,16 @@ export type LiveRecs = {
   queued: Rec[];
   /** Best players on the board, whatever the position. */
   bpa: Rec[];
-  /** Model default target per position + that slot's fill state. */
-  byPosition: { pos: Position; state: TargetState; rec: Rec | null }[];
+  /** Model default target per position + that slot's fill state, plus the
+   *  highest-floor (p10) and highest-ceiling (p90) alternative at the same
+   *  position — lets a drafter pick safety or upside without leaving the panel. */
+  byPosition: {
+    pos: Position;
+    state: TargetState;
+    rec: Rec | null;
+    floor: Rec | null;
+    ceiling: Rec | null;
+  }[];
 };
 
 function ordinal(n: number): string {
@@ -120,13 +128,23 @@ export function buildRecommendations(
 
   const bpa = ranked.slice(0, 3).map((player) => ({ player, tags: tagsFor(player) }));
 
+  const byFloor = (a: SnapshotPlayer, b: SnapshotPlayer) =>
+    (b.projection?.points.p10 ?? 0) - (a.projection?.points.p10 ?? 0);
+  const byCeiling = (a: SnapshotPlayer, b: SnapshotPlayer) =>
+    (b.projection?.points.p90 ?? 0) - (a.projection?.points.p90 ?? 0);
+
   const byPosition = POSITIONS.map((pos) => {
     const state = shape.find((s) => s.pos === pos)!.state;
-    const best = board.filter((p) => p.position === pos).sort(byScore)[0] ?? null;
+    const atPos = board.filter((p) => p.position === pos);
+    const best = atPos.slice().sort(byScore)[0] ?? null;
+    const floor = atPos.slice().sort(byFloor)[0] ?? null;
+    const ceiling = atPos.slice().sort(byCeiling)[0] ?? null;
     return {
       pos,
       state,
       rec: best ? { player: best, tags: tagsFor(best) } : null,
+      floor: floor ? { player: floor, tags: tagsFor(floor) } : null,
+      ceiling: ceiling ? { player: ceiling, tags: tagsFor(ceiling) } : null,
     };
   });
 

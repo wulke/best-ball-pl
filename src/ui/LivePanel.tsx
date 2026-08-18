@@ -148,26 +148,58 @@ export function LivePanel({
                 <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
                   Default target by position
                 </span>
-                {recs.byPosition.map(({ pos, state, rec }) => (
-                  <div key={pos} className="flex items-center gap-1.5">
-                    <Tooltip
-                      text={
-                        state === 'need'
-                          ? 'NEED — below the starter minimum; fill this position'
-                          : state === 'ok'
-                            ? 'Starters covered; below the balanced-shape target'
-                            : 'At or past the balanced-shape target'
-                      }
-                    >
-                      <span
-                        className={`w-10 shrink-0 rounded border px-1 py-0.5 text-center text-[0.65rem] font-semibold uppercase tracking-wide ${STATE_STYLE[state]}`}
+                {recs.byPosition.map(({ pos, state, rec, floor, ceiling }) => {
+                  const p50Labels: ('p10' | 'p50' | 'p90')[] = rec
+                    ? [
+                        ...(floor?.player.id === rec.player.id ? (['p10'] as const) : []),
+                        'p50',
+                        ...(ceiling?.player.id === rec.player.id ? (['p90'] as const) : []),
+                      ]
+                    : [];
+                  return (
+                  <div key={pos} className="flex flex-col gap-1 border-b border-default/50 pb-1.5 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-1.5">
+                      <Tooltip
+                        text={
+                          state === 'need'
+                            ? 'NEED — below the starter minimum; fill this position'
+                            : state === 'ok'
+                              ? 'Starters covered; below the balanced-shape target'
+                              : 'At or past the balanced-shape target'
+                        }
                       >
-                        {STATE_LABEL[state]}
-                      </span>
-                    </Tooltip>
-                    {rec ? <RecRow rec={rec} /> : <span className="text-xs text-muted">none left</span>}
+                        <span
+                          className={`w-10 shrink-0 rounded border px-1 py-0.5 text-center text-[0.65rem] font-semibold uppercase tracking-wide ${STATE_STYLE[state]}`}
+                        >
+                          {STATE_LABEL[state]}
+                        </span>
+                      </Tooltip>
+                      {rec ? (
+                        <>
+                          <ScenarioTag labels={p50Labels} />
+                          <RecRow rec={rec} scenario="p50" />
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted">none left</span>
+                      )}
+                    </div>
+                    {floor && floor.player.id !== rec?.player.id && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-10 shrink-0" />
+                        <ScenarioTag labels={['p10']} />
+                        <RecRow rec={floor} scenario="p10" />
+                      </div>
+                    )}
+                    {ceiling && ceiling.player.id !== rec?.player.id && ceiling.player.id !== floor?.player.id && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-10 shrink-0" />
+                        <ScenarioTag labels={['p90']} />
+                        <RecRow rec={ceiling} scenario="p90" />
+                      </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -202,8 +234,43 @@ function RecList({
   );
 }
 
-function RecRow({ rec }: { rec: Rec }) {
+const SCENARIO_TITLE: Record<'p10' | 'p50' | 'p90', string> = {
+  p10: 'Highest floor — safest points outcome at this position',
+  p50: 'Highest projected median (tournament score)',
+  p90: 'Highest ceiling — best boom-week upside at this position',
+};
+
+/** Renders one badge per scenario the player leads — a single player can
+ *  top more than one (e.g. p50 + p90), which the combined badge makes explicit
+ *  instead of implying it's only the median pick. */
+function ScenarioTag({ labels }: { labels: ('p10' | 'p50' | 'p90')[] }) {
+  const multi = labels.length > 1;
+  const style = multi
+    ? 'border-accent/50 text-accent'
+    : labels[0] === 'p10'
+      ? 'border-info/40 text-info'
+      : labels[0] === 'p90'
+        ? 'border-positive/40 text-positive'
+        : 'border-default text-muted';
+  const title = labels.map((l) => `${l.toUpperCase()}: ${SCENARIO_TITLE[l]}`).join(' · ');
+  return (
+    <Tooltip text={title}>
+      <span
+        className={`shrink-0 rounded border px-1 py-0.5 text-center text-[0.6rem] font-semibold uppercase tabular-nums tracking-wide ${style}`}
+      >
+        {labels.join('+')}
+      </span>
+    </Tooltip>
+  );
+}
+
+function RecRow({ rec, scenario }: { rec: Rec; scenario?: 'p10' | 'p50' | 'p90' }) {
   const { player, tags } = rec;
+  const points = player.projection
+    ? scenario
+      ? player.projection.points[scenario]
+      : player.projection.tournamentScore
+    : null;
   return (
     <div className="flex min-w-0 items-center gap-1.5 text-sm">
       <span
@@ -215,9 +282,9 @@ function RecRow({ rec }: { rec: Rec }) {
         {player.name}
       </span>
       <span className="shrink-0 text-xs text-muted">{player.team}</span>
-      {player.projection && (
+      {points !== null && (
         <span className="shrink-0 text-xs tabular-nums text-secondary">
-          {player.projection.tournamentScore.toFixed(0)} · T{player.projection.tier}
+          {points.toFixed(0)} · T{player.projection!.tier}
         </span>
       )}
       {tags.map((tag) => (
