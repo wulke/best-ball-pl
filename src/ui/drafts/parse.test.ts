@@ -12,16 +12,17 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import type { SnapshotPlayer } from '../types.js';
 import { teamsInLog } from './types.js';
-import { normalizeName, parseRecap } from './parse.js';
+import { extractRecapText, normalizeName, parseRecap, sniffDraftUrl } from './parse.js';
 
 const FIXTURE = new URL(
   '../../../data/drafts/fixtures/2026-08-18-wulke-first-draft.txt',
   import.meta.url,
 );
 const SNAPSHOT = new URL('../../../data/snapshot.json', import.meta.url);
+const RAW_MHTML = new URL('../../../data/udraft-raw/Completed.mhtml', import.meta.url);
 
 const paste = readFileSync(FIXTURE, 'utf8');
 const snapshot = JSON.parse(readFileSync(SNAPSHOT, 'utf8')) as {
@@ -198,3 +199,59 @@ test('unparseable or empty pastes return a clear error', () => {
   assert.ok(parsed.status === 'error');
   assert.match(parsed.message, /truncated/);
 });
+
+// ── Saved-page intake (.mhtml / .html) ──────────────────────────────────────
+
+const SYNTHETIC_MHTML = [
+  'From: <Saved by Blink>',
+  'Snapshot-Content-Location: https://app.underdogsports.com/draft/00000000-0000-0000-0000-000000000000',
+  'Subject: Recap',
+  'MIME-Version: 1.0',
+  'Content-Type: multipart/related;',
+  '\ttype="text/html";',
+  '\tboundary="----Boundary----"',
+  '',
+  '',
+  '------Boundary----',
+  'Content-Type: text/html',
+  'Content-Transfer-Encoding: quoted-printable',
+  'Content-Location: https://app.underdogsports.com/draft/00000000-0000-0000-0000-000000000000',
+  '',
+  '<!DOCTYPE html><html><body><p>HOFF84</p><p>1.1<span>|</span>1</p><p>E. Haalan=',
+  'd</p><p>FW - MCI</p><p>WULKE</p><p>1.2|2</p><p>A. Semenyo</p><p>MD - MCI</p></body></html>',
+  '------Boundary----',
+].join('\n');
+
+test('a saved .mhtml file extracts to the same paste text the parser consumes', () => {
+  const extracted = extractRecapText(SYNTHETIC_MHTML);
+  assert.equal(
+    extracted,
+    ['HOFF84', '1.1|1', 'E. Haaland', 'FW - MCI', 'WULKE', '1.2|2', 'A. Semenyo', 'MD - MCI'].join('\n'),
+  );
+  // The extracted text parses like a pasted recap — and the file header URL is
+  // sniffed from the raw content, not the page text.
+  const parsed = parseRecap(extracted, pool);
+  assert.ok(parsed.status === 'ok');
+  assert.equal(parsed.picks.length, 2);
+  assert.equal(parsed.picks[1].team, 'WULKE');
+  assert.equal(parsed.picks[1].rawName, 'A. Semenyo');
+  assert.equal(sniffDraftUrl(SYNTHETIC_MHTML), 'https://app.underdogsports.com/draft/00000000-0000-0000-0000-000000000000');
+  assert.equal(parsed.suggestedUrl, null); // page text alone carries no URL
+});
+
+test('plain .html saves and raw text pass through extractRecapText', () => {
+  assert.equal(
+    extractRecapText('<html><body><p>HOFF84</p><p>1.1|1</p><p>E. Haaland</p><p>FW - MCI</p></body></html>'),
+    ['HOFF84', '1.1|1', 'E. Haaland', 'FW - MCI'].join('\n'),
+  );
+  assert.equal(extractRecapText('already pasted\ntext'), 'already pasted\ntext');
+});
+
+test(
+  'the real saved MHTML extracts exactly to the committed fixture (local)',
+  { skip: existsSync(RAW_MHTML) ? false : 'data/udraft-raw/ is gitignored — run where the saved recap lives' },
+  () => {
+    const extracted = extractRecapText(readFileSync(RAW_MHTML, 'utf8'));
+    assert.equal(extracted, paste);
+  },
+);

@@ -8,7 +8,7 @@ import { useRef, useState } from 'react';
 import type { SnapshotPlayer } from '../types.js';
 import type { PreviewPick, RoomRecord } from './types.js';
 import { renumber } from './types.js';
-import { parseRecap } from './parse.js';
+import { extractRecapText, parseRecap, sniffDraftUrl } from './parse.js';
 import { buildFixturePreview } from './fixture.js';
 import { exportRoomFile, newRoomId, parseRoomFile } from './store.js';
 import { PickTable } from './PickTable.js';
@@ -34,6 +34,7 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
   const [intake, setIntake] = useState<Intake>({ stage: 'idle' });
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const recapFileInput = useRef<HTMLInputElement>(null);
 
   const openRoom = rooms.find((room) => room.id === openId) ?? null;
 
@@ -99,6 +100,27 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
+  };
+
+  const loadRecapFile = async (file: File) => {
+    setError(null);
+    const rawContent = await file.text();
+    const pasteText = extractRecapText(rawContent);
+    const result = parseRecap(pasteText, players);
+    setPaste(pasteText);
+    if (result.status === 'error') {
+      setError(`${file.name}: ${result.message}`);
+      return;
+    }
+    setIntake({
+      stage: 'preview',
+      picks: result.picks,
+      rawPaste: pasteText,
+      suggestedName: result.suggestedName,
+      // The recap page's own text carries no URL — sniff the saved-file header
+      // (Snapshot-Content-Location) as well as anything pasted inline.
+      suggestedUrl: sniffDraftUrl(rawContent) ?? result.suggestedUrl,
+    });
   };
 
   const importFile = async (file: File) => {
@@ -186,10 +208,10 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
               setError(null);
             }}
             rows={4}
-            placeholder="Paste Underdog's draft recap text here (copy from your logged-in recap view)…"
+            placeholder="Paste Underdog's draft recap text here, or load a saved recap page (.mhtml / .html)…"
             className="w-full resize-y rounded border border-default bg-surface px-2 py-1 font-mono text-xs text-primary placeholder:text-muted focus:border-strong focus:outline-none"
           />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={tryParse}
@@ -198,9 +220,28 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
             >
               Parse &amp; preview
             </button>
+            <button
+              type="button"
+              onClick={() => recapFileInput.current?.click()}
+              className="rounded border border-default px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-secondary transition hover:border-strong hover:text-primary"
+              title="Load a saved recap page: Chrome/Edge single-file .mhtml (⌘S → Webpage, Single File), .html, or a .txt paste"
+            >
+              Load recap file
+            </button>
+            <input
+              ref={recapFileInput}
+              type="file"
+              accept=".mhtml,.mht,.html,.htm,.txt"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void loadRecapFile(file);
+                event.target.value = '';
+              }}
+            />
             {intake.stage === 'idle' && (
               <span className="text-xs text-muted">
-                paste-parse is the only intake — inline edit is the pressure valve
+                paste or saved-page intake — inline edit is the pressure valve
               </span>
             )}
           </div>

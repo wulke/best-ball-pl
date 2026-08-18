@@ -51,6 +51,11 @@ const POS_CLUB = /^(G|D|MD|FW) - [A-Z]{3}$/;
 const DRAFT_URL =
   /https?:\/\/(?:www\.)?app\.underdog(?:fantasy|sports)\.com\/draft\/[0-9a-f-]{36}/i;
 
+/** Sniff a draft URL out of any text (the MHTML Snapshot-Content-Location header, a pasted link, …). */
+export function sniffDraftUrl(text: string): string | null {
+  return text.match(DRAFT_URL)?.[0] ?? null;
+}
+
 /** Diacritics NFKD won't decompose, plus forms it renders awkwardly. */
 const CHAR_MAP: Record<string, string> = {
   'ø': 'o',
@@ -245,6 +250,122 @@ export function parseRecap(rawPaste: string, pool: SnapshotPlayer[]): ParseResul
     status: 'ok',
     picks,
     suggestedName: null,
-    suggestedUrl: rawPaste.match(DRAFT_URL)?.[0] ?? null,
+    suggestedUrl: sniffDraftUrl(rawPaste),
   };
+}
+
+// ── Recap file intake: turn a saved page into the paste the parser eats ─────
+// Mirrors what the fixture generator does (see data/drafts/fixtures/): decode
+// the MHTML's text/html part (quoted-printable or base64), then reduce the HTML
+// to copy-format text — newline at block boundaries, inline spans glued — so
+// the `round.pick|overall` anchors and their cells survive exactly as a
+// browser copy would produce them.
+
+const BLOCK_CLOSE = /<\/(p|div|button|li|tr|h[1-6]|section|article|header|footer|table)>/gi;
+const BLOCK_OPEN =
+  /<(p|div|button|li|tr|h[1-6]|section|article|header|footer|table)\b[^>]*>/gi;
+
+const ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+};
+
+function decodeHtmlEntities(text: string): string {
+  return text.replace(/&(amp|lt|gt|quot|apos|nbsp|#[0-9]+|#x[0-9a-fA-F]+);/g, (raw, name) => {
+    if (name.startsWith('#x')) {
+      const code = Number.parseInt(name.slice(2), 16);
+      return Number.isNaN(code) ? raw : String.fromCodePoint(code);
+    }
+    if (name.startsWith('#')) {
+      const code = Number.parseInt(name.slice(1), 10);
+      return Number.isNaN(code) ? raw : String.fromCodePoint(code);
+    }
+    return ENTITIES[name.toLowerCase()] ?? raw;
+  });
+}
+
+/** Reduce saved-page HTML to copy-format recap text (see file header). */
+export function htmlToPasteText(html: string): string {
+  const text = html
+    .replace(/<br\b[^>]*>/gi, '\n')
+    .replace(BLOCK_CLOSE, '\n')
+    .replace(BLOCK_OPEN, '\n')
+    .replace(/<[^>]+>/g, '');
+  return decodeHtmlEntities(text)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+/** Decode a quoted-printable body to UTF-8 (soft breaks joined, =XX escaped). */
+function decodeQuotedPrintable(body: string): string {
+  const bytes: number[] = [];
+  const lines = body.split(/\r?\n/);
+  for (const line of lines) {
+    if (line.endsWith('=')) {
+      for (let i = 0; i < line.length - 1; i += 1) {
+        if (line[i] === '=') {
+          bytes.push(Number.parseInt(line.slice(i + 1, i + 3), 16));
+          i += 2;
+        } else {
+          bytes.push(line.charCodeAt(i));
+        }
+      }
+      continue; // soft line break: no newline between the joined lines
+    }
+    for (let i = 0; i < line.length; i += 1) {
+      if (line[i] === '=') {
+        bytes.push(Number.parseInt(line.slice(i + 1, i + 3), 16));
+        i += 2;
+      } else {
+        bytes.push(line.charCodeAt(i));
+      }
+    }
+    bytes.push(10);
+  }
+  return new TextDecoder('utf-8').decode(Uint8Array.from(bytes));
+}
+
+/** Pull the largest text/html part out of an MHTML multipart message. */
+function decodeMhtmlHtmlPart(content: string): string | null {
+  const boundaryMatch = content.match(/boundary="([^"]+)"/);
+  if (!boundaryMatch) return null;
+  const boundary = boundaryMatch[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = content.split(new RegExp(`--${boundary}`, 'g'));
+  let best: { headers: string; body: string } | null = null;
+  for (const part of parts) {
+    const sep = part.search(/\r?\n\r?\n/);
+    if (sep === -1) continue;
+    const headers = part.slice(0, sep);
+    const body = part.slice(sep).replace(/^\r?\n/, '');
+    if (!/content-type:\s*text\/html/i.test(headers)) continue;
+    if (!best || body.length > best.body.length) best = { headers, body };
+  }
+  if (!best) return null;
+  if (/content-transfer-encoding:\s*base64/i.test(best.headers)) {
+    const binary = atob(best.body.replace(/\s+/g, ''));
+    const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+  return decodeQuotedPrintable(best.body);
+}
+
+/**
+ * Turn a saved recap file into the paste-text the parser consumes: Chrome/
+ * Edge single-file .mhtml (and .mht), plain .html saves, or raw pasted text
+ * (returned unchanged). Anything else comes back as its text with no anchors,
+ * which parseRecap reports as a normal "no recap pick lines" error.
+ */
+export function extractRecapText(content: string): string {
+  if (/multipart\/related|^From: <Saved by Blink>/im.test(content)) {
+    const html = decodeMhtmlHtmlPart(content);
+    if (html) return htmlToPasteText(html);
+  }
+  if (/<html[\s>]/i.test(content)) return htmlToPasteText(content);
+  return content;
 }
