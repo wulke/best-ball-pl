@@ -33,6 +33,7 @@ npm run dev
 | `npm run dev` | Vite dev server for the cheat-sheet UI |
 | `npm run build` | Build the static UI bundle into `dist/ui/` (includes snapshot copy) |
 | `npm run preview` | Preview the built bundle locally |
+| `npm test` | Parser/matcher tests against the committed first-recap fixture |
 | `npm run typecheck` | TypeScript check across the repo |
 
 ## Project Structure
@@ -55,8 +56,9 @@ src/
     PlayerTable.tsx #   Ranked tier table: bands, rows, flags
     useDrafted.ts   #   Mark-drafted state persisted to localStorage
     drafts/         # Draft-review slice (#20): rooms, intake, review lenses
-      types.ts      #   Parsed-log + room-record contract (the #22 parser targets this)
-      parse.ts      #   parseRecap seam — STUB until #22 lands the real parser
+      types.ts      #   Parsed-log + room-record contract (the #22 parser produces this)
+      parse.ts      #   Recap paste-parser + name matcher (#22, built against the first real recap)
+      parse.test.ts #   Parser/matcher tests vs the committed fixture (npm test)
       store.ts      #   localStorage working store + export/import (data/drafts/)
       review.ts     #   Pure lens math: deviations, headline, best-9, tier mix, club grid, flags
       fixture.ts    #   DEV-only deterministic 12-team room for exercising the flow
@@ -66,6 +68,7 @@ data/
   fbref.json     # Committed parse of the manually-saved FBref pages (volume terms)
   pl-stats.json  # Committed Premier League stats API pull (passing terms)
   drafts/        # Exported room records (data/drafts/<yyyy-mm-dd>-<room-slug>.json), committed
+    fixtures/    # Recap-paste text fixtures for the parser tests (no room identifiers)
 docs/
   research/   # Research findings (wayfinder research tickets)
 ```
@@ -149,7 +152,7 @@ A single ranked table over the snapshot, built for draft day (the **Sheet** tab)
 
 ### Draft review (v1)
 
-The **Drafts** tab — the between-drafts review loop for the practice-then-flagship plan. Paste-parse is the only intake (#19): copy Underdog's draft-recap text into the paste box, the parser builds the full-room pick log, ambiguous names get a one-click confirm queue, unmatched picks (transfer insurance, by design) stay flagged and excluded from the math. **Until the recap parser lands (#22, gated on the first real $3 recap)**, pastes are stored verbatim so the first recap is already captured — and a DEV-only fixture button simulates a full 12-team room against the current snapshot to exercise the whole flow.
+The **Drafts** tab — the between-drafts review loop for the practice-then-flagship plan. Paste-parse is the only intake (#19): **paste** Underdog's draft-recap text into the paste box **or load a saved recap page** (`.mhtml` from Chrome/Edge ⌘S → *Webpage, Single File*, `.html`, or `.txt` — saved files are decoded to the same paste text and the draft URL is sniffed from the file header). The **recap parser (#22)** then builds the full-room pick log — pick/round/team from the `1.6|6`-style board anchors, names matched against the FPL snapshot (normalized diacritics/case/punctuation, last-name + first-initial; mononyms like Rayan exact-match the FPL web name). Ambiguous names get a **one-click confirm queue**; unmatched picks (transfer insurance / non-EPL names outside the FPL pool, by design) stay flagged and excluded from the math. The parser was built against the first real $3 recap and is locked in by tests (`npm test`) against the committed paste fixture (`data/drafts/fixtures/`); the real saved page (`data/udraft-raw/`, gitignored) is regression-checked byte-for-byte when present locally. **Re-parse** over a stored room re-runs the parser without clobbering your team pick, confirmed matches, or carry note. A DEV-only fixture button still simulates a full 12-team room against the current snapshot for exercising the flow without a real paste.
 
 - **Rooms**: localStorage is the working store; **Export** downloads the record verbatim as `data/drafts/<yyyy-mm-dd>-<room-slug>.json` to move into the repo and commit (the archival step), **Import** restores it. Room facts: name, draft date, entry cost ($3/$15/other), draft URL, my team (dropdown of recap teams), carry note.
 - **Pick log**: the full ~216-pick log with inline editing as the pressure valve — re-match a player (search-select), fix a team name, delete/add picks; pick/round renumber automatically.

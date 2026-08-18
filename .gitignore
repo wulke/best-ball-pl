@@ -22,3 +22,7 @@ coverage/
 # (the capture-instructions README inside stays tracked)
 data/fbref-raw/*
 !data/fbref-raw/README.md
+
+# Raw saved Underdog draft pages — parsed into room records (see #22)
+data/udraft-raw/*
+!data/udraft-raw/README.md
