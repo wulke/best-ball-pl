@@ -5,6 +5,7 @@
  */
 import type { Position, SnapshotPlayer } from './types.js';
 import type { LiveRecs, Rec, TargetState } from './recommend.js';
+import { Tooltip } from './Tooltip.js';
 
 const POS_BADGE: Record<string, string> = {
   G: 'border-pos-g/30 bg-pos-g/10 text-pos-g',
@@ -59,13 +60,16 @@ export function LivePanel({
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-1">
           {recs.shape.map((s) => (
-            <span
+            <Tooltip
               key={s.pos}
-              className={`rounded border px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tabular-nums tracking-wide ${STATE_STYLE[s.state]}`}
-              title={`Starters need ${s.starter} ${s.pos}; balanced-shape target ${s.target}`}
+              text={`Starters need ${s.starter} ${s.pos} — roster has ${s.count}; balanced-shape target ${s.target}`}
             >
-              {s.pos} {s.count}/{s.starter}
-            </span>
+              <span
+                className={`rounded border px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tabular-nums tracking-wide ${STATE_STYLE[s.state]}`}
+              >
+                {s.pos} {s.count}/{s.starter}
+              </span>
+            </Tooltip>
           ))}
           <button
             type="button"
@@ -91,22 +95,25 @@ export function LivePanel({
                 Correlation watch
               </span>
               {recs.clubChips.map((chip) => (
-                <span
+                <Tooltip
                   key={chip.club}
-                  className={`rounded border px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tabular-nums tracking-wide ${
-                    chip.csBlock || chip.count >= 3 || chip.attackers >= 2
-                      ? 'border-negative/50 text-negative'
-                      : 'border-default text-muted'
-                  }`}
-                  title={
+                  text={
                     chip.csBlock
-                      ? 'G + D from one club: their clean-sheet points are the same event'
-                      : `${chip.count} players from ${chip.club}`
+                      ? `G + D from ${chip.club}: their clean-sheet points are the same event`
+                      : `${chip.count} players from ${chip.club} — correlated outcomes`
                   }
                 >
-                  {chip.club} ×{chip.count}
-                  {chip.csBlock ? ' CS-corr' : ''}
-                </span>
+                  <span
+                    className={`rounded border px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tabular-nums tracking-wide ${
+                      chip.csBlock || chip.count >= 3 || chip.attackers >= 2
+                        ? 'border-negative/50 text-negative'
+                        : 'border-default text-muted'
+                    }`}
+                  >
+                    {chip.club} ×{chip.count}
+                    {chip.csBlock ? ' CS-corr' : ''}
+                  </span>
+                </Tooltip>
               ))}
             </div>
           )}
@@ -143,11 +150,21 @@ export function LivePanel({
                 </span>
                 {recs.byPosition.map(({ pos, state, rec }) => (
                   <div key={pos} className="flex items-center gap-1.5">
-                    <span
-                      className={`w-10 shrink-0 rounded border px-1 py-0.5 text-center text-[0.65rem] font-semibold uppercase tracking-wide ${STATE_STYLE[state]}`}
+                    <Tooltip
+                      text={
+                        state === 'need'
+                          ? 'NEED — below the starter minimum; fill this position'
+                          : state === 'ok'
+                            ? 'Starters covered; below the balanced-shape target'
+                            : 'At or past the balanced-shape target'
+                      }
                     >
-                      {STATE_LABEL[state]}
-                    </span>
+                      <span
+                        className={`w-10 shrink-0 rounded border px-1 py-0.5 text-center text-[0.65rem] font-semibold uppercase tracking-wide ${STATE_STYLE[state]}`}
+                      >
+                        {STATE_LABEL[state]}
+                      </span>
+                    </Tooltip>
                     {rec ? <RecRow rec={rec} /> : <span className="text-xs text-muted">none left</span>}
                   </div>
                 ))}
@@ -204,14 +221,24 @@ function RecRow({ rec }: { rec: Rec }) {
         </span>
       )}
       {tags.map((tag) => (
-        <span
+        <Tooltip
           key={tag}
-          className={`shrink-0 rounded border px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${
-            tag === 'CS corr' || tag.endsWith('left') ? 'border-negative/50 text-negative' : 'border-default text-muted'
-          }`}
+          text={
+            tag === 'CS corr'
+              ? 'Same-club G + D: their clean-sheet points are the same event'
+              : tag.endsWith('left')
+                ? 'Tier scarcity — few players of this tier left on the board'
+                : `Would be your ${tag.split(' ')[0]} player from this club — correlated outcomes`
+          }
         >
-          {tag}
-        </span>
+          <span
+            className={`shrink-0 rounded border px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${
+              tag === 'CS corr' || tag.endsWith('left') ? 'border-negative/50 text-negative' : 'border-default text-muted'
+            }`}
+          >
+            {tag}
+          </span>
+        </Tooltip>
       ))}
     </div>
   );

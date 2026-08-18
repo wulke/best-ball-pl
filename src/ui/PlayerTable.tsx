@@ -1,4 +1,5 @@
 import type { PlayerStatus, SnapshotPlayer } from './types.js';
+import { Tooltip } from './Tooltip.js';
 
 /**
  * The ranked tier table — the cheat sheet itself.
@@ -126,14 +127,20 @@ export function PlayerTable({
       <table className="player-table w-full min-w-max border-collapse">
         <thead className="sticky top-11 z-10 bg-surface print:static">
           <tr className="border-b border-strong">
-            <th className={`${TH_BASE} w-6`} title="Off board — drafted by anyone in the room">
-              ✓
+            <th className={`${TH_BASE} w-6`}>
+              <Tooltip text="Off board — drafted by anyone in the room (not just you)" wide>
+                <span>✓</span>
+              </Tooltip>
             </th>
-            <th className={`${TH_BASE} w-6`} title="I drafted this player (marks off-board too)">
-              M
+            <th className={`${TH_BASE} w-6`}>
+              <Tooltip text="My pick — I drafted this player (marks off-board too)" wide>
+                <span>M</span>
+              </Tooltip>
             </th>
-            <th className={`${TH_BASE} w-6`} title="Queue / watch — my target pool">
-              ★
+            <th className={`${TH_BASE} w-6`}>
+              <Tooltip text="Queue / watch — my target pool for this draft" wide>
+                <span>★</span>
+              </Tooltip>
             </th>
             <th
               className={`${TH_BASE} w-8 text-right`}
@@ -224,57 +231,65 @@ function PlayerRow({
       }`}
     >
       <td className="w-6 px-1 py-1">
-        <button
-          type="button"
-          aria-pressed={isDrafted}
-          title={
+        <Tooltip
+          text={
             isDrafted
-              ? 'Off board — drafted by anyone in the room (click to undo)'
+              ? 'Off board — anyone in the room drafted them (click to undo)'
               : 'Mark off board — anyone in the room drafted them'
           }
-          onClick={() => onToggleDrafted(player.id)}
-          className={`flex h-4 w-4 items-center justify-center rounded border transition-colors focus:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
-            isDrafted
-              ? 'border-strong bg-surface-hover text-primary'
-              : 'border-strong opacity-0 hover:border-accent group-hover:opacity-100'
-          }`}
+          wide
         >
-          {isDrafted && <span className="text-[10px] font-bold leading-none">✓</span>}
-        </button>
+          <button
+            type="button"
+            aria-pressed={isDrafted}
+            onClick={() => onToggleDrafted(player.id)}
+            className={`flex h-4 w-4 items-center justify-center rounded border transition-colors focus:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
+              isDrafted
+                ? 'border-strong bg-surface-hover text-primary'
+                : 'border-strong opacity-0 hover:border-accent group-hover:opacity-100'
+            }`}
+          >
+            {isDrafted && <span className="text-[10px] font-bold leading-none">✓</span>}
+          </button>
+        </Tooltip>
       </td>
       <td className="w-6 px-1 py-1">
-        <button
-          type="button"
-          aria-pressed={isMine}
-          title={
-            isMine
-              ? `My pick (click to undo from my roster)`
-              : 'I drafted this player — marks mine + off board'
-          }
-          onClick={() => onDraftMine(player.id)}
-          className={`flex h-4 w-4 items-center justify-center rounded border text-[9px] font-bold leading-none transition-colors focus:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
-            isMine
-              ? 'border-accent bg-accent text-accent-fg opacity-100'
-              : 'border-accent/60 text-accent opacity-0 hover:bg-accent/10 group-hover:opacity-100'
-          }`}
+        <Tooltip
+          text={isMine ? 'My pick (click to undo)' : 'MY PICK — I drafted this player; marks off-board too'}
+          wide
         >
-          M
-        </button>
+          <button
+            type="button"
+            aria-pressed={isMine}
+            onClick={() => onDraftMine(player.id)}
+            className={`flex h-4 w-4 items-center justify-center rounded border text-[9px] font-bold leading-none transition-colors focus:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
+              isMine
+                ? 'border-accent bg-accent text-accent-fg opacity-100'
+                : 'border-accent/60 text-accent opacity-0 hover:bg-accent/10 group-hover:opacity-100'
+            }`}
+          >
+            M
+          </button>
+        </Tooltip>
       </td>
       <td className="w-6 px-1 py-1">
-        <button
-          type="button"
-          aria-pressed={isQueued}
-          title={isQueued ? 'Queued — remove from my target pool' : 'Queue as a target (watch list)'}
-          onClick={() => onToggleQueued(player.id)}
-          className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] leading-none transition-colors focus:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
-            isQueued
-              ? 'border-accent bg-accent/10 text-accent opacity-100'
-              : 'border-strong text-muted opacity-0 hover:border-accent hover:text-accent group-hover:opacity-100'
-          }`}
+        <Tooltip
+          text={isQueued ? 'Queued — remove from my target pool' : 'Queue as a target (watch list)'}
+          wide
         >
-          ★
-        </button>
+          <button
+            type="button"
+            aria-pressed={isQueued}
+            onClick={() => onToggleQueued(player.id)}
+            className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] leading-none transition-colors focus:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
+              isQueued
+                ? 'border-accent bg-accent/10 text-accent opacity-100'
+                : 'border-strong text-muted opacity-0 hover:border-accent hover:text-accent group-hover:opacity-100'
+            }`}
+          >
+            ★
+          </button>
+        </Tooltip>
       </td>
       <td className={`${TD_NUM} w-8 text-muted`}>{row.rank}</td>
       <td className="px-1 py-1">
@@ -288,36 +303,35 @@ function PlayerRow({
             {player.name}
           </span>
           {statusLabel && (
-            <span
-              title={`${statusLabel}${player.news ? ` — ${player.news}` : ''}`}
-              className="rounded border border-negative/30 bg-negative/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-negative"
-            >
-              !
-            </span>
+            <Tooltip text={`${statusLabel}${player.news ? ` — ${player.news}` : ''}`} wide>
+              <span className="rounded border border-negative/30 bg-negative/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-negative">
+                !
+              </span>
+            </Tooltip>
           )}
           {projection.confidence === 'medium' && (
-            <span
-              title="Projection confidence: medium history depth"
-              className="rounded border border-info/30 bg-info/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info"
-            >
-              M
-            </span>
+            <Tooltip text="Projection confidence: medium history depth" wide>
+              <span className="rounded border border-info/30 bg-info/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info">
+                ±
+              </span>
+            </Tooltip>
           )}
           {projection.confidence === 'low' && (
-            <span
-              title="Projection confidence: thin history — elevated uncertainty"
-              className="rounded border border-negative/30 bg-negative/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-negative"
-            >
-              L
-            </span>
+            <Tooltip text="Projection confidence: thin history — elevated uncertainty" wide>
+              <span className="rounded border border-negative/30 bg-negative/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-negative">
+                ?
+              </span>
+            </Tooltip>
           )}
           {projection.durabilityRisk && (
-            <span
-              title="Durability risk: thin projected minutes/start rate for the 26-week Round 1 grind — ceiling boost dampened"
-              className="rounded border border-info/30 bg-info/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info"
+            <Tooltip
+              text="Durability risk: thin projected minutes/start rate for the 26-week Round 1 grind — ceiling boost dampened"
+              wide
             >
-              R
-            </span>
+              <span className="rounded border border-info/30 bg-info/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info">
+                R
+              </span>
+            </Tooltip>
           )}
         </div>
       </td>
