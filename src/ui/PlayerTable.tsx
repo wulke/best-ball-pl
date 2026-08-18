@@ -38,6 +38,13 @@ type Props = {
   players: SnapshotPlayer[];
   drafted: ReadonlySet<string>;
   onToggleDrafted: (id: string) => void;
+  /** My roster this draft (live session). */
+  mine: ReadonlySet<string>;
+  /** Draft by me: marks mine AND off-board in one click. */
+  onDraftMine: (id: string) => void;
+  /** My target queue (live session). */
+  queued: ReadonlySet<string>;
+  onToggleQueued: (id: string) => void;
   /** true when a single position is filtered → contiguous tier band rows. */
   groupByTier: boolean;
 };
@@ -47,7 +54,16 @@ const TH_BASE =
 const TD_NUM =
   'font-condensed tabular-nums text-sm px-1 py-1 text-right whitespace-nowrap';
 
-export function PlayerTable({ players, drafted, onToggleDrafted, groupByTier }: Props) {
+export function PlayerTable({
+  players,
+  drafted,
+  onToggleDrafted,
+  mine,
+  onDraftMine,
+  queued,
+  onToggleQueued,
+  groupByTier,
+}: Props) {
   const rows: Row[] = players.map((player) => ({
     player,
     rank: groupByTier ? (player.projection?.posRank ?? 0) : (player.projection?.overallRank ?? 0),
@@ -64,7 +80,7 @@ export function PlayerTable({ players, drafted, onToggleDrafted, groupByTier }: 
     const lo = group[group.length - 1].player.projection?.tournamentScore ?? 0;
     body.push(
       <tr key={`band-${tier}`} className="border-y border-default bg-surface-raised print:static">
-        <td colSpan={groupByTier ? 10 : 11} className="px-2 py-1">
+        <td colSpan={groupByTier ? 12 : 13} className="px-2 py-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-accent">
               Tier {tier}
@@ -92,18 +108,32 @@ export function PlayerTable({ players, drafted, onToggleDrafted, groupByTier }: 
         showTierColumn={!groupByTier}
         isDrafted={drafted.has(row.player.id)}
         onToggleDrafted={onToggleDrafted}
+        isMine={mine.has(row.player.id)}
+        onDraftMine={onDraftMine}
+        isQueued={queued.has(row.player.id)}
+        onToggleQueued={onToggleQueued}
       />,
     );
   });
   if (groupByTier && currentTier !== -1) pushBand(currentTier, tierStart, rows.length);
 
   return (
-    <div className="overflow-x-auto rounded-md border border-default bg-surface">
-      <table className="player-table w-full border-collapse">
+    <div className="rounded-md border border-default bg-surface">
+      {/* No overflow wrapper: an overflow container becomes the sticky
+          thead's scroll ancestor and breaks vertical sticking (the header
+          rendered over the first rows). The page is the scroller; on narrow
+          viewports the table overflows to a body-level horizontal scrollbar. */}
+      <table className="player-table w-full min-w-max border-collapse">
         <thead className="sticky top-11 z-10 bg-surface print:static">
           <tr className="border-b border-strong">
-            <th className={`${TH_BASE} w-6`} title="Toggle drafted (kept in localStorage)">
+            <th className={`${TH_BASE} w-6`} title="Off board — drafted by anyone in the room">
               ✓
+            </th>
+            <th className={`${TH_BASE} w-6`} title="I drafted this player (marks off-board too)">
+              M
+            </th>
+            <th className={`${TH_BASE} w-6`} title="Queue / watch — my target pool">
+              ★
             </th>
             <th
               className={`${TH_BASE} w-8 text-right`}
@@ -151,7 +181,7 @@ export function PlayerTable({ players, drafted, onToggleDrafted, groupByTier }: 
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={groupByTier ? 10 : 11} className="px-2 py-6 text-center text-sm text-muted">
+              <td colSpan={groupByTier ? 12 : 13} className="px-2 py-6 text-center text-sm text-muted">
                 No players match the current filters.
               </td>
             </tr>
@@ -168,11 +198,19 @@ function PlayerRow({
   showTierColumn,
   isDrafted,
   onToggleDrafted,
+  isMine,
+  onDraftMine,
+  isQueued,
+  onToggleQueued,
 }: {
   row: Row;
   showTierColumn: boolean;
   isDrafted: boolean;
   onToggleDrafted: (id: string) => void;
+  isMine: boolean;
+  onDraftMine: (id: string) => void;
+  isQueued: boolean;
+  onToggleQueued: (id: string) => void;
 }) {
   const { player } = row;
   const projection = player.projection!; // upstream filters projection-less players
@@ -181,7 +219,7 @@ function PlayerRow({
 
   return (
     <tr
-      className={`border-b border-default transition-colors last:border-b-0 hover:bg-surface-hover ${
+      className={`group border-b border-default transition-colors last:border-b-0 hover:bg-surface-hover ${
         isDrafted ? 'opacity-60' : ''
       }`}
     >
@@ -189,15 +227,53 @@ function PlayerRow({
         <button
           type="button"
           aria-pressed={isDrafted}
-          title={isDrafted ? 'Undo drafted mark' : 'Mark drafted'}
-          onClick={() => onToggleDrafted(player.id)}
-          className={`flex h-4 w-4 items-center justify-center rounded border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
+          title={
             isDrafted
-              ? 'border-accent bg-accent text-accent-fg'
-              : 'border-strong hover:border-accent'
+              ? 'Off board — drafted by anyone in the room (click to undo)'
+              : 'Mark off board — anyone in the room drafted them'
+          }
+          onClick={() => onToggleDrafted(player.id)}
+          className={`flex h-4 w-4 items-center justify-center rounded border transition-colors focus:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
+            isDrafted
+              ? 'border-strong bg-surface-hover text-primary'
+              : 'border-strong opacity-0 hover:border-accent group-hover:opacity-100'
           }`}
         >
           {isDrafted && <span className="text-[10px] font-bold leading-none">✓</span>}
+        </button>
+      </td>
+      <td className="w-6 px-1 py-1">
+        <button
+          type="button"
+          aria-pressed={isMine}
+          title={
+            isMine
+              ? `My pick (click to undo from my roster)`
+              : 'I drafted this player — marks mine + off board'
+          }
+          onClick={() => onDraftMine(player.id)}
+          className={`flex h-4 w-4 items-center justify-center rounded border text-[9px] font-bold leading-none transition-colors focus:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
+            isMine
+              ? 'border-accent bg-accent text-accent-fg opacity-100'
+              : 'border-accent/60 text-accent opacity-0 hover:bg-accent/10 group-hover:opacity-100'
+          }`}
+        >
+          M
+        </button>
+      </td>
+      <td className="w-6 px-1 py-1">
+        <button
+          type="button"
+          aria-pressed={isQueued}
+          title={isQueued ? 'Queued — remove from my target pool' : 'Queue as a target (watch list)'}
+          onClick={() => onToggleQueued(player.id)}
+          className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] leading-none transition-colors focus:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
+            isQueued
+              ? 'border-accent bg-accent/10 text-accent opacity-100'
+              : 'border-strong text-muted opacity-0 hover:border-accent hover:text-accent group-hover:opacity-100'
+          }`}
+        >
+          ★
         </button>
       </td>
       <td className={`${TD_NUM} w-8 text-muted`}>{row.rank}</td>
@@ -205,7 +281,7 @@ function PlayerRow({
         <div className="flex min-w-0 items-center gap-1.5">
           <span
             className={`truncate text-sm font-medium ${
-              isDrafted ? 'text-muted line-through' : 'text-primary'
+              isMine ? 'text-accent' : isDrafted ? 'text-muted line-through' : 'text-primary'
             }`}
             title={player.fullName}
           >

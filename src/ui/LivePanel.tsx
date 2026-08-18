@@ -1,0 +1,227 @@
+/**
+ * The live-draft panel (#7): roster shape, correlation watch, and next-pick
+ * defaults — "From your queue" (the watch pool), "Best on board" (BPA), and
+ * the model's default target per position. Collapsible; stays above the table.
+ */
+import type { Position, SnapshotPlayer } from './types.js';
+import type { LiveRecs, Rec, TargetState } from './recommend.js';
+
+const POS_BADGE: Record<string, string> = {
+  G: 'border-pos-g/30 bg-pos-g/10 text-pos-g',
+  D: 'border-pos-d/30 bg-pos-d/10 text-pos-d',
+  MD: 'border-pos-md/30 bg-pos-md/10 text-pos-md',
+  FW: 'border-pos-fw/30 bg-pos-fw/10 text-pos-fw',
+};
+
+const STATE_STYLE: Record<TargetState, string> = {
+  need: 'border-negative/50 text-negative',
+  ok: 'border-info/40 text-info',
+  full: 'border-default text-muted',
+};
+const STATE_LABEL: Record<TargetState, string> = {
+  need: 'NEED',
+  ok: 'ok',
+  full: 'full',
+};
+
+type Props = {
+  recs: LiveRecs;
+  roster: SnapshotPlayer[];
+  open: boolean;
+  onToggleOpen: () => void;
+  /** Filter the board down to the queue. */
+  queueOnly: boolean;
+  onToggleQueueOnly: () => void;
+  queueSize: number;
+};
+
+export function LivePanel({
+  recs,
+  roster,
+  open,
+  onToggleOpen,
+  queueOnly,
+  onToggleQueueOnly,
+  queueSize,
+}: Props) {
+  return (
+    <section className="rounded-md border border-default bg-surface print:hidden">
+      <div className="flex flex-wrap items-center gap-2 border-b border-default px-3 py-2">
+        <button
+          type="button"
+          onClick={onToggleOpen}
+          className="font-condensed text-sm font-semibold uppercase tracking-wider text-accent"
+        >
+          {open ? '▾' : '▸'} Live draft
+        </button>
+        <span className="text-xs tabular-nums text-muted">
+          {recs.picksLeft} picks left · {roster.length}/18 on roster
+        </span>
+        <div className="ml-auto flex flex-wrap items-center gap-1">
+          {recs.shape.map((s) => (
+            <span
+              key={s.pos}
+              className={`rounded border px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tabular-nums tracking-wide ${STATE_STYLE[s.state]}`}
+              title={`Starters need ${s.starter} ${s.pos}; balanced-shape target ${s.target}`}
+            >
+              {s.pos} {s.count}/{s.starter}
+            </span>
+          ))}
+          <button
+            type="button"
+            onClick={onToggleQueueOnly}
+            disabled={queueSize === 0}
+            className={`rounded border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-40 ${
+              queueOnly
+                ? 'border-accent bg-accent text-accent-fg'
+                : 'border-default text-secondary hover:border-strong hover:text-primary'
+            }`}
+            title="Show only queued players (your drafting pool)"
+          >
+            ★ Queue ({queueSize})
+          </button>
+        </div>
+      </div>
+
+      {open && (
+        <div className="flex flex-col gap-2 px-3 py-2">
+          {recs.clubChips.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
+                Correlation watch
+              </span>
+              {recs.clubChips.map((chip) => (
+                <span
+                  key={chip.club}
+                  className={`rounded border px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tabular-nums tracking-wide ${
+                    chip.csBlock || chip.count >= 3 || chip.attackers >= 2
+                      ? 'border-negative/50 text-negative'
+                      : 'border-default text-muted'
+                  }`}
+                  title={
+                    chip.csBlock
+                      ? 'G + D from one club: their clean-sheet points are the same event'
+                      : `${chip.count} players from ${chip.club}`
+                  }
+                >
+                  {chip.club} ×{chip.count}
+                  {chip.csBlock ? ' CS-corr' : ''}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {roster.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
+                My roster
+              </span>
+              {roster.map((p) => (
+                <span
+                  key={p.id}
+                  className="rounded border border-default px-1.5 py-0.5 text-xs text-secondary"
+                >
+                  <span className={`font-semibold ${posColor(p.position)}`}>{p.position}</span>{' '}
+                  {p.name}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="grid gap-2 lg:grid-cols-2">
+            <RecList
+              title="From your queue"
+              hint="★ players still on the board — your drafting pool, best first"
+              recs={recs.queued}
+              empty="Nothing queued yet — ★ players as you spot them between picks."
+            />
+            <div className="flex flex-col gap-2">
+              <RecList title="Best on board" hint="BPA by tournament score" recs={recs.bpa} />
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
+                  Default target by position
+                </span>
+                {recs.byPosition.map(({ pos, state, rec }) => (
+                  <div key={pos} className="flex items-center gap-1.5">
+                    <span
+                      className={`w-10 shrink-0 rounded border px-1 py-0.5 text-center text-[0.65rem] font-semibold uppercase tracking-wide ${STATE_STYLE[state]}`}
+                    >
+                      {STATE_LABEL[state]}
+                    </span>
+                    {rec ? <RecRow rec={rec} /> : <span className="text-xs text-muted">none left</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function RecList({
+  title,
+  hint,
+  recs,
+  empty,
+}: {
+  title: string;
+  hint: string;
+  recs: Rec[];
+  empty?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted" title={hint}>
+        {title}
+      </span>
+      {recs.length === 0 ? (
+        <span className="text-xs text-muted">{empty ?? '—'}</span>
+      ) : (
+        recs.map(({ player, tags }) => <RecRow key={player.id} rec={{ player, tags }} />)
+      )}
+    </div>
+  );
+}
+
+function RecRow({ rec }: { rec: Rec }) {
+  const { player, tags } = rec;
+  return (
+    <div className="flex min-w-0 items-center gap-1.5 text-sm">
+      <span
+        className={`inline-block shrink-0 rounded border px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase leading-none tracking-wide ${POS_BADGE[player.position]}`}
+      >
+        {player.position}
+      </span>
+      <span className="truncate font-medium text-primary" title={player.fullName}>
+        {player.name}
+      </span>
+      <span className="shrink-0 text-xs text-muted">{player.team}</span>
+      {player.projection && (
+        <span className="shrink-0 text-xs tabular-nums text-secondary">
+          {player.projection.tournamentScore.toFixed(0)} · T{player.projection.tier}
+        </span>
+      )}
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className={`shrink-0 rounded border px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${
+            tag === 'CS corr' || tag.endsWith('left') ? 'border-negative/50 text-negative' : 'border-default text-muted'
+          }`}
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function posColor(pos: Position): string {
+  return {
+    G: 'text-pos-g',
+    D: 'text-pos-d',
+    MD: 'text-pos-md',
+    FW: 'text-pos-fw',
+  }[pos];
+}

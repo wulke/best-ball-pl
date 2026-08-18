@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Position, Snapshot } from './types.js';
 import { PlayerTable } from './PlayerTable.js';
 import { useDrafted } from './useDrafted.js';
+import { useDraftSession } from './useDraftSession.js';
+import { buildRecommendations } from './recommend.js';
+import { LivePanel } from './LivePanel.js';
 import { DraftsView } from './drafts/DraftsView.js';
 import { CarryCard } from './drafts/CarryCard.js';
 import { reviewRoom } from './drafts/review.js';
@@ -20,8 +23,11 @@ export function App() {
   const [positionFilter, setPositionFilter] = useState<PositionFilter>('ALL');
   const [query, setQuery] = useState('');
   const [hideDrafted, setHideDrafted] = useState(true);
+  const [queueOnly, setQueueOnly] = useState(false);
+  const [liveOpen, setLiveOpen] = useState(true);
   const [carryOpen, setCarryOpen] = useState(true);
   const { drafted, toggle, clear } = useDrafted();
+  const { mine, queue, toggleMine, toggleQueue, clearAll } = useDraftSession();
   const { rooms, upsert, remove } = useRooms();
 
   useEffect(() => {
@@ -55,10 +61,31 @@ export function App() {
     return { room: latest, flags: review.flags, note: latest.carryNote };
   }, [rooms, snapshot]);
 
+  /** Draft by me: one click sets mine + off board (the M button). */
+  const draftMine = useCallback(
+    (id: string) => {
+      toggleMine(id);
+      if (!drafted.has(id) && !mine.has(id)) toggle(id);
+    },
+    [toggleMine, toggle, drafted, mine],
+  );
+
+  /** My roster as player objects (for the live panel). */
+  const roster = useMemo(
+    () => players.filter((p) => mine.has(p.id)),
+    [players, mine],
+  );
+
+  const recs = useMemo(
+    () => buildRecommendations(players, drafted, mine, queue),
+    [players, drafted, mine, queue],
+  );
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = players.filter((player) => {
       if (positionFilter !== 'ALL' && player.position !== positionFilter) return false;
+      if (queueOnly && !queue.has(player.id)) return false;
       if (hideDrafted && drafted.has(player.id)) return false;
       if (
         q &&
@@ -77,7 +104,7 @@ export function App() {
         : (a.projection!.posRank - b.projection!.posRank),
     );
     return filtered;
-  }, [players, positionFilter, hideDrafted, query, drafted]);
+  }, [players, positionFilter, hideDrafted, queueOnly, query, drafted, queue]);
 
   return (
     <div className="min-h-screen bg-app px-4 py-6">
@@ -171,6 +198,16 @@ export function App() {
               </div>
             )}
 
+            <LivePanel
+              recs={recs}
+              roster={roster}
+              open={liveOpen}
+              onToggleOpen={() => setLiveOpen((value) => !value)}
+              queueOnly={queueOnly}
+              onToggleQueueOnly={() => setQueueOnly((value) => !value)}
+              queueSize={queue.size}
+            />
+
             <div className="sticky top-0 z-20 flex h-11 flex-nowrap items-center gap-2 overflow-x-auto bg-app py-2 print:hidden">
               <div className="flex items-center gap-0.5 rounded border border-default p-0.5">
                 {POSITION_FILTERS.map((position) => (
@@ -201,25 +238,28 @@ export function App() {
                 className={`rounded px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition ${
                   hideDrafted ? 'bg-accent text-accent-fg' : 'text-muted hover:text-secondary'
                 }`}
-                title="Hide players marked drafted"
+                title="Hide players drafted by anyone (off board)"
               >
-                Hide drafted ({drafted.size})
+                Hide off-board ({drafted.size})
               </button>
 
-              {drafted.size > 0 && (
+              {(drafted.size > 0 || mine.size > 0 || queue.size > 0) && (
                 <button
                   onClick={() => {
-                    if (confirm('Clear all drafted marks? (New practice draft)')) clear();
+                    if (confirm('Clear the board, my roster, and queue? (New draft)')) {
+                      clear();
+                      clearAll();
+                    }
                   }}
                   className="rounded border border-default px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-secondary transition hover:border-strong hover:text-primary"
-                  title="Reset the board between practice drafts"
+                  title="Full reset between drafts: off-board marks, my roster, queue"
                 >
-                  Clear
+                  New draft
                 </button>
               )}
 
               <span className="ml-auto text-xs tabular-nums text-muted">
-                {visible.length} shown · {drafted.size} drafted
+                {visible.length} shown · {drafted.size} off board · {mine.size} mine · {queue.size} queued
               </span>
             </div>
 
@@ -227,6 +267,10 @@ export function App() {
               players={visible}
               drafted={drafted}
               onToggleDrafted={toggle}
+              mine={mine}
+              onDraftMine={draftMine}
+              queued={queue}
+              onToggleQueued={toggleQueue}
               groupByTier={positionFilter !== 'ALL'}
             />
           </>

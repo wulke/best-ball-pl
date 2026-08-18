@@ -139,8 +139,11 @@ A single ranked table over the snapshot, built for draft day (the **Sheet** tab)
 - **Tier bands**: in a position-filtered view, natural-break tiers render as labeled divider rows (`Tier 3 · 2 players · 308.8–308.1 pts`); in the overall view tiers interleave across positions, so tier shows as a compact per-row `T4` column instead.
 - **Columns**: pick toggle, rank, player, position, team, £ price, projected p50 points (raw, unadjusted), tier, /90 efficiency, ceiling (p90 per 90 — the best-ball spike proxy), and value (tournament-adjusted score per £M).
 - **Flags**: `!` marks non-available status (hover for the injury/suspension news); `M`/`L` chips mark medium/low projection confidence; `R` marks durability/minutes-risk (thin projected playing time for the 26-week grind — dampens the ceiling boost feeding rank/tier/value).
-- **Search** matches player name or team; **Hide drafted** (default on) removes picked players from the board.
-- **Mark drafted**: the `✓` toggle per row persists in localStorage across sessions; **Clear** resets the board between practice drafts.
+- **Search** matches player name or team; **Hide off-board** (default on) removes drafted players from the board.
+- **Row controls** (three, hover-revealed): `✓` marks a player **off board** — drafted by *anyone* in the room, not necessarily by you; `M` marks **my pick** (sets your roster + off-board together); `★` **queues** a target (watch list). All persist in localStorage per draft session.
+- **Live draft panel** (collapsible, above the table): roster shape chips vs starter minimums (`FW 1/2`, red = need), **correlation watch** (same-club clusters; `CS corr` flags G+D pairs whose clean sheets are the same event), **From your queue** (your ★ pool still on the board, best first), **Best on board** (top-3 BPA), and a **default target per position** with NEED/ok/full state and scarcity tags (`T2 ×3 left`) — the mid-to-late-round answer to "I don't know half these players".
+- **★ Queue filter**: the `★ Queue (n)` toggle filters the board down to your queued targets — the Underdog watch-list pattern, mid-draft.
+- **New draft**: full reset of off-board marks, roster, and queue between drafts.
 - **Print-friendly**: printing (or Print preview) flips any theme to light paper/dark ink via a print token override, hides interactive controls, and tightens row density — print with filters active to scope the sheet (e.g. MD-only page).
 - **Carry-card pin**: when a reviewed draft room exists, its carry-forward card (auto-flags + your note) pins at the top of the sheet for the next draft — collapsible, never printed.
 
