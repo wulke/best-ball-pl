@@ -51,13 +51,21 @@ src/
     project.ts  #   Minutes/rates/volume/team priors → p10/p50/p90 projections
     cli.ts      #   npm run model: recompute + ranked report
   ui/         # Browser-only React cheat sheet (Vite)
-    App.tsx         #   Snapshot load, filters/search, sticky controls bar
+    App.tsx         #   Snapshot load, view nav (Sheet/Drafts), carry-card pin, sticky controls bar
     PlayerTable.tsx #   Ranked tier table: bands, rows, flags
     useDrafted.ts   #   Mark-drafted state persisted to localStorage
+    drafts/         # Draft-review slice (#20): rooms, intake, review lenses
+      types.ts      #   Parsed-log + room-record contract (the #22 parser targets this)
+      parse.ts      #   parseRecap seam — STUB until #22 lands the real parser
+      store.ts      #   localStorage working store + export/import (data/drafts/)
+      review.ts     #   Pure lens math: deviations, headline, best-9, tier mix, club grid, flags
+      fixture.ts    #   DEV-only deterministic 12-team room for exercising the flow
+      DraftsView.tsx / RoomEditor.tsx / PickTable.tsx / ReviewPanel.tsx / PlayerPicker.tsx / CarryCard.tsx
 data/
   snapshot.json  # Committed, ETL-generated; the UI's single data source
   fbref.json     # Committed parse of the manually-saved FBref pages (volume terms)
   pl-stats.json  # Committed Premier League stats API pull (passing terms)
+  drafts/        # Exported room records (data/drafts/<yyyy-mm-dd>-<room-slug>.json), committed
 docs/
   research/   # Research findings (wayfinder research tickets)
 ```
@@ -124,7 +132,7 @@ UI follows the design system in [`DESIGN.md`](DESIGN.md) — data-dense sports a
 
 ### Cheat sheet view (v1)
 
-A single ranked table over the snapshot, built for draft day:
+A single ranked table over the snapshot, built for draft day (the **Sheet** tab):
 
 - **Ranking**: overall by tournament-adjusted score, or within-position (`posRank`) when a position filter is active.
 - **Tier bands**: in a position-filtered view, natural-break tiers render as labeled divider rows (`Tier 3 · 2 players · 308.8–308.1 pts`); in the overall view tiers interleave across positions, so tier shows as a compact per-row `T4` column instead.
@@ -133,6 +141,20 @@ A single ranked table over the snapshot, built for draft day:
 - **Search** matches player name or team; **Hide drafted** (default on) removes picked players from the board.
 - **Mark drafted**: the `✓` toggle per row persists in localStorage across sessions; **Clear** resets the board between practice drafts.
 - **Print-friendly**: printing (or Print preview) flips any theme to light paper/dark ink via a print token override, hides interactive controls, and tightens row density — print with filters active to scope the sheet (e.g. MD-only page).
+- **Carry-card pin**: when a reviewed draft room exists, its carry-forward card (auto-flags + your note) pins at the top of the sheet for the next draft — collapsible, never printed.
+
+### Draft review (v1)
+
+The **Drafts** tab — the between-drafts review loop for the practice-then-flagship plan. Paste-parse is the only intake (#19): copy Underdog's draft-recap text into the paste box, the parser builds the full-room pick log, ambiguous names get a one-click confirm queue, unmatched picks (transfer insurance, by design) stay flagged and excluded from the math. **Until the recap parser lands (#22, gated on the first real $3 recap)**, pastes are stored verbatim so the first recap is already captured — and a DEV-only fixture button simulates a full 12-team room against the current snapshot to exercise the whole flow.
+
+- **Rooms**: localStorage is the working store; **Export** downloads the record verbatim as `data/drafts/<yyyy-mm-dd>-<room-slug>.json` to move into the repo and commit (the archival step), **Import** restores it. Room facts: name, draft date, entry cost ($3/$15/other), draft URL, my team (dropdown of recap teams), carry note.
+- **Pick log**: the full ~216-pick log with inline editing as the pressure valve — re-match a player (search-select), fix a team name, delete/add picks; pick/round renumber automatically.
+- **Review panel** (needs my team picked) — the #18 lenses:
+  - **Headline**: roster total vs naive sheet-perfect top-18 legal shape, as % (tournament score, raw p50 alongside — 12-team rooms sit ~50–55% of the unattainable baseline by construction)
+  - **Per-pick deviation**: each own pick vs the best sheet player still on the board — BPA delta primary (rank + points), best same-position secondary
+  - **Best 9**: pseudo-starters (1 G / 2 D / 2 MD / 2 FW / 2 FLEX) by projection, with the tier mix and a floor gauge (avg p10/p50)
+  - **Club coverage**: 20 clubs × G/D/MD/FW counts, shaded by model strength (CS quartile for G/D, attack quartile for MD/FW) with auto gap-flags
+  - **Carry card**: top auto-flags + one free-text line — pinned on the cheat sheet during the next draft
 
 ## Workflow
 

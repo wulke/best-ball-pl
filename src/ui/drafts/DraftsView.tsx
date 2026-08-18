@@ -1,0 +1,329 @@
+/**
+ * The Drafts view (#20): room list → paste box → match-confirm preview →
+ * pick-your-team → review panel. Intake is paste-parse only (#19); until #22
+ * lands the parser, pastes are stored verbatim (the fixture gate) and the dev
+ * fixture exercises the full flow.
+ */
+import { useRef, useState } from 'react';
+import type { SnapshotPlayer } from '../types.js';
+import type { PreviewPick, RoomRecord } from './types.js';
+import { renumber } from './types.js';
+import { parseRecap } from './parse.js';
+import { buildFixturePreview } from './fixture.js';
+import { exportRoomFile, newRoomId, parseRoomFile } from './store.js';
+import { PickTable } from './PickTable.js';
+import { RoomEditor } from './RoomEditor.js';
+
+type Props = {
+  players: SnapshotPlayer[];
+  rooms: RoomRecord[];
+  upsert: (room: RoomRecord) => void;
+  remove: (id: string) => void;
+};
+
+type Intake =
+  | { stage: 'idle' }
+  | { stage: 'preview'; picks: PreviewPick[]; rawPaste: string; suggestedName: string | null; suggestedUrl: string | null }
+  | { stage: 'unimplemented'; rawPaste: string };
+
+const DEV = import.meta.env.DEV;
+const PANEL = 'rounded-md border border-default bg-surface';
+
+export function DraftsView({ players, rooms, upsert, remove }: Props) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [paste, setPaste] = useState('');
+  const [intake, setIntake] = useState<Intake>({ stage: 'idle' });
+  const [error, setError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const openRoom = rooms.find((room) => room.id === openId) ?? null;
+
+  const createRoom = (init: Partial<RoomRecord>): RoomRecord => {
+    const now = new Date().toISOString();
+    return {
+      version: 1,
+      id: newRoomId(),
+      name: init.name ?? '',
+      entryCost: init.entryCost ?? 3,
+      draftDate: init.draftDate ?? now.slice(0, 10),
+      rawPaste: init.rawPaste ?? '',
+      picks: init.picks ?? [],
+      myTeam: init.myTeam ?? null,
+      draftUrl: init.draftUrl ?? null,
+      carryNote: '',
+      createdAt: now,
+      updatedAt: now,
+    };
+  };
+
+  const commitPreview = (preview: Extract<Intake, { stage: 'preview' }>) => {
+    const room = createRoom({
+      name: preview.suggestedName ?? `Room ${new Date().toISOString().slice(0, 10)}`,
+      rawPaste: preview.rawPaste,
+      picks: renumber(preview.picks.map(({ candidates: _candidates, ...entry }) => entry)),
+      draftUrl: preview.suggestedUrl,
+    });
+    upsert(room);
+    setIntake({ stage: 'idle' });
+    setPaste('');
+    setOpenId(room.id);
+  };
+
+  const tryParse = () => {
+    const raw = paste.trim();
+    if (!raw) return;
+    const result = parseRecap(raw);
+    if (result.status === 'unimplemented') {
+      setIntake({ stage: 'unimplemented', rawPaste: raw });
+      return;
+    }
+    if (result.status === 'error') {
+      setError(result.message);
+      return;
+    }
+    setIntake({
+      stage: 'preview',
+      picks: result.picks,
+      rawPaste: raw,
+      suggestedName: result.suggestedName,
+      suggestedUrl: result.suggestedUrl,
+    });
+  };
+
+  const loadFixture = () => {
+    try {
+      const fixture = buildFixturePreview(players);
+      setPaste(fixture.rawPaste);
+      setIntake({
+        stage: 'preview',
+        picks: fixture.picks,
+        rawPaste: fixture.rawPaste,
+        suggestedName: fixture.suggestedName,
+        suggestedUrl: null,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const importFile = async (file: File) => {
+    setError(null);
+    try {
+      const room = parseRoomFile(await file.text());
+      upsert({ ...room, updatedAt: new Date().toISOString() });
+      setOpenId(room.id);
+    } catch (err) {
+      setError(err instanceof Error ? `Import failed: ${err.message}` : 'Import failed');
+    }
+  };
+
+  if (openRoom) {
+    return (
+      <RoomEditor
+        room={openRoom}
+        players={players}
+        onChange={upsert}
+        onClose={() => setOpenId(null)}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-accent">
+            Practice-then-flagship loop
+          </p>
+          <h2 className="font-condensed text-2xl font-bold">Draft Rooms</h2>
+        </div>
+        <div className="flex items-center gap-1">
+          {DEV && (
+            <button
+              type="button"
+              onClick={loadFixture}
+              className="rounded border border-default px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-info transition hover:border-strong"
+              title="Dev-only: simulate a full 12-team room against the current snapshot"
+            >
+              Dev fixture
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            className="rounded border border-default px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-secondary transition hover:border-strong hover:text-primary"
+          >
+            Import room
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void importFile(file);
+              event.target.value = '';
+            }}
+          />
+        </div>
+      </header>
+
+      {error && (
+        <p className="rounded border border-negative/40 bg-negative/10 px-3 py-2 text-sm text-negative">
+          {error}
+        </p>
+      )}
+
+      {/* Intake: paste box (#19) */}
+      <section className={PANEL}>
+        <div className="border-b border-default px-3 py-2">
+          <span className="font-condensed text-sm font-semibold uppercase tracking-wider text-accent">
+            New room from recap paste
+          </span>
+        </div>
+        <div className="flex flex-col gap-2 px-3 py-2">
+          <textarea
+            value={paste}
+            onChange={(event) => {
+              setPaste(event.target.value);
+              setIntake({ stage: 'idle' });
+              setError(null);
+            }}
+            rows={4}
+            placeholder="Paste Underdog's draft recap text here (copy from your logged-in recap view)…"
+            className="w-full resize-y rounded border border-default bg-surface px-2 py-1 font-mono text-xs text-primary placeholder:text-muted focus:border-strong focus:outline-none"
+          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={tryParse}
+              disabled={paste.trim() === ''}
+              className="rounded bg-accent px-3 py-1.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Parse &amp; preview
+            </button>
+            {intake.stage === 'idle' && (
+              <span className="text-xs text-muted">
+                paste-parse is the only intake — inline edit is the pressure valve
+              </span>
+            )}
+          </div>
+
+          {intake.stage === 'unimplemented' && (
+            <div className="rounded border border-info/30 bg-info/10 px-2 py-1.5 text-sm text-info">
+              The recap parser lands with the first real $3 recap (#22).{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  const room = createRoom({
+                    name: `Room ${new Date().toISOString().slice(0, 10)} (paste stored)`,
+                    rawPaste: intake.rawPaste,
+                  });
+                  upsert(room);
+                  setPaste('');
+                  setIntake({ stage: 'idle' });
+                  setOpenId(room.id);
+                }}
+                className="font-semibold underline underline-offset-2"
+              >
+                Store the paste verbatim now
+              </button>{' '}
+              — capturing the first recap is the parser's gate.
+            </div>
+          )}
+
+          {intake.stage === 'preview' && (
+            <div className="flex flex-col gap-2">
+              <PickTable
+                players={players}
+                picks={intake.picks}
+                onConfirmCandidate={(index, playerId) => {
+                  setIntake({
+                    ...intake,
+                    picks: intake.picks.map((pick, i) =>
+                      i === index ? { ...pick, playerId, unmatched: false, candidates: undefined } : pick,
+                    ),
+                  });
+                }}
+                onLeaveUnmatched={(index) => {
+                  setIntake({
+                    ...intake,
+                    picks: intake.picks.map((pick, i) =>
+                      i === index ? { ...pick, playerId: null, unmatched: true, candidates: undefined } : pick,
+                    ),
+                  });
+                }}
+              />
+              <div>
+                <button
+                  type="button"
+                  onClick={() => commitPreview(intake)}
+                  className="rounded bg-accent px-3 py-1.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-hover"
+                >
+                  Create room ({intake.picks.filter((p) => !p.playerId).length} unmatched)
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Room list */}
+      <section className={PANEL}>
+        <div className="border-b border-default px-3 py-2">
+          <span className="font-condensed text-sm font-semibold uppercase tracking-wider text-accent">
+            Rooms ({rooms.length})
+          </span>
+        </div>
+        {rooms.length === 0 ? (
+          <p className="px-3 py-4 text-sm text-muted">
+            No rooms yet — paste a recap above (or run the dev fixture).
+          </p>
+        ) : (
+          <ul>
+            {rooms.map((room) => (
+              <li
+                key={room.id}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-default px-2 py-1.5 last:border-b-0 hover:bg-surface-hover"
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenId(room.id)}
+                  className="text-left text-sm font-semibold text-primary hover:text-accent"
+                >
+                  {room.name || 'Untitled room'}
+                </button>
+                <span className="text-xs tabular-nums text-muted">
+                  {room.draftDate || '—'} · {room.entryCost !== null ? `$${room.entryCost}` : '—'} ·{' '}
+                  {room.picks.length} picks
+                  {room.myTeam ? ` · my team: ${room.myTeam}` : ' · no team picked'}
+                </span>
+                <span className="ml-auto flex items-center gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => exportRoomFile(room)}
+                    className="rounded border border-default px-2 py-0.5 font-semibold text-secondary transition hover:border-strong hover:text-primary"
+                    title="Download data/drafts/<date>-<slug>.json for commit"
+                  >
+                    Export
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Delete room "${room.name || 'Untitled'}"? This cannot be undone.`))
+                        remove(room.id);
+                    }}
+                    className="rounded border border-default px-2 py-0.5 font-semibold text-muted transition hover:border-negative hover:text-negative"
+                  >
+                    Delete
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
