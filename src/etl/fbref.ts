@@ -272,7 +272,12 @@ async function extractTable(html: string, spec: PageSpec): Promise<ExtractedTabl
  *  file isn't a parseable multipart MHTML (callers fall back to raw content). */
 function readMhtmlHtml(filePath: string): string | null {
   const raw = fs.readFileSync(filePath, 'utf8');
-  const boundaryMatch = raw.match(/^Content-Type: multipart\/related;\s*boundary="?([^";\r\n]+)"?/im);
+  // Chrome folds the MIME header across lines (boundary= lands on its own
+  // line), so grab the whole pre-body header block and find the boundary
+  // anywhere in it.
+  const headEnd = raw.indexOf('\r\n\r\n');
+  const headerBlock = headEnd === -1 ? raw : raw.slice(0, headEnd);
+  const boundaryMatch = headerBlock.match(/boundary="?([^";\r\n]+)"?/);
   if (!boundaryMatch) return null;
   const boundary = `--${boundaryMatch[1]}`;
   const parts = raw.split(boundary).slice(1);
@@ -351,7 +356,16 @@ export async function parseFbrefRawDir(onLog: (msg: string) => void = console.lo
   for (const f of files) {
     const fullPath = path.join(FBREF_RAW_DIR, f);
     const raw = fs.readFileSync(fullPath, 'utf8');
-    const html = f.endsWith('.mhtml') ? (readMhtmlHtml(fullPath) ?? raw) : raw;
+    let html: string;
+    if (f.endsWith('.mhtml')) {
+      html = readMhtmlHtml(fullPath) ?? '';
+      if (!html) {
+        onLog(`[fbref] WARNING: could not decode ${f} as a single-file MHTML — skipped`);
+        continue;
+      }
+    } else {
+      html = raw;
+    }
     const detected = detectPage(f, html, onLog);
     if (!detected) continue;
     const { seasonUrl, spec } = detected;
