@@ -149,6 +149,8 @@ type MatchReport = {
 function matchPlayer(
   fbrefName: string,
   squads: Set<string | null>,
+  seasonLabel: string,
+  fbrefMinutes: number,
   players: SnapshotPlayer[],
   byNormFull: Map<string, SnapshotPlayer[]>,
   byNormWeb: Map<string, SnapshotPlayer[]>,
@@ -162,13 +164,31 @@ function matchPlayer(
     return hit;
   }
 
+  // Guard for same-name strangers: FBref "Neto" (Bournemouth GK) vs the FPL
+  // winger "Pedro Lomba Neto" share a web name. When the FBref squad maps to
+  // a DIFFERENT club than the candidate's AND the season minutes disagree by
+  // >90, they're almost certainly different people (a transfer keeps the
+  // player's season minutes; only the club changes). Such candidates are
+  // rejected so the exact/surname tiers can't mis-pair them.
+  const guard = (c: SnapshotPlayer | null): SnapshotPlayer | null => {
+    if (!c) return null;
+    const fplCodes = [...squads]
+      .filter((s): s is string => s !== null)
+      .map((s) => SQUAD_TO_FPL[s])
+      .filter(Boolean);
+    if (fplCodes.length === 0 || fplCodes.includes(c.team)) return c;
+    const row = c.seasons.find((s) => s.season === seasonLabel);
+    if (row && Math.abs(row.minutes - fbrefMinutes) > 90) return null;
+    return c;
+  };
+
   const full = byNormFull.get(norm(fbrefName)) ?? [];
-  if (full.length === 1) return full[0];
-  if (full.length > 1) return tiebreakBySquad(full, squads) ?? full[0];
+  if (full.length === 1) return guard(full[0]);
+  if (full.length > 1) return guard(tiebreakBySquad(full, squads) ?? full[0]);
 
   const web = byNormWeb.get(norm(fbrefName)) ?? [];
-  if (web.length === 1) return web[0];
-  if (web.length > 1) return tiebreakBySquad(web, squads) ?? null;
+  if (web.length === 1) return guard(web[0]);
+  if (web.length > 1) return guard(tiebreakBySquad(web, squads) ?? null);
 
   // Surname tier: FBref writes "First Last" while FPL often lists only the
   // last name ("Caicedo") or a fuller name ("Kepa Arrizabalaga Revuelta",
@@ -187,8 +207,8 @@ function matchPlayer(
       const nonSurnameCand = cand.filter((t) => t !== last);
       return nonSurnameFb.some((t) => nonSurnameCand.some((c) => c.startsWith(t) || t.startsWith(c)));
     });
-    if (candidates.length === 1) return candidates[0];
-    if (candidates.length > 1) return tiebreakBySquad(candidates, squads) ?? null;
+    if (candidates.length === 1) return guard(candidates[0]);
+    if (candidates.length > 1) return guard(tiebreakBySquad(candidates, squads) ?? null);
   }
 
   // First-name-only tier: FBref sometimes uses a single token ("Alisson")
@@ -198,8 +218,8 @@ function matchPlayer(
     const candidates = players.filter(
       (p) => norm(p.fullName).startsWith(only) && norm(p.fullName) !== only,
     );
-    if (candidates.length === 1) return candidates[0];
-    if (candidates.length > 1) return tiebreakBySquad(candidates, squads) ?? null;
+    if (candidates.length === 1) return guard(candidates[0]);
+    if (candidates.length > 1) return guard(tiebreakBySquad(candidates, squads) ?? null);
   }
 
   return null;
@@ -244,7 +264,7 @@ export function applyFbrefEnrichment(
     const byName = assembleSeason(pages);
     let count = 0;
     for (const [fbrefName, stats] of byName) {
-      const player = matchPlayer(fbrefName, stats.squads, players, byNormFull, byNormWeb, overrides);
+      const player = matchPlayer(fbrefName, stats.squads, seasonLabel, stats.minutes, players, byNormFull, byNormWeb, overrides);
       if (!player) {
         // Only interesting if the FBref squad maps into the 2026/27 pool.
         const inPool = [...stats.squads].some((s) => s !== null && s in SQUAD_TO_FPL) || stats.squads.has(null);
@@ -260,6 +280,7 @@ export function applyFbrefEnrichment(
       row.tacklesWon = stats.values.tacklesWon;
       row.passesCompleted = stats.values.passesCompleted;
       row.gkWins = stats.values.gkWins;
+      row.unusedSubs = stats.values.unusedSubs;
       row.fbrefMinutes = stats.minutes > 0 ? stats.minutes : undefined;
       if (row.fbrefMinutes != null && Math.abs(row.fbrefMinutes - row.minutes) > 90) {
         report.minuteMismatches.push(

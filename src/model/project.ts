@@ -131,6 +131,9 @@ type RawRates = {
   startFraction: number;
   penaltiesSavedRate: number; // expected per full-season share
   seasonCount: number;
+  /** FBref playing-time signal: recency-weighted unused-subs per 90 played
+   *  (bench-heavy role) — null when the playing-time page wasn't parsed. */
+  unusedSubsPer90: number | null;
   /** FBref per-90 volume rates, recency-weighted over enriched seasons. */
   volume: VolumeRates | null;
 };
@@ -199,6 +202,18 @@ function rawRates(player: SnapshotPlayer, cfg: ModelConfig): RawRates {
   const penaltyTotals = seasons.reduce((a, s) => a + s.penaltiesSaved, 0);
   const penaltyMinutes = seasons.reduce((a, s) => a + s.minutes, 0);
 
+  // FBref playing-time signal: unused substitutes per 90 played, weighted over
+  // the enriched rows (denominator = those rows' FBref minutes, so a
+  // bench-warming cameo player and a nailed starter are compared fairly).
+  let wUnused = 0;
+  let wUnusedMin = 0;
+  seasons.slice(0, 3).forEach((s, i) => {
+    if (s.unusedSubs == null || s.fbrefMinutes == null || s.fbrefMinutes <= 0) return;
+    const w = weights[i];
+    wUnused += w * s.unusedSubs;
+    wUnusedMin += w * s.fbrefMinutes;
+  });
+
   // FBref volume terms: recency-weight each field's totals and divide by the
   // SAME rows' weighted minutes — a field only counts seasons where that
   // field was actually parsed (a page set can legitimately cover only some
@@ -245,6 +260,7 @@ function rawRates(player: SnapshotPlayer, cfg: ModelConfig): RawRates {
     startFraction: starts.minutes > 0 ? Math.min(1, Math.max(0.3, starts.total)) : 0.85,
     penaltiesSavedRate: penaltyMinutes > 0 ? penaltyTotals / (penaltyMinutes / SEASON_MINUTES) : 0,
     seasonCount: seasons.length,
+    unusedSubsPer90: wUnusedMin > 0 ? wUnused / (wUnusedMin / 90) : null,
     volume,
   };
 }
@@ -613,7 +629,8 @@ export function buildProjections(
     const tCfg = cfg.tournament;
     const durabilityRisk =
       minutes / cfg.minutes.maxMinutes < tCfg.minutesShareRiskThreshold ||
-      rates.startFraction < tCfg.startFractionRiskThreshold;
+      rates.startFraction < tCfg.startFractionRiskThreshold ||
+      (rates.unusedSubsPer90 ?? 0) > tCfg.unusedSubsRiskPer90;
 
     // Ceiling weighting: best-ball rewards boom weeks, so rank on a score
     // blended toward p90, not raw mean output. Risk-flagged players get a

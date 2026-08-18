@@ -59,6 +59,10 @@ export type SeasonStatLine = {
   passesCompleted?: number;
   /** FBref keeper W (parsed for cross-checks; scoring still uses the team win-rate prior). */
   gkWins?: number;
+  /** FBref playing-time page: games the player was an UNUSED substitute — a
+   *  thin-role signal FPL history can't express (bench-warmers vs nailed
+   *  starters with similar minutes). Feeds the durability-risk flag. */
+  unusedSubs?: number;
   /** Minutes as FBref reports them — cross-check vs FPL `minutes` for match QA. */
   fbrefMinutes?: number;
 };

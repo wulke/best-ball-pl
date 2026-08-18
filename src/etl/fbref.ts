@@ -35,16 +35,21 @@ export type FbrefField =
   | 'crosses'
   | 'tacklesWon'
   | 'passesCompleted'
-  | 'gkWins';
+  | 'gkWins'
+  | 'unusedSubs';
 
 type PageSpec = {
   /** Canonical URL slug for this page type on FBref ("shooting", "passing",
-   *  "passing_types", "defense", "keepers") — used to identify saved files
-   *  by their content, since browsers name the files however they like. */
+   *  "passing_types", "defense", "keepers", "playingtime") — used to
+   *  identify saved files by their content, since browsers name the files
+   *  however they like. */
   slug: string;
   /** Legacy raw-filename suffix: `<season>_<page>.html` (still honoured as a
    *  fallback when the canonical URL can't be read). Also the cache key. */
   file: string;
+  /** FBref DOM table id suffix (usually == file; "playingtime" →
+   *  "stats_playing_time"). The player table is extracted by this id. */
+  tableId?: string;
   /** field → candidate `data-stat` names (first hit in the table wins). */
   dataStats: Partial<Record<FbrefField, string[]>>;
   /** field → thead labels (last header row), fallback when data-stat misses.
@@ -88,6 +93,13 @@ const PAGE_SPECS: PageSpec[] = [
     file: 'keeper',
     dataStats: { gkWins: ['gk_wins'] },
     headers: { gkWins: ['W', 'Wins'] },
+  },
+  {
+    slug: 'playingtime',
+    file: 'playingtime',
+    tableId: 'playing_time',
+    dataStats: { unusedSubs: ['unused_subs'] },
+    headers: { unusedSubs: ['Unused Subs'] },
   },
 ];
 
@@ -160,7 +172,7 @@ async function extractTable(html: string, spec: PageSpec): Promise<ExtractedTabl
   // summary tables. Pull the `stats_<page>` table straight out of the raw
   // HTML instead; fall back to the full page when the regex misses.
   const playerTableMatch = html.match(
-    new RegExp(`<table[^>]*id="stats_${spec.file}"[^>]*>[\\s\\S]*?</table>`),
+    new RegExp(`<table[^>]*id="stats_${spec.tableId ?? spec.file}"[^>]*>[\\s\\S]*?</table>`),
   );
   const content = playerTableMatch
     ? `<!doctype html><html><body>${playerTableMatch[0]}</body></html>`
@@ -250,6 +262,44 @@ async function extractTable(html: string, spec: PageSpec): Promise<ExtractedTabl
 }
 
 // ---------------------------------------------------------------------------
+// Saved-file reading (.html + .mhtml)
+// ---------------------------------------------------------------------------
+
+/** Extract the main HTML document from a Chrome "Web Page, Single File"
+ *  (.mhtml) save. Needed because FBref's passing table is JS-populated after
+ *  load — "HTML Only" saves the pre-JS server document (empty cells), while
+ *  the single-file format captures the rendered DOM. Returns null when the
+ *  file isn't a parseable multipart MHTML (callers fall back to raw content). */
+function readMhtmlHtml(filePath: string): string | null {
+  const raw = fs.readFileSync(filePath, 'utf8');
+  const boundaryMatch = raw.match(/^Content-Type: multipart\/related;\s*boundary="?([^";\r\n]+)"?/im);
+  if (!boundaryMatch) return null;
+  const boundary = `--${boundaryMatch[1]}`;
+  const parts = raw.split(boundary).slice(1);
+  for (const part of parts) {
+    if (!part.trim() || part.startsWith('--')) continue;
+    const sep = part.indexOf('\r\n\r\n');
+    if (sep === -1) continue;
+    const headerBlock = part.slice(0, sep);
+    const body = part.slice(sep + 4);
+    if (!/^Content-Type:\s*text\/html/im.test(headerBlock)) continue;
+    // Prefer the part whose Content-Location matches the page (the first
+    // text/html part is usually the page itself anyway).
+    const encoding = headerBlock.match(/^Content-Transfer-Encoding:\s*(\S+)/im)?.[1]?.toLowerCase();
+    if (encoding === 'base64') {
+      return Buffer.from(body.replace(/\s/g, ''), 'base64').toString('utf8');
+    }
+    if (encoding === 'quoted-printable' || !encoding) {
+      return body
+        .replace(/=\r?\n/g, '') // soft line breaks
+        .replace(/=([0-9A-Fa-f]{2})/g, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)));
+    }
+    return body;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Public entry: parse every saved page in data/fbref-raw/
 // ---------------------------------------------------------------------------
 
@@ -291,16 +341,17 @@ export async function parseFbrefRawDir(onLog: (msg: string) => void = console.lo
   const seen = new Set<string>();
 
   const files = fs.existsSync(FBREF_RAW_DIR)
-    ? fs.readdirSync(FBREF_RAW_DIR).filter((f) => f.endsWith('.html')).sort()
+    ? fs.readdirSync(FBREF_RAW_DIR).filter((f) => f.endsWith('.html') || f.endsWith('.mhtml')).sort()
     : [];
   if (!files.length) {
-    onLog('[fbref] no .html files in data/fbref-raw/');
+    onLog('[fbref] no saved pages (.html/.mhtml) in data/fbref-raw/');
     return parsed;
   }
 
   for (const f of files) {
     const fullPath = path.join(FBREF_RAW_DIR, f);
-    const html = fs.readFileSync(fullPath, 'utf8');
+    const raw = fs.readFileSync(fullPath, 'utf8');
+    const html = f.endsWith('.mhtml') ? (readMhtmlHtml(fullPath) ?? raw) : raw;
     const detected = detectPage(f, html, onLog);
     if (!detected) continue;
     const { seasonUrl, spec } = detected;
@@ -317,18 +368,24 @@ export async function parseFbrefRawDir(onLog: (msg: string) => void = console.lo
     const wanted = Object.keys(spec.dataStats) as FbrefField[];
     const resolved = wanted.filter((field) => table.rows.some((r) => field in r.values));
     if (resolved.length === 0) {
-      throw new Error(
-        `None of ${wanted.join('/')} found in ${f} (detected as ${seasonLabel} ${spec.slug}). ` +
-          `data-stats present: ${table.availableStats.slice(0, 40).join(', ')}; headers: ${table.availableHeaders.join(' | ')}`,
+      // Graceful degradation: e.g. the passing page's pass columns are
+      // JS-populated and empty in an "HTML Only" save. Keep the rows (the
+      // per-term coverage then falls back to baselines) and warn loudly
+      // instead of killing the whole run.
+      onLog(
+        `[fbref] WARNING: ${seasonLabel} ${spec.slug} parsed (${table.rows.length} rows) but none of ` +
+          `${wanted.join('/')} have values — cells are likely JS-populated (saved as "HTML Only"?). ` +
+          `That term falls back to league baselines. Re-save this page as "Web Page, Single File" (.mhtml) ` +
+          `to capture the rendered table. data-stats present: ${table.availableStats.slice(0, 30).join(', ')}`,
       );
     }
     const unresolved = wanted.filter((field) => !resolved.includes(field));
-    if (unresolved.length) onLog(`[fbref] warn: ${unresolved.join('/')} unresolved in ${spec.slug}`);
+    if (unresolved.length && resolved.length) onLog(`[fbref] warn: ${unresolved.join('/')} unresolved in ${spec.slug}`);
     const key = spec.file;
     if (parsed.seasons[seasonLabel][key]) onLog(`[fbref] note: ${f} duplicates ${seasonLabel} ${key} — last one wins`);
     parsed.seasons[seasonLabel][key] = table.rows;
     seen.add(`${seasonLabel}/${key}`);
-    onLog(`[fbref] ${seasonLabel} ${spec.slug}: ${table.rows.length} rows (fields: ${resolved.join(', ')})`);
+    onLog(`[fbref] ${seasonLabel} ${spec.slug}: ${table.rows.length} rows (fields: ${resolved.join(', ') || 'NONE — baseline fallback'})`);
   }
 
   const missing: string[] = [];

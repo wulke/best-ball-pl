@@ -19,4 +19,6 @@ coverage/
 .pw-browsers/
 
 # Raw manually-saved FBref HTML — parsed output is committed as data/fbref.json
-data/fbref-raw/
+# (the capture-instructions README inside stays tracked)
+data/fbref-raw/*
+!data/fbref-raw/README.md

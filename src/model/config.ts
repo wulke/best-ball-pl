@@ -250,6 +250,11 @@ export type TournamentConfig = {
   /** Multi-season start-rate below this also flags risk (undercuts a healthy
    *  minutes total padded by garbage-time cameos). */
   startFractionRiskThreshold: number;
+  /** FBref unused-subs per 90 played above this flags durability/minutes risk
+   *  (bench-heavy role — a player benched entirely more often than they're on
+   *  the pitch is a rotation bet, not a Round-1 grind pick). Null when the
+   *  playing-time page wasn't parsed. */
+  unusedSubsRiskPer90: number;
   /** Ceiling boost applied to flagged players is scaled by this factor
    *  (0 = no boost, 1 = full boost) — a boom-week proxy is only worth
    *  drafting toward if the player is trusted to be on the pitch. */
@@ -260,6 +265,7 @@ export const DEFAULT_TOURNAMENT: TournamentConfig = {
   ceilingWeight: 0.2,
   minutesShareRiskThreshold: 0.5,
   startFractionRiskThreshold: 0.55,
+  unusedSubsRiskPer90: 0.6,
   riskCeilingDampen: 0.3,
 };
 
