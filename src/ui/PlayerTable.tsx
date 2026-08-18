@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { PlayerStatus, SnapshotPlayer } from './types.js';
 import { Tooltip } from './Tooltip.js';
+import { PlayerBreakdownModal } from './PlayerBreakdownModal.js';
 
 /**
  * The ranked tier table — the cheat sheet itself.
@@ -65,6 +67,7 @@ export function PlayerTable({
   onToggleQueued,
   groupByTier,
 }: Props) {
+  const [breakdownPlayer, setBreakdownPlayer] = useState<SnapshotPlayer | null>(null);
   const rows: Row[] = players.map((player) => ({
     player,
     rank: groupByTier ? (player.projection?.posRank ?? 0) : (player.projection?.overallRank ?? 0),
@@ -81,7 +84,7 @@ export function PlayerTable({
     const lo = group[group.length - 1].player.projection?.tournamentScore ?? 0;
     body.push(
       <tr key={`band-${tier}`} className="border-y border-default bg-surface-raised print:static">
-        <td colSpan={groupByTier ? 12 : 13} className="px-2 py-1">
+        <td colSpan={groupByTier ? 13 : 14} className="px-2 py-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-accent">
               Tier {tier}
@@ -113,6 +116,7 @@ export function PlayerTable({
         onDraftMine={onDraftMine}
         isQueued={queued.has(row.player.id)}
         onToggleQueued={onToggleQueued}
+        onShowBreakdown={setBreakdownPlayer}
       />,
     );
   });
@@ -140,6 +144,11 @@ export function PlayerTable({
             <th className={`${TH_BASE} w-6`}>
               <Tooltip text="Queue / watch — my target pool for this draft" wide>
                 <span>★</span>
+              </Tooltip>
+            </th>
+            <th className={`${TH_BASE} w-6`}>
+              <Tooltip text="Scoring breakdown — how the projection is built" wide>
+                <span>i</span>
               </Tooltip>
             </th>
             <th
@@ -188,7 +197,7 @@ export function PlayerTable({
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={groupByTier ? 12 : 13} className="px-2 py-6 text-center text-sm text-muted">
+              <td colSpan={groupByTier ? 13 : 14} className="px-2 py-6 text-center text-sm text-muted">
                 No players match the current filters.
               </td>
             </tr>
@@ -196,6 +205,14 @@ export function PlayerTable({
           {body}
         </tbody>
       </table>
+      {breakdownPlayer?.projection && (
+        <PlayerBreakdownModal
+          name={breakdownPlayer.name}
+          position={breakdownPlayer.position}
+          projection={breakdownPlayer.projection}
+          onClose={() => setBreakdownPlayer(null)}
+        />
+      )}
     </div>
   );
 }
@@ -209,6 +226,7 @@ function PlayerRow({
   onDraftMine,
   isQueued,
   onToggleQueued,
+  onShowBreakdown,
 }: {
   row: Row;
   showTierColumn: boolean;
@@ -218,6 +236,7 @@ function PlayerRow({
   onDraftMine: (id: string) => void;
   isQueued: boolean;
   onToggleQueued: (id: string) => void;
+  onShowBreakdown: (player: SnapshotPlayer) => void;
 }) {
   const { player } = row;
   const projection = player.projection!; // upstream filters projection-less players
@@ -288,6 +307,17 @@ function PlayerRow({
             }`}
           >
             ★
+          </button>
+        </Tooltip>
+      </td>
+      <td className="w-6 px-1 py-1">
+        <Tooltip text="Scoring breakdown — how the projection is built" wide>
+          <button
+            type="button"
+            onClick={() => onShowBreakdown(player)}
+            className="flex h-4 w-4 items-center justify-center rounded border border-strong text-[10px] font-semibold italic leading-none text-muted opacity-0 transition-colors hover:border-accent hover:text-accent focus:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent group-hover:opacity-100"
+          >
+            i
           </button>
         </Tooltip>
       </td>
