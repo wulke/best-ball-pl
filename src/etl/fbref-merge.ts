@@ -22,62 +22,15 @@ import {
   type FbrefParsed,
   type FbrefPlayerRow,
 } from './fbref.js';
+import { buildMatchIndexes, matchPlayer, norm, readOverrides, SQUAD_TO_FPL, type Overrides } from './match.js';
+import { applyPlEnrichment, fetchPlStats } from './pl-stats.js';
 import { DEFAULT_MODEL_CONFIG } from '../model/config.js';
 import { buildProjections } from '../model/project.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const SNAPSHOT_PATH = path.join(REPO_ROOT, 'data/snapshot.json');
-const OVERRIDES_PATH = path.join(REPO_ROOT, 'data/fbref-overrides.json');
 const FBREF_RAW_DIR = path.join(REPO_ROOT, 'data/fbref-raw');
-
-/** FBref squad name → FPL short code (2026/27 pool). */
-const SQUAD_TO_FPL: Record<string, string> = {
-  Arsenal: 'ARS',
-  'Aston Villa': 'AVL',
-  Brighton: 'BHA',
-  Bournemouth: 'BOU',
-  Brentford: 'BRE',
-  Chelsea: 'CHE',
-  'Coventry City': 'COV',
-  'Crystal Palace': 'CRY',
-  Everton: 'EVE',
-  Fulham: 'FUL',
-  'Hull City': 'HUL',
-  'Ipswich Town': 'IPS',
-  'Leeds United': 'LEE',
-  Liverpool: 'LIV',
-  'Manchester City': 'MCI',
-  'Manchester United': 'MUN',
-  'Newcastle United': 'NEW',
-  'Nottingham Forest': 'NFO',
-  Sunderland: 'SUN',
-  Tottenham: 'TOT',
-};
-
-/** Strip diacritics + everything non-alphabetic, lowercase. */
-function norm(name: string): string {
-  return name
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z]/g, '');
-}
-
-/** Normalized whitespace-delimited tokens ("A.Becker" → ["abecker"]). */
-function tokensOf(name: string): string[] {
-  return name
-    .split(/\s+/)
-    .map(norm)
-    .filter((t) => t.length > 0);
-}
-
-type Overrides = Record<string, string>; // fbref name → FPL element id
-
-function readOverrides(): Overrides {
-  if (!fs.existsSync(OVERRIDES_PATH)) return {};
-  return JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8')) as Overrides;
-}
 
 // ---------------------------------------------------------------------------
 // Season assembly: group per-page rows by player
@@ -145,94 +98,6 @@ type MatchReport = {
   enriched: { season: string; count: number }[];
   minuteMismatches: string[];
 };
-
-function matchPlayer(
-  fbrefName: string,
-  squads: Set<string | null>,
-  seasonLabel: string,
-  fbrefMinutes: number,
-  players: SnapshotPlayer[],
-  byNormFull: Map<string, SnapshotPlayer[]>,
-  byNormWeb: Map<string, SnapshotPlayer[]>,
-  overrides: Overrides,
-): SnapshotPlayer | null {
-  const byId = (id: string) => players.find((p) => p.id === id) ?? null;
-  const override = overrides[fbrefName];
-  if (override) {
-    const hit = byId(override);
-    if (!hit) throw new Error(`data/fbref-overrides.json: "${fbrefName}" → id ${override} not in snapshot`);
-    return hit;
-  }
-
-  // Guard for same-name strangers: FBref "Neto" (Bournemouth GK) vs the FPL
-  // winger "Pedro Lomba Neto" share a web name. When the FBref squad maps to
-  // a DIFFERENT club than the candidate's AND the season minutes disagree by
-  // >90, they're almost certainly different people (a transfer keeps the
-  // player's season minutes; only the club changes). Such candidates are
-  // rejected so the exact/surname tiers can't mis-pair them.
-  const guard = (c: SnapshotPlayer | null): SnapshotPlayer | null => {
-    if (!c) return null;
-    const fplCodes = [...squads]
-      .filter((s): s is string => s !== null)
-      .map((s) => SQUAD_TO_FPL[s])
-      .filter(Boolean);
-    if (fplCodes.length === 0 || fplCodes.includes(c.team)) return c;
-    const row = c.seasons.find((s) => s.season === seasonLabel);
-    if (row && Math.abs(row.minutes - fbrefMinutes) > 90) return null;
-    return c;
-  };
-
-  const full = byNormFull.get(norm(fbrefName)) ?? [];
-  if (full.length === 1) return guard(full[0]);
-  if (full.length > 1) return guard(tiebreakBySquad(full, squads) ?? full[0]);
-
-  const web = byNormWeb.get(norm(fbrefName)) ?? [];
-  if (web.length === 1) return guard(web[0]);
-  if (web.length > 1) return guard(tiebreakBySquad(web, squads) ?? null);
-
-  // Surname tier: FBref writes "First Last" while FPL often lists only the
-  // last name ("Caicedo") or a fuller name ("Kepa Arrizabalaga Revuelta",
-  // "Josh Acheampong" vs FBref "Joshua Acheampong"). Match the FBref name's
-  // FINAL token to the FPL web name or full-name suffix, then require a
-  // NON-surname token overlap (one a prefix of the other) as a sanity check —
-  // that stops same-surname strangers ("Jacob Bruun Larsen" ≠ Strand Larsen)
-  // being paired while tolerating nicknames ("Josh" vs "Joshua").
-  const fbTokens = tokensOf(fbrefName);
-  if (fbTokens.length >= 2) {
-    const last = fbTokens[fbTokens.length - 1];
-    const candidates = players.filter((p) => {
-      if (norm(p.name) !== last && !norm(p.fullName).endsWith(last)) return false;
-      const cand = tokensOf(`${p.name} ${p.fullName}`);
-      const nonSurnameFb = fbTokens.slice(0, -1);
-      const nonSurnameCand = cand.filter((t) => t !== last);
-      return nonSurnameFb.some((t) => nonSurnameCand.some((c) => c.startsWith(t) || t.startsWith(c)));
-    });
-    if (candidates.length === 1) return guard(candidates[0]);
-    if (candidates.length > 1) return guard(tiebreakBySquad(candidates, squads) ?? null);
-  }
-
-  // First-name-only tier: FBref sometimes uses a single token ("Alisson")
-  // while FPL has "A.Becker" / "Alisson Becker". Match a full-name prefix.
-  if (fbTokens.length === 1) {
-    const only = fbTokens[0];
-    const candidates = players.filter(
-      (p) => norm(p.fullName).startsWith(only) && norm(p.fullName) !== only,
-    );
-    if (candidates.length === 1) return guard(candidates[0]);
-    if (candidates.length > 1) return guard(tiebreakBySquad(candidates, squads) ?? null);
-  }
-
-  return null;
-}
-
-function tiebreakBySquad(candidates: SnapshotPlayer[], squads: Set<string | null>): SnapshotPlayer | null {
-  const fplCodes = new Set(
-    [...squads].filter((s): s is string => s !== null).map((s) => SQUAD_TO_FPL[s]).filter(Boolean),
-  );
-  if (fplCodes.size === 0) return null;
-  const hit = candidates.filter((p) => fplCodes.has(p.team));
-  return hit.length === 1 ? hit[0] : null;
-}
 
 // ---------------------------------------------------------------------------
 // Enrichment (pure — reused by npm run etl)
@@ -302,7 +167,7 @@ export function applyFbrefEnrichment(
 async function main() {
   // 1. Parse raw pages if present; else reuse the committed cache.
   const rawFiles = fs.existsSync(FBREF_RAW_DIR)
-    ? fs.readdirSync(FBREF_RAW_DIR).filter((f) => f.endsWith('.html'))
+    ? fs.readdirSync(FBREF_RAW_DIR).filter((f) => /\.(html|mhtml|csv)$/i.test(f))
     : [];
   let cache: FbrefParsed;
   if (rawFiles.length > 0) {
@@ -339,13 +204,28 @@ async function main() {
     for (const m of report.minuteMismatches.slice(0, 10)) console.warn(`[fbref]   ${m}`);
   }
 
+  // 3. PL stats API: FBref's passing page cells are JS-populated and currently
+  // served empty, so pull passesCompleted/keyPasses from the Premier League's
+  // own leaderboard API instead. FBref-first precedence — PL fills gaps only.
+  let plReport = null;
+  try {
+    const plCache = await fetchPlStats();
+    plReport = applyPlEnrichment(snapshot.players, plCache, overrides);
+    console.log(
+      `[fbref] PL passing filled: ${plReport.enriched.map((e) => `${e.season}=${e.count}`).join(', ')}`,
+    );
+  } catch (err) {
+    console.warn(`[fbref] PL stats fetch failed (${(err as Error).message}) — passesCompleted/keyPasses stay on baselines.`);
+  }
+
   const { projections } = buildProjections(snapshot.players, DEFAULT_MODEL_CONFIG);
   const players = snapshot.players.map((p, i) => ({ ...p, projection: projections[i] }));
   const out: Snapshot = { ...snapshot, players };
   fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(out, null, 2)}\n`);
 
   const withVolume = snapshot.players.filter((p) => p.seasons.some((s) => s.shotsOnTarget != null)).length;
-  console.log(`[fbref] Snapshot updated: ${withVolume}/${snapshot.players.length} players carry FBref volume data.`);
+  const withPassing = snapshot.players.filter((p) => p.seasons.some((s) => s.keyPasses != null)).length;
+  console.log(`[fbref] Snapshot updated: ${withVolume}/${snapshot.players.length} players carry FBref volume; ${withPassing} carry passing data (FBref+PL).`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {

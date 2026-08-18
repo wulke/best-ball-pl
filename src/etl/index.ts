@@ -20,6 +20,8 @@ import { fileURLToPath } from 'node:url';
 import { FplApi } from './fpl.js';
 import { applyFbrefEnrichment } from './fbref-merge.js';
 import { readFbrefCache } from './fbref.js';
+import { applyPlEnrichment, readPlCache } from './pl-stats.js';
+import { readOverrides } from './match.js';
 import { DEFAULT_MODEL_CONFIG } from '../model/config.js';
 import { buildProjections } from '../model/project.js';
 import type {
@@ -145,13 +147,25 @@ async function main() {
 
   // Re-apply committed FBref volume data if present (from `npm run fbref`) so
   // a fresh FPL pull doesn't silently drop back to baseline-only volume.
+  const overrides = readOverrides();
   const fbref = readFbrefCache();
   if (fbref) {
-    const report = applyFbrefEnrichment(players, fbref);
+    const report = applyFbrefEnrichment(players, fbref, overrides);
     const enriched = report.enriched.map((e) => `${e.season}=${e.count}`).join(', ');
     console.log(`[ETL] FBref volume re-applied from data/fbref.json (${enriched || 'none'}).`);
   } else {
     console.log('[ETL] No data/fbref.json — volume terms fall back to league-average baselines.');
+  }
+
+  // PL stats cache covers the passing terms (passesCompleted/keyPasses) that
+  // FBref's JS-populated pages don't capture. Fill gaps only (FBref-first).
+  const pl = readPlCache();
+  if (pl) {
+    const plReport = applyPlEnrichment(players, pl, overrides);
+    const plEnriched = plReport.enriched.map((e) => `${e.season}=${e.count}`).join(', ');
+    console.log(`[ETL] PL passing re-applied from data/pl-stats.json (${plEnriched || 'none'}).`);
+  } else {
+    console.log('[ETL] No data/pl-stats.json — passing terms fall back to league-average baselines.');
   }
 
   console.log('[ETL] Projecting season-long False Nine points (p10/p50/p90)…');
