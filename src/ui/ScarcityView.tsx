@@ -380,9 +380,13 @@ export function ScarcityView({ players, drafted }: Props) {
               position's board so far (not just a count). */}
           {POSITIONS.map((pos) => {
             const draftedCount = byPos[pos].length - livePos[pos].length;
-            const frontierRank = draftedCount + 1;
-            if (frontierRank > byPos[pos].length || frontierRank > CAP) return null;
-            const player = byPos[pos][frontierRank - 1];
+            // Best still-available player — not "draftedCount-th off the top," since real drafts
+            // don't take positions in strict rank order (out-of-order GK picks are the norm, not
+            // the exception).
+            const player = livePos[pos][0];
+            if (!player) return null;
+            const frontierRank = byPos[pos].indexOf(player) + 1;
+            if (frontierRank > CAP) return null;
             const cx = xScale(frontierRank);
             const cy = yScale(player.projection!.tournamentScore);
             const posIsolated = activePosition !== null;
