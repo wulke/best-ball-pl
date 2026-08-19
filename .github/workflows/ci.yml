@@ -3,6 +3,11 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # Manual dispatch (#41): PRs opened by the scheduled-refresh workflow's
+  # GITHUB_TOKEN don't trigger pull_request events (GitHub's anti-recursion
+  # rule), so that workflow explicitly runs this on its branch to populate
+  # the required "check" status for the same commit.
+  workflow_dispatch: {}
 
 permissions:
   contents: read

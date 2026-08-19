@@ -6,6 +6,7 @@
   "scripts": {
     "etl": "node --import tsx src/etl/index.ts",
     "odds": "node --import tsx src/etl/odds-cli.ts",
+    "etl:sanity-check": "node --import tsx src/etl/sanity-check.ts",
     "fbref": "node --import tsx src/etl/fbref-merge.ts",
     "model": "node --import tsx src/model/cli.ts",
     "dev": "vite --config src/ui/vite.config.ts",
