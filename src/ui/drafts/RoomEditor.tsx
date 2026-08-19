@@ -5,33 +5,14 @@
  */
 import { useMemo, useState } from 'react';
 import type { SnapshotPlayer } from '../types.js';
-import type { PickLogEntry, PreviewPick, RoomRecord } from './types.js';
+import type { RoomRecord } from './types.js';
 import { teamsInLog } from './types.js';
-import { parseRecap } from './parse.js';
+import { parseRecap, preserveMatches } from './parse.js';
 import { exportRoomFile } from './store.js';
 import { PickTable } from './PickTable.js';
 import { ReviewPanel } from './ReviewPanel.js';
 
 type Tab = 'room' | 'log' | 'review';
-
-/**
- * Re-parse keeps confirmed inline edits: entries whose (team, rawName) are
- * unchanged carry their existing match (playerId + unmatched state) over the
- * fresh parse. Unconfirmed ambiguous picks get fresh candidates; editor-level
- * player re-matches change rawName to the pool name, so those flow through the
- * fresh parse by design. myTeam / carryNote / draftUrl are untouched above.
- */
-function preserveMatches(prev: PickLogEntry[], next: PreviewPick[]): PreviewPick[] {
-  const key = (entry: PickLogEntry): string => `${entry.team}\u0000${entry.rawName}`;
-  const prevByKey = new Map(prev.map((entry) => [key(entry), entry]));
-  return next.map((entry) => {
-    const old = prevByKey.get(key(entry));
-    if (old?.playerId) {
-      return { ...entry, playerId: old.playerId, unmatched: old.unmatched, candidates: undefined };
-    }
-    return entry;
-  });
-}
 
 type Props = {
   room: RoomRecord;
@@ -61,7 +42,7 @@ export function RoomEditor({ room, players, onChange, onClose }: Props) {
     }
     setReparseNote(null);
     patch({
-      picks: preserveMatches(room.picks, result.picks),
+      picks: preserveMatches(room.picks, result.picks, new Set(players.map((p) => p.id))),
       ...(result.suggestedName && room.name === '' ? { name: result.suggestedName } : {}),
       ...(result.suggestedUrl && !room.draftUrl ? { draftUrl: result.suggestedUrl } : {}),
     });
