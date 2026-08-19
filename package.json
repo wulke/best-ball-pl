@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "etl": "node --import tsx src/etl/index.ts",
+    "odds": "node --import tsx src/etl/odds-cli.ts",
     "fbref": "node --import tsx src/etl/fbref-merge.ts",
     "model": "node --import tsx src/model/cli.ts",
     "dev": "vite --config src/ui/vite.config.ts",
     "build": "vite build --config src/ui/vite.config.ts",
     "preview": "vite preview --config src/ui/vite.config.ts",
-    "test": "node --import tsx --test src/ui/drafts/parse.test.ts src/ui/headlineDrivers.test.ts src/ui/windowProjections.test.ts src/model/project.test.ts src/model/window.test.ts src/contest/profiles.test.ts src/etl/actuals.test.ts",
+    "test": "node --import tsx --test src/ui/drafts/parse.test.ts src/ui/headlineDrivers.test.ts src/ui/windowProjections.test.ts src/model/project.test.ts src/model/window.test.ts src/contest/profiles.test.ts src/etl/actuals.test.ts src/etl/odds.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
