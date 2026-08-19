@@ -195,6 +195,47 @@ export const DEFAULT_SCENARIOS: ScenarioConfig = {
   },
 };
 
+/**
+ * Fixture-difficulty adjustment knobs (#42). Opponent strength (FPL FDR,
+ * 1 easy … 5 hard, per side per fixture) enters as factors **relative to the
+ * club's own calendar-mean difficulty**: factor = 1 + slope × (d̄ − d) for
+ * output-raising slopes (easier fixture → more), sign-flipped for terms that
+ * rise against harder opponents (goals conceded, saves — a busier keeper).
+ * Because d̄ is the club's own mean, every factor family averages exactly 1
+ * over a club's season: season-long output is opponent-neutral by
+ * construction (bit-for-bit False Nine parity), and short windows express
+ * genuine schedule strength — Saturday vs SUN is not Saturday vs MCI.
+ *
+ * What each family touches (the settled answer to "where do opponent
+ * adjustments touch rates"):
+ * - attack — goals, assists, shots on/off target, chances created (both the
+ *   per-player key-pass branch and the baseline floor branch).
+ * - cleanSheet / goalsConceded / gkWin — defensive counting terms (G + D CS/GC,
+ *   G-only wins).
+ * - saves — G-only; rises against harder opponents (more shots faced).
+ * Crosses, tackles, passes, and penalty saves are minutes-volume terms —
+ * unadjusted (v1; slopes are cheap to add if evidence demands).
+ *
+ * Slopes are per unit of FDR relative to the club mean; 0.12 ≈ a two-step
+ * difficulty swing (2→4) moving attack output ∓24%. League-eyeball v1, like
+ * the conversions — tune against results, not theory.
+ */
+export type FixtureDifficultyConfig = {
+  attackSlope: number;
+  cleanSheetSlope: number;
+  goalsConcededSlope: number;
+  savesSlope: number;
+  gkWinSlope: number;
+};
+
+export const DEFAULT_FIXTURE_DIFFICULTY: FixtureDifficultyConfig = {
+  attackSlope: 0.12,
+  cleanSheetSlope: 0.15,
+  goalsConcededSlope: 0.12,
+  savesSlope: 0.08,
+  gkWinSlope: 0.12,
+};
+
 /** Team-defensive priors: last season blended with league mean. */
 export type TeamRegression = {
   /** Weight on last season's rates (rest = league mean). */
@@ -290,6 +331,7 @@ export type ModelConfig = {
   rates: RateConfig;
   scenarios: ScenarioConfig;
   team: TeamRegression;
+  fixture: FixtureDifficultyConfig;
   tiering: TieringConfig;
   tournament: TournamentConfig;
 };
@@ -302,6 +344,7 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   rates: DEFAULT_RATES,
   scenarios: DEFAULT_SCENARIOS,
   team: DEFAULT_TEAM_REGRESSION,
+  fixture: DEFAULT_FIXTURE_DIFFICULTY,
   tiering: DEFAULT_TIERING,
   tournament: DEFAULT_TOURNAMENT,
 };

@@ -1,11 +1,17 @@
 /**
- * Season-long projection pipeline v1: snapshot players → False Nine points at
- * p10/p50/p90. Transparent by construction — every projected stat line is
- * retained on the projection so any ranking can be audited to its inputs.
+ * Window-parametric projection pipeline (#42): snapshot players → False Nine
+ * points at p10/p50/p90, summed over an **explicit fixture window** (see
+ * buildProjections). Transparent by construction — every projected stat line
+ * is retained on the projection so any ranking can be audited to its inputs.
  *
  * Model shape (see #8 and docs/research/historical-baseline-modeling.md):
  *   minutes  : recency-weighted multi-season durability prior, status-haircut
- *   rates    : xG/xA-blended per-90s, regressed to position mean by sample
+ *              (season total — allocated 1/n per calendar fixture, GK starts
+ *              likewise, so any window sums the right share)
+ *   rates    : xG/xA-blended per-90s, regressed to position mean by sample;
+ *              opponent-neutral priors — schedule strength enters at the
+ *              fixture level, never the rate estimate (per-fixture FDR
+ *              factors relative to each club's calendar mean; #42)
  *   volume   : FPL-invisible terms (SoT/KP/Crs/TklW/pass) — per-player
  *              recency-weighted FBref rates shrunk to the position mean,
  *              per term, when that term has data (#21); league-average
@@ -20,9 +26,14 @@
  */
 
 import type { PlayerStatus, Position, SnapshotPlayer } from '../etl/types.js';
-import type { ModelConfig } from './config.js';
+import type { FixtureDifficultyConfig, ModelConfig } from './config.js';
 import { scoreStatline } from './scoring.js';
-import type { PlayerProjection, ProjectedStatline } from './types.js';
+import type {
+  PlayerProjection,
+  ProjectedStatline,
+  ProjectionWindow,
+  WindowFixture,
+} from './types.js';
 
 const LATEST_SEASON = '2025/26';
 const SEASON_MINUTES = 3420; // 38 × 90
@@ -305,102 +316,206 @@ const STATUS_FACTORS: Partial<Record<PlayerStatus, number>> = {
 };
 
 // ---------------------------------------------------------------------------
-// Stat-line construction
+// Window math — per-fixture decomposition (#42)
 // ---------------------------------------------------------------------------
+
+/** Per-club fixture context: what the window sums over, and the calendar
+ *  normalizations opponent factors are relative to. */
+export type ClubFixtureContext = {
+  /** Difficulty of each of the club's fixtures inside the window (FDR 1–5). */
+  windowDifficulties: number[];
+  /** Calendar fixture count — the per-fixture minutes denominator (38 in a
+   *  full EPL season; the season's minutes allocate 1/n per fixture). */
+  calendarGames: number;
+  /** Calendar-mean difficulty — factors average exactly 1 against it, so a
+   *  full-season window is opponent-neutral by construction. */
+  calendarMeanDifficulty: number;
+};
+
+function difficultyOf(fixture: WindowFixture, club: string): number {
+  return fixture.home === club ? fixture.homeDifficulty : fixture.awayDifficulty;
+}
+
+function buildClubFixtureContext(club: string, window: ProjectionWindow): ClubFixtureContext {
+  const calendar = window.calendar.filter((f) => f.home === club || f.away === club);
+  if (calendar.length === 0) {
+    throw new Error(
+      `Club ${club} has no fixtures in the projection calendar — snapshot integrity break.`,
+    );
+  }
+  const dMean =
+    calendar.reduce((sum, f) => sum + difficultyOf(f, club), 0) / calendar.length;
+  return {
+    windowDifficulties: window.fixtures
+      .filter((f) => f.home === club || f.away === club)
+      .map((f) => difficultyOf(f, club)),
+    calendarGames: calendar.length,
+    calendarMeanDifficulty: dMean,
+  };
+}
+
+/** A neutral fallback window for callers that pass none (synthetic/unit
+ *  use): every players' club gets an opponent-flat 38-game calendar — every
+ *  factor is exactly 1, so output equals the pre-#42 season math. Real
+ *  callers (ETL, model CLI, UI) always pass an explicitly resolved window. */
+export function neutralWindowFor(players: SnapshotPlayer[]): ProjectionWindow {
+  const clubs = [...new Set(players.map((p) => p.team))];
+  const flat: WindowFixture[] = clubs.map((club) => ({
+    home: club,
+    away: club,
+    homeDifficulty: 3,
+    awayDifficulty: 3,
+  }));
+  // 38 flat fixtures per club — the same denominator a real calendar gives.
+  const calendar: WindowFixture[] = [];
+  for (let i = 0; i < 38; i += 1) calendar.push(...flat);
+  return { calendar, fixtures: calendar, clubs: null };
+}
+
+/** Fixture factor families (see config.ts `FixtureDifficultyConfig`).
+ *  `rel` = club-mean difficulty − this fixture's difficulty: positive means
+ *  an easier-than-average fixture. */
+type FixtureFactors = { attack: number; cs: number; gc: number; saves: number; win: number };
+
+function fixtureFactors(d: number, dMean: number, cfg: FixtureDifficultyConfig): FixtureFactors {
+  const rel = dMean - d;
+  return {
+    attack: 1 + cfg.attackSlope * rel,
+    cs: 1 + cfg.cleanSheetSlope * rel,
+    gc: 1 + cfg.goalsConcededSlope * -rel, // harder fixture → more conceded
+    saves: 1 + cfg.savesSlope * -rel, // harder fixture → busier keeper
+    win: 1 + cfg.gkWinSlope * rel,
+  };
+}
+
+/** All-float stat line — summed over a window's fixtures unrounded, then
+ *  rounded once at the exact points the pre-#42 season pipeline rounded
+ *  (parity is guarded by test against the committed snapshot). */
+type RawStatline = { [K in keyof ProjectedStatline]: number };
+
+const EMPTY_RAW: RawStatline = {
+  minutes: 0, matches: 0, goals: 0, assists: 0, shotsOnTarget: 0, shotsOffTarget: 0,
+  chancesCreated: 0, crosses: 0, tackles: 0, passes: 0, cleanSheets: 0,
+  goalsConceded: 0, saves: 0, gkWins: 0, penaltiesSaved: 0,
+};
 
 type AttackRates = { goals: number; assists: number };
 
-function buildStatline(
-  minutes: number,
+/** Sum a player's stat line over the club's fixtures inside the window.
+ *
+ *  Structure: every term is linear in either `m × attack` (chance-quality
+ *  terms, opponent-adjusted) or `m` (minutes-volume terms), so the per-90
+ *  coefficients below are computed once per player and each fixture
+ *  contributes `coef × m_f` — a season window (factors averaging exactly 1)
+ *  reproduces the pre-#42 season totals by construction, and any shorter
+ *  window is just the sum over its fixtures. Season-level branch choices
+ *  (key-pass vs baseline floor for chances created) are made once, on the
+ *  same unadjusted season totals the old code compared. */
+function buildWindowStatline(
+  seasonMinutes: number,
   position: Position,
   rates: RawRates,
   attack: AttackRates,
   team: TeamContext,
   cfg: ModelConfig,
   volume: VolumeRates | null,
+  club: ClubFixtureContext,
 ): ProjectedStatline {
-  const matches = minutes / 90;
+  const gk = position === 'G';
   const baseline = cfg.volume.baselines[position];
+  const perFixtureMinutes = seasonMinutes / club.calendarGames;
+  const csEligible = gk ? 0.95 : 0.25 + 0.75 * rates.startFraction;
 
-  const goals = (attack.goals / 90) * matches;
-  const assists = (attack.assists / 90) * matches;
+  // Attack-family coefficients (per 90 of opponent-adjusted match time).
+  const goalsCoef = attack.goals / 90;
+  const assistsCoef = attack.assists / 90;
+  const sot = volume?.shotsOnTarget?.per90 ?? null;
+  const sh = volume?.shots?.per90 ?? null;
+  const sotCoef = sot != null ? sot : goalsCoef / cfg.conversions.goalsPerSoT;
+  const missPer90 = sh != null ? Math.max(0, sh - (sot ?? 0)) : 0; // per-90 constants — max is fixture-independent
+  const offTargetCoef =
+    sh != null
+      ? cfg.scoring.blockedShotsCountOffTarget
+        ? missPer90
+        : missPer90 * cfg.volume.offTargetShareOfMisses
+      : sotCoef * cfg.conversions.offTargetPerSoT * (cfg.scoring.blockedShotsCountOffTarget ? 1.9 : 1.0);
+  const kp = volume?.keyPasses?.per90 ?? null;
+  const chancesCoef =
+    kp != null
+      ? kp
+      : assistsCoef * cfg.conversions.kpPerAssist >= baseline.chancesCreatedFloor
+        ? assistsCoef * cfg.conversions.kpPerAssist
+        : baseline.chancesCreatedFloor;
 
-  let shotsOnTarget: number;
-  let shotsOffTarget: number;
-  let chancesCreated: number;
-  let crosses: number;
-  let tackles: number;
-  let passes: number;
-  if (volume) {
-    // FBref per-player rates — but only for terms whose page was parsed
-    // (covered league-wide); everything else keeps the v1 conversion/baseline
-    // math, so a partial page set can't silently zero out volume terms.
-    const sot = volume.shotsOnTarget?.per90 ?? null;
-    const sh = volume.shots?.per90 ?? null;
-    shotsOnTarget = sot != null ? sot * matches : goals / cfg.conversions.goalsPerSoT;
-    if (sh != null) {
-      const misses = Math.max(0, sh - (sot ?? 0)) * matches;
-      shotsOffTarget = cfg.scoring.blockedShotsCountOffTarget
-        ? misses
-        : misses * cfg.volume.offTargetShareOfMisses;
-    } else {
-      shotsOffTarget =
-        shotsOnTarget *
-        cfg.conversions.offTargetPerSoT *
-        (cfg.scoring.blockedShotsCountOffTarget ? 1.9 : 1.0);
-    }
-    const kp = volume.keyPasses?.per90 ?? null;
-    chancesCreated =
-      kp != null
-        ? kp * matches
-        : Math.max(assists * cfg.conversions.kpPerAssist, baseline.chancesCreatedFloor * matches);
-    const crs = volume.crosses?.per90 ?? null;
-    crosses = crs != null ? crs * matches : baseline.crosses * matches;
-    const tklw = volume.tacklesWon?.per90 ?? null;
-    tackles = tklw != null ? tklw * matches : baseline.tackles * matches;
-    const cmp = volume.passesCompleted?.per90 ?? null;
-    passes = cmp != null ? cmp * matches : baseline.passes * matches;
-  } else {
-    // No FBref rows: league-average conversions + position baselines (v1 path).
-    shotsOnTarget = goals / cfg.conversions.goalsPerSoT;
-    shotsOffTarget =
-      shotsOnTarget *
-      cfg.conversions.offTargetPerSoT *
-      (cfg.scoring.blockedShotsCountOffTarget ? 1.9 : 1.0);
-    chancesCreated = Math.max(
-      assists * cfg.conversions.kpPerAssist,
-      baseline.chancesCreatedFloor * matches,
-    );
-    crosses = baseline.crosses * matches;
-    tackles = baseline.tackles * matches;
-    passes = baseline.passes * matches;
+  // Minutes-volume coefficients (unadjusted by opponent).
+  const crossesCoef = volume?.crosses?.per90 ?? baseline.crosses;
+  const tacklesCoef = volume?.tacklesWon?.per90 ?? baseline.tackles;
+  const passesCoef = volume?.passesCompleted?.per90 ?? baseline.passes;
+
+  // Defensive coefficients (own factor family per term).
+  const csCoef = team.cleanSheetRate * csEligible;
+  const gcCoef = team.goalsConcededPerMatch;
+  const savesCoef = gk ? (rates.savesPer90 ?? cfg.team.meanSavesPer90) : 0;
+  const winCoef = gk ? team.gkWinRate : 0;
+
+  // Factor-free terms are computed analytically — coefficient × window
+  // matches, the *identical expression* the pre-#42 season pipeline used —
+  // not by summing per-fixture slices. Minutes and matches live on decimal
+  // grids (GK starts × 90, recency-weighted totals), so repeated-addition
+  // float drift flips their rounding boundaries; a season window
+  // (nWindow/calendarGames = 1) must reproduce the committed numbers
+  // bit-for-bit. Only factor-carrying terms (attack/defense) are summed over
+  // fixtures — their coefficients are blended floats that never sit on
+  // round2 boundaries.
+  const nWindow = club.windowDifficulties.length;
+  const windowMinutes = seasonMinutes * (nWindow / club.calendarGames);
+  const windowMatches = windowMinutes / 90;
+
+  const raw = { ...EMPTY_RAW };
+  raw.minutes = windowMinutes;
+  raw.matches = windowMatches;
+  raw.crosses = crossesCoef * windowMatches;
+  raw.tackles = tacklesCoef * windowMatches;
+  raw.passes = passesCoef * windowMatches;
+  raw.penaltiesSaved = gk ? rates.penaltiesSavedRate * (windowMinutes / SEASON_MINUTES) : 0;
+
+  const perFixtureMatches = perFixtureMinutes / 90; // one fixture's share of the season job
+  for (const d of club.windowDifficulties) {
+    const f = fixtureFactors(d, club.calendarMeanDifficulty, cfg.fixture);
+    const a = perFixtureMatches * f.attack; // opponent-adjusted match time
+    raw.goals += goalsCoef * a;
+    raw.assists += assistsCoef * a;
+    raw.shotsOnTarget += sotCoef * a;
+    raw.shotsOffTarget += offTargetCoef * a;
+    raw.chancesCreated += chancesCoef * a;
+    raw.cleanSheets += csCoef * perFixtureMatches * f.cs;
+    raw.goalsConceded += gcCoef * perFixtureMatches * f.gc;
+    raw.saves += savesCoef * perFixtureMatches * f.saves;
+    raw.gkWins += winCoef * perFixtureMatches * f.win;
   }
 
-  // Defensive/team terms — G and D only for CS/GC.
-  const csEligible = position === 'G' ? 0.95 : 0.25 + 0.75 * rates.startFraction;
-  const cleanSheets = team.cleanSheetRate * matches * csEligible;
-  const goalsConceded = team.goalsConcededPerMatch * matches;
+  return finalizeStatline(raw, position);
+}
 
-  const saves = position === 'G' ? (rates.savesPer90 ?? cfg.team.meanSavesPer90) * matches : 0;
-  const gkWins = position === 'G' ? team.gkWinRate * matches : 0;
-  const penaltiesSaved = position === 'G' ? rates.penaltiesSavedRate * (minutes / SEASON_MINUTES) : 0;
-
+/** Round a summed raw line at the exact points the pre-#42 pipeline rounded. */
+function finalizeStatline(raw: RawStatline, position: Position): ProjectedStatline {
+  const defensive = position === 'G' || position === 'D';
   return {
-    minutes: Math.round(minutes),
-    matches: Math.round(matches * 10) / 10,
-    goals: round2(goals),
-    assists: round2(assists),
-    shotsOnTarget: round2(shotsOnTarget),
-    shotsOffTarget: round2(shotsOffTarget),
-    chancesCreated: round2(chancesCreated),
-    crosses: round2(crosses),
-    tackles: round2(tackles),
-    passes: Math.round(passes),
-    cleanSheets: round2(position === 'G' || position === 'D' ? cleanSheets : 0),
-    goalsConceded: round2(position === 'G' || position === 'D' ? goalsConceded : 0),
-    saves: round2(saves),
-    gkWins: round2(gkWins),
-    penaltiesSaved: round2(penaltiesSaved),
+    minutes: Math.round(raw.minutes),
+    matches: Math.round(raw.matches * 10) / 10,
+    goals: round2(raw.goals),
+    assists: round2(raw.assists),
+    shotsOnTarget: round2(raw.shotsOnTarget),
+    shotsOffTarget: round2(raw.shotsOffTarget),
+    chancesCreated: round2(raw.chancesCreated),
+    crosses: round2(raw.crosses),
+    tackles: round2(raw.tackles),
+    passes: Math.round(raw.passes),
+    cleanSheets: round2(defensive ? raw.cleanSheets : 0),
+    goalsConceded: round2(defensive ? raw.goalsConceded : 0),
+    saves: round2(raw.saves),
+    gkWins: round2(raw.gkWins),
+    penaltiesSaved: round2(raw.penaltiesSaved),
   };
 }
 
@@ -448,10 +563,34 @@ function round2(x: number): number {
 // Public entry
 // ---------------------------------------------------------------------------
 
+/**
+ * Window-parametric projection pipeline (#42): snapshot players → False Nine
+ * points at p10/p50/p90 **for an explicit fixture window**. Every stat line
+ * is a sum over the window's fixtures; the season window (all 380) is
+ * opponent-neutral by construction — factors average exactly 1 over each
+ * club's calendar — so it reproduces the committed season projections
+ * bit-for-bit (guarded by test). Short windows (a GW range, a single-day
+ * slate) express schedule strength through per-fixture FDR factors.
+ *
+ * Pass an explicitly resolved window (`resolveContest` in
+ * src/contest/profiles.ts against the committed fixtures). Omitting one
+ * derives a neutral opponent-flat calendar — synthetic/unit use only.
+ *
+ * `window.clubs` scopes rank/tier/value to the draft pool; all priors
+ * (position means, volume means, the newcomer price fit) still estimate over
+ * the full population — a small pool must not shrink the league's priors.
+ */
 export function buildProjections(
   players: SnapshotPlayer[],
   cfg: ModelConfig,
+  window?: ProjectionWindow,
 ): ProjectionResult {
+  const windowSpec = window ?? neutralWindowFor(players);
+  const clubContexts = new Map<string, ClubFixtureContext>();
+  for (const club of new Set(players.map((p) => p.team))) {
+    clubContexts.set(club, buildClubFixtureContext(club, windowSpec));
+  }
+
   const teams = buildTeamContexts(players, cfg);
   const leagueTeam = teams.get(players[0]?.team ?? '')!; // contexts exist for every team
   const fallbackTeam: TeamContext = leagueTeam ?? {
@@ -737,7 +876,16 @@ export function buildProjections(
     };
 
     const minutes = minutesByPlayer[i];
-    const base = buildStatline(minutes, player.position, rates, attack, team, cfg, volumeRates[i]);
+    const base = buildWindowStatline(
+      minutes,
+      player.position,
+      rates,
+      attack,
+      team,
+      cfg,
+      volumeRates[i],
+      clubContexts.get(player.team)!,
+    );
 
     const p10Line = applyScenario(base, cfg.scenarios.p10, cfg.minutes.maxMinutes);
     const p90Cfg = cfg.scenarios.p90;
@@ -806,8 +954,18 @@ export function buildProjections(
     } satisfies PlayerProjection;
   });
 
-  assignRanks(players, projections, cfg);
+  assignRanks(players, projections, cfg, poolIndices(players, windowSpec));
   return { projections, positionMeans, teamContexts: teams };
+}
+
+/** Indices of players inside the window's draft pool (null clubs = everyone). */
+function poolIndices(players: SnapshotPlayer[], window: ProjectionWindow): number[] {
+  if (window.clubs == null) return players.map((_, i) => i);
+  const clubs = new Set(window.clubs);
+  return players.reduce<number[]>((acc, p, i) => {
+    if (clubs.has(p.team)) acc.push(i);
+    return acc;
+  }, []);
 }
 
 function blend(x: number | null, actual: number, xWeight: number): number {
@@ -841,21 +999,34 @@ function toVolMean(s: VolSums): VolumeMean | null {
   return any ? out : null;
 }
 
-function assignRanks(players: SnapshotPlayer[], projections: PlayerProjection[], cfg: ModelConfig): void {
+function assignRanks(
+  players: SnapshotPlayer[],
+  projections: PlayerProjection[],
+  cfg: ModelConfig,
+  pool: number[],
+): void {
   // Rank/tier on tournamentScore (ceiling-weighted, risk-dampened) — the
-  // best-ball-relevant value, not raw mean points (see #10).
+  // best-ball-relevant value, not raw mean points (see #10) — within the
+  // window's draft pool. Players outside the pool (a slate's non-playing
+  // clubs) sit unranked at residual tier 9.
   const byScore = (a: number, b: number) =>
     projections[b].tournamentScore - projections[a].tournamentScore;
-  const overall = players.map((_, i) => i).sort(byScore);
+  const overall = [...pool].sort(byScore);
   overall.forEach((index, rank) => {
     projections[index].overallRank = rank + 1;
   });
 
+  const inPool = new Set(pool);
+  players.forEach((_, i) => {
+    if (!inPool.has(i)) {
+      projections[i].overallRank = 0;
+      projections[i].posRank = 0;
+      projections[i].tier = 9;
+    }
+  });
+
   (['G', 'D', 'MD', 'FW'] as Position[]).forEach((pos) => {
-    const inPos = players
-      .map((_, i) => i)
-      .filter((i) => players[i].position === pos)
-      .sort(byScore);
+    const inPos = pool.filter((i) => players[i].position === pos).sort(byScore);
     inPos.forEach((index, rank) => {
       projections[index].posRank = rank + 1;
     });

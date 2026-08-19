@@ -27,6 +27,7 @@ import { applyPlEnrichment, fetchPlStats } from './pl-stats.js';
 import { fetchUnderstatStats, summarizeValidation, validatePlPassing } from './understat.js';
 import { DEFAULT_MODEL_CONFIG } from '../model/config.js';
 import { buildProjections } from '../model/project.js';
+import { FALSE_NINE, resolveContest } from '../contest/profiles.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
@@ -230,7 +231,9 @@ async function main() {
     console.warn(`[fbref] PL stats fetch failed (${(err as Error).message}) — passesCompleted/keyPasses stay on baselines.`);
   }
 
-  const { projections } = buildProjections(snapshot.players, DEFAULT_MODEL_CONFIG);
+  // Season window, explicit (#42): all committed fixtures, whole pool.
+  const season = resolveContest(FALSE_NINE, snapshot.fixtures);
+  const { projections } = buildProjections(snapshot.players, DEFAULT_MODEL_CONFIG, season);
   const players = snapshot.players.map((p, i) => ({ ...p, projection: projections[i] }));
   const out: Snapshot = { ...snapshot, players };
   fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(out, null, 2)}\n`);

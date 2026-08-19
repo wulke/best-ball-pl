@@ -187,6 +187,9 @@ export function resolveWindow(window: WindowSpec, fixtures: SnapshotFixture[]): 
 /** A profile bound to a snapshot: the window as fixtures + the eligible pool. */
 export type ResolvedContest = {
   profile: ContestProfile;
+  /** The full committed calendar — normalizes opponent factors (club mean
+   *  difficulty, per-club fixture count). Structurally a ProjectionWindow. */
+  calendar: SnapshotFixture[];
   /** The window as an explicit fixture list — what any window-math sums over. */
   fixtures: SnapshotFixture[];
   /** Clubs whose players are draft-eligible; null = the whole player pool. */
@@ -203,7 +206,7 @@ export function resolveContest(
   const clubs = profile.poolClubs ?? (restricted
     ? [...new Set(window.flatMap((f) => [f.home, f.away]))].sort()
     : null);
-  return { profile, fixtures: window, clubs };
+  return { profile, calendar: fixtures, fixtures: window, clubs };
 }
 
 /** Ordered starter-slot expansion: position slots (G→D→MD→FW) then FLEX. */

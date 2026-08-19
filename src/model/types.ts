@@ -30,6 +30,43 @@ export type ProjectedStatline = {
 export type ProjectionScenario = 'p10' | 'p50' | 'p90';
 
 /**
+ * The fixture-difficulty shape the window math consumes — structurally the
+ * snapshot's fixture (id/kickoff/event are window-irrelevant to the model).
+ */
+export type WindowFixture = {
+  home: string;
+  away: string;
+  homeDifficulty: number;
+  awayDifficulty: number;
+};
+
+/**
+ * A projection window (#42): the unit every projection is a sum over.
+ *
+ * - `calendar` — the full committed fixture list. Two normalizations hang off
+ *   it: each club's calendar fixture count (the per-fixture minutes
+ *   denominator — season minutes are allocated 1/n per fixture) and each
+ *   club's calendar-mean difficulty (opponent factors are relative to it, so
+ *   they average exactly 1 over a club's season — season windows stay
+ *   opponent-neutral by construction).
+ * - `fixtures` — the explicit window subset the stat lines sum over: the
+ *   whole calendar (season parity), a GW range, or a single-day slate.
+ * - `clubs` — the draft pool: ranking/tiering/value sort within these clubs
+ *   only (null = everyone). Priors (position means, volume means, price
+ *   fits) always estimate over the full player population — a small contest
+ *   pool must not shrink the league's priors.
+ *
+ * Callers who pass nothing get a neutral opponent-flat calendar derived from
+ * the players' clubs (every factor exactly 1 — synthetic/unit use); real
+ * callers (ETL, CLI, UI) pass an explicitly resolved window.
+ */
+export type ProjectionWindow = {
+  calendar: WindowFixture[];
+  fixtures: WindowFixture[];
+  clubs: string[] | null;
+};
+
+/**
  * Per-player projection: season points at three percentile-ish scenarios
  * (parametric, not simulated — see src/model/project.ts), the stat lines they
  * come from, and the derived columns the cheat sheet ranks on.
