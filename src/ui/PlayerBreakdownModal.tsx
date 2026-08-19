@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { Position } from './types.js';
 import type { PlayerProjection, ProjectedStatline } from '../model/types.js';
 import { DEFAULT_SCORING, FALSE_NINE_POINTS } from '../model/config.js';
+import { headlineDrivers } from './headlineDrivers.js';
 
 /**
  * Scoring terms in the order the ticket's table should read — one universal
@@ -47,11 +48,14 @@ const TERMS: {
 export function PlayerBreakdownModal({
   name,
   position,
+  team,
   projection,
   onClose,
 }: {
   name: string;
   position: Position;
+  /** FPL short name (e.g. "MCI") — names the team in the why-this-projection lines. */
+  team: string;
   projection: PlayerProjection;
   onClose: () => void;
 }) {
@@ -156,6 +160,29 @@ export function PlayerBreakdownModal({
             statistical distribution.
           </p>
           <RangeChart p10={projection.points.p10} p50={projection.points.p50} p90={projection.points.p90} />
+        </div>
+
+        <div className="mt-4">
+          <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-accent">
+            Why this projection
+          </span>
+          <dl className="mt-1">
+            {headlineDrivers(projection, position, team).map((line) => (
+              <div
+                key={line.label}
+                className="flex gap-2 border-b border-default py-1 last:border-b-0"
+              >
+                <dt
+                  className={`w-20 shrink-0 font-condensed text-[0.65rem] font-semibold uppercase tracking-wider ${
+                    line.negative ? 'text-negative' : 'text-muted'
+                  }`}
+                >
+                  {line.label}
+                </dt>
+                <dd className="text-xs leading-snug text-secondary">{line.text}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </div>
     </div>
