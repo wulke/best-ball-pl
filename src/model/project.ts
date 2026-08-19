@@ -1013,7 +1013,7 @@ const FLEX_ELIGIBLE: readonly Position[] = ['D', 'MD', 'FW'];
  *  starters plus this position's even share of the FLEX pool, times the
  *  number of teams drafting. The (draftValue-th + 1) player at a position is
  *  the last one a full league of teams would actually start. */
-function replacementDepth(pos: Position, replacement: ReplacementConfig): number {
+export function replacementDepth(pos: Position, replacement: ReplacementConfig): number {
   const flexShare = FLEX_ELIGIBLE.includes(pos) ? replacement.flex / FLEX_ELIGIBLE.length : 0;
   return Math.max(1, Math.round(replacement.draftSize * (replacement.starters[pos] + flexShare)));
 }

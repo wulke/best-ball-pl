@@ -7,8 +7,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildProjections } from './project.js';
-import { DEFAULT_MODEL_CONFIG } from './config.js';
+import { buildProjections, replacementDepth } from './project.js';
+import { DEFAULT_MODEL_CONFIG, DEFAULT_REPLACEMENT, type ReplacementConfig } from './config.js';
 import type { Position, PlayerStatus, SeasonStatLine, SnapshotPlayer } from '../etl/types.js';
 
 function season(overrides: Partial<SeasonStatLine> & { season: string; minutes: number }): SeasonStatLine {
@@ -245,4 +245,88 @@ test('durabilityReasons are all false and durabilityRisk is false for a secure s
     highUnusedSubs: false,
   });
   assert.equal(proj.durabilityRisk, false);
+});
+
+// ---------------------------------------------------------------------------
+// draftValue / overallRankByValue (VORP) — #Pickford-4th
+// ---------------------------------------------------------------------------
+
+function round2(x: number): number {
+  return Math.round(x * 100) / 100;
+}
+
+test('replacementDepth: FLEX share splits evenly across D/MD/FW only, never G', () => {
+  // False Nine shape (12-team, 1G/2D/2MD/2FW + 2 FLEX): flexShare = 2/3 per
+  // flex-eligible position; G gets none regardless of the flex count.
+  assert.equal(replacementDepth('G', DEFAULT_REPLACEMENT), 12); // 12 * (1 + 0)
+  assert.equal(replacementDepth('D', DEFAULT_REPLACEMENT), 32); // round(12 * (2 + 2/3)) = round(32.0004)
+  assert.equal(replacementDepth('MD', DEFAULT_REPLACEMENT), 32);
+  assert.equal(replacementDepth('FW', DEFAULT_REPLACEMENT), 32);
+
+  // The Free Kick GW1 slate shape (6-team, 1G/1D/1MD/1FW + 2 FLEX).
+  const freeKick: ReplacementConfig = {
+    starters: { G: 1, D: 1, MD: 1, FW: 1 },
+    flex: 2,
+    draftSize: 6,
+  };
+  assert.equal(replacementDepth('G', freeKick), 6);
+  assert.equal(replacementDepth('D', freeKick), 10); // round(6 * (1 + 2/3)) = round(10.002)
+
+  // Rounding lands mid-value cases sensibly (not just exact-integer cases).
+  const oddSplit: ReplacementConfig = { starters: { G: 1, D: 1, MD: 1, FW: 1 }, flex: 1, draftSize: 10 };
+  assert.equal(replacementDepth('MD', oddSplit), 13); // round(10 * (1 + 1/3)) = round(13.33)
+
+  // Floors at 1 even for a degenerate zero-starter, zero-flex shape.
+  const empty: ReplacementConfig = { starters: { G: 0, D: 0, MD: 0, FW: 0 }, flex: 0, draftSize: 1 };
+  assert.equal(replacementDepth('G', empty), 1);
+  assert.equal(replacementDepth('D', empty), 1);
+});
+
+test('draftValue clamps to the last available player when the pool is shallower than replacement depth', () => {
+  // Only 6 goalkeepers exist (buildTeams' T1-T6), well short of the default
+  // 12-team replacement depth — the worst of the 6 becomes the baseline.
+  const { byId } = run([]);
+  const gks = ['T1-GK', 'T2-GK', 'T3-GK', 'T4-GK', 'T5-GK', 'T6-GK'].map((id) => byId.get(id)!);
+  const sorted = [...gks].sort((a, b) => b.tournamentScore - a.tournamentScore);
+  const worst = sorted[sorted.length - 1];
+
+  assert.equal(worst.draftValue, 0, 'the worst available keeper is his own replacement baseline');
+  for (const proj of sorted) {
+    assert.equal(proj.draftValue, round2(proj.tournamentScore - worst.tournamentScore));
+  }
+});
+
+test('a shallow position compresses toward replacement faster than a deep one', () => {
+  // draftSize=1, 1 starting G but 3 starting FW (0 D/MD, no FLEX): replacement
+  // depth is 1 for G and 3 for FW — an intentionally extreme, synthetic
+  // roster shape purely to make the shallow-vs-deep contrast unambiguous.
+  const shape: ReplacementConfig = { starters: { G: 1, D: 0, MD: 0, FW: 3 }, flex: 0, draftSize: 1 };
+  assert.equal(replacementDepth('G', shape), 1);
+  assert.equal(replacementDepth('FW', shape), 3);
+
+  const players = buildTeams(); // 6 G, 7 FW, no D/MD
+  const { projections } = buildProjections(players, DEFAULT_MODEL_CONFIG, undefined, shape);
+  const byId = new Map(players.map((p, i) => [p.id, projections[i]]));
+
+  const gks = ['T1-GK', 'T2-GK', 'T3-GK', 'T4-GK', 'T5-GK', 'T6-GK'].map((id) => byId.get(id)!);
+  const fwds = ['T1-attacker', 'T2-attacker', 'T3-attacker', 'T4-attacker', 'T5-attacker', 'T6-attacker', 'T7-attacker'].map(
+    (id) => byId.get(id)!,
+  );
+  const gSorted = [...gks].sort((a, b) => b.tournamentScore - a.tournamentScore);
+  const fSorted = [...fwds].sort((a, b) => b.tournamentScore - a.tournamentScore);
+
+  // Wiring check: draftValue is exactly tournamentScore minus the score at
+  // the position's own replacement rank.
+  const gReplacement = gSorted[Math.min(1, gSorted.length) - 1].tournamentScore;
+  const fReplacement = fSorted[Math.min(3, fSorted.length) - 1].tournamentScore;
+  gSorted.forEach((proj) => assert.equal(proj.draftValue, round2(proj.tournamentScore - gReplacement)));
+  fSorted.forEach((proj) => assert.equal(proj.draftValue, round2(proj.tournamentScore - fReplacement)));
+
+  // The compression itself: only the single best keeper clears his own
+  // shallow replacement level (draftValue >= 0); the top three forwards all
+  // do, because their position stays open three picks deeper.
+  const gPositive = gSorted.filter((p) => p.draftValue >= 0).length;
+  const fPositive = fSorted.filter((p) => p.draftValue >= 0).length;
+  assert.equal(gPositive, 1, 'only the #1 keeper is at or above his 1-deep replacement level');
+  assert.equal(fPositive, 3, 'the top 3 forwards are at or above their 3-deep replacement level');
 });
