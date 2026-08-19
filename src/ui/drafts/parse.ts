@@ -32,7 +32,7 @@
  * appear in the paste (van Dijk, Smith Rowe, Mukiele Mulere).
  */
 import type { SnapshotPlayer } from '../types.js';
-import type { PickCandidate, PreviewPick } from './types.js';
+import type { PickCandidate, PickLogEntry, PreviewPick } from './types.js';
 
 export type ParseResult =
   | {
@@ -262,6 +262,32 @@ export function parseRecap(rawPaste: string, pool: SnapshotPlayer[]): ParseResul
     suggestedName: null,
     suggestedUrl: sniffDraftUrl(rawPaste),
   };
+}
+
+/**
+ * Re-parse reconciliation (#22). A confident fresh match is the parser's
+ * authority and always wins — so parser bug-fixes propagate on re-parse
+ * instead of being re-clobbered by a stored (possibly stale) playerId.
+ * Only where the fresh parse leaves a pick unresolved (ambiguous or
+ * unmatched) is the user's earlier resolution kept: a confirmed ambiguous
+ * pick or a manual re-match, provided it still resolves in the current
+ * pool. myTeam / carryNote / draftUrl are untouched by callers.
+ */
+export function preserveMatches(
+  prev: PickLogEntry[],
+  next: PreviewPick[],
+  validIds?: Set<string>,
+): PreviewPick[] {
+  const key = (entry: PickLogEntry): string => `${entry.team}\u0000${entry.rawName}`;
+  const prevByKey = new Map(prev.map((entry) => [key(entry), entry]));
+  return next.map((entry) => {
+    if (entry.playerId) return entry;
+    const old = prevByKey.get(key(entry));
+    if (old?.playerId && (!validIds || validIds.has(old.playerId))) {
+      return { ...entry, playerId: old.playerId, unmatched: false, candidates: undefined };
+    }
+    return entry;
+  });
 }
 
 // ── Recap file intake: turn a saved page into the paste the parser eats ─────

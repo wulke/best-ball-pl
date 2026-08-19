@@ -15,7 +15,13 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import type { SnapshotPlayer } from '../types.js';
 import { teamsInLog } from './types.js';
-import { extractRecapText, normalizeName, parseRecap, sniffDraftUrl } from './parse.js';
+import {
+  extractRecapText,
+  normalizeName,
+  parseRecap,
+  preserveMatches,
+  sniffDraftUrl,
+} from './parse.js';
 
 const FIXTURE = new URL(
   '../../../data/drafts/fixtures/2026-08-18-wulke-first-draft.txt',
@@ -176,6 +182,35 @@ test('a surname web name does not steal a pick from its namesake (B. Fernandes �
   const matched = pool.find((p) => p.id === pick.playerId!)!;
   assert.equal(matched.team, 'MUN');
   assert.match(matched.fullName ?? '', /Bruno/);
+});
+
+test('re-parse corrects stale stored matches but keeps user confirmations', () => {
+  const parsed = result();
+  assert.ok(parsed);
+  const fresh = parsed.picks;
+  // Simulate a room created under the pre-fix matcher: B. Fernandes stored
+  // as Mateus (the surname-web-name steal), J. Pedro confirmed by the user
+  // to the CHE FW João Pedro from the confirm queue.
+  const mateus = pool.find((p) => p.team === 'TOT' && p.name === 'Fernandes');
+  assert.ok(mateus);
+  const staleRoom = fresh.map((p) => {
+    if (p.rawName === 'B. Fernandes') return { ...p, playerId: mateus!.id };
+    if (p.rawName === 'J. Pedro') {
+      const chosen = p.candidates?.find((c) => c.label.includes('CHE (FW)'));
+      assert.ok(chosen);
+      return { ...p, playerId: chosen!.playerId, unmatched: false, candidates: undefined };
+    }
+    return p;
+  });
+
+  const reconciled = preserveMatches(staleRoom, fresh, new Set(pool.map((p) => p.id)));
+  // Stale wrong match is corrected by the fresh confident parse…
+  const bf = reconciled.find((p) => p.rawName === 'B. Fernandes')!;
+  assert.equal(pool.find((p) => p.id === bf.playerId)?.team, 'MUN');
+  // …while the user's confirmed ambiguous pick survives the re-parse.
+  const jp = reconciled.find((p) => p.rawName === 'J. Pedro')!;
+  assert.equal(jp.playerId, pool.find((p) => p.fullName === 'João Pedro Junqueira de Jesus')?.id);
+  assert.equal(jp.candidates, undefined);
 });
 
 test('names absent from the FPL pool stay unmatched and flagged', () => {
