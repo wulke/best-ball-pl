@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Position, Snapshot } from './types.js';
 import { PlayerTable } from './PlayerTable.js';
 import { useDrafted } from './useDrafted.js';
@@ -9,10 +9,11 @@ import { DraftsView } from './drafts/DraftsView.js';
 import { CarryCard } from './drafts/CarryCard.js';
 import { reviewRoom } from './drafts/review.js';
 import { useRooms } from './drafts/store.js';
+import { ScarcityView } from './ScarcityView.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
-type View = 'sheet' | 'drafts';
+type View = 'sheet' | 'drafts' | 'scarcity';
 const POSITION_FILTERS: PositionFilter[] = ['ALL', 'G', 'D', 'MD', 'FW'];
 
 export function App() {
@@ -26,9 +27,33 @@ export function App() {
   const [queueOnly, setQueueOnly] = useState(false);
   const [liveOpen, setLiveOpen] = useState(true);
   const [carryOpen, setCarryOpen] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const { drafted, toggle, clear } = useDrafted();
   const { mine, queue, toggleMine, toggleQueue, clearAll } = useDraftSession();
   const { rooms, upsert, remove } = useRooms();
+
+  // Scarcity brings its own tall panel — collapse Live Draft to make room when switching to it.
+  useEffect(() => {
+    if (view === 'scarcity') setLiveOpen(false);
+  }, [view]);
+
+  // Close the hamburger menu on outside click or Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointer = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     fetch('data/snapshot.json')
@@ -115,8 +140,8 @@ export function App() {
               The False Nine · EPL Best Ball
             </p>
             <h1 className="font-condensed text-2xl font-bold">
-              {view === 'sheet' ? 'Cheat Sheet' : 'Draft Rooms'}
-              {view === 'sheet' && snapshot && (
+              {view === 'drafts' ? 'Draft Rooms' : 'Cheat Sheet'}
+              {view !== 'drafts' && snapshot && (
                 <span className="ml-2 align-middle font-condensed text-sm font-semibold text-muted tabular-nums">
                   {snapshot.generated_at.slice(0, 10)} · {players.length} players
                 </span>
@@ -128,7 +153,7 @@ export function App() {
               {(
                 [
                   ['sheet', 'Sheet'],
-                  ['drafts', 'Drafts'],
+                  ['scarcity', 'Scarcity'],
                 ] as [View, string][]
               ).map(([key, label]) => (
                 <button
@@ -158,6 +183,40 @@ export function App() {
                   {option}
                 </button>
               ))}
+            </div>
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((open) => !open)}
+                aria-haspopup="true"
+                aria-expanded={menuOpen}
+                aria-label="More views"
+                className={`rounded border border-default px-2 py-1.5 text-sm transition ${
+                  view === 'drafts' || menuOpen
+                    ? 'border-strong text-primary'
+                    : 'text-muted hover:text-secondary'
+                }`}
+              >
+                ☰
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full z-30 mt-1 w-40 rounded-md border border-default bg-surface-raised py-1 shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setView('drafts');
+                      setMenuOpen(false);
+                    }}
+                    className={`block w-full px-3 py-1.5 text-left text-sm font-semibold transition ${
+                      view === 'drafts'
+                        ? 'text-accent'
+                        : 'text-secondary hover:bg-surface-hover hover:text-primary'
+                    }`}
+                  >
+                    Drafts
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -207,6 +266,10 @@ export function App() {
               onToggleQueueOnly={() => setQueueOnly((value) => !value)}
               queueSize={queue.size}
             />
+
+            {/* Scarcity is an analysis panel over the same live board state, not a separate
+                page — the board (filters + table) below stays mounted underneath it. */}
+            {view === 'scarcity' && <ScarcityView players={players} drafted={drafted} />}
 
             <div className="sticky top-0 z-20 flex h-11 flex-nowrap items-center gap-2 overflow-x-auto bg-app py-2 print:hidden">
               <div className="flex items-center gap-0.5 rounded border border-default p-0.5">
