@@ -91,3 +91,20 @@ This same article also has Underdog's full stat *definitions* (assist rules, wha
 1. **Card points, minutes thresholds, penalty-event points are unconfirmed.** If precise point values matter for the model, the only reliable path is a logged-in browser session against `app.underdogsports.com/rules/tournaments/the-false-nine` (Cloudflare blocks headless `curl`/`WebFetch`) — someone with a real browser/account should screenshot or copy that page's scoring table directly.
 2. The points table here is RotoWire-sourced, not Underdog-sourced directly. Spot-check against the primary page before finalizing point weights in the projection model.
 3. Ticket #5 (`research/underdog-pool-adp`, already closed) separately documents `api.underdogfantasy.com/v2/lobby` as an unauthenticated, scriptable source for contest metadata (entry counts, cutoff times, round structure) — useful for a live status widget, but confirmed to have no player-pool/ADP or scoring-rules data.
+
+## Addendum (2026-08-19, from `research/free-kick-daily-ruleset`): stronger primary source for the points table
+
+While researching The Free Kick's daily contest mechanics, a directly Underdog-authored page was found that
+independently corroborates the points table above at a stronger confidence level than the RotoWire/Rotogrinders
+sourcing this doc originally relied on: `help.underdogsports.com/en/articles/11159786-daily-vs-best-ball-scoring`
+("Daily vs Best Ball Scoring", fetched via Wayback Machine snapshot `20260702003341`, live fetch still 403s).
+This page is Underdog's own side-by-side scoring comparison across every sport it offers, for both the Daily and
+Best Ball contest families. Its **Soccer/FIFA** section lists "Best Ball: All Players / Goalkeeper / GK and
+Defender" tables that are value-for-value identical to the table above (Goal 8.0, Assist 4.0, Shot on Target 2.0,
+Shot off Target 1.0, Chance Created 1.0, Cross 0.75, Tackle Successful 0.5, Pass Successful 0.05, Save 2.0,
+Penalty Save 3.0, Goals Conceded -2.0, Win 5.0, Clean Sheet 5.0) — and its adjacent "Daily" Soccer/FIFA tables are
+in turn identical to the Best Ball ones, confirming scoring parity between Underdog's season-long best ball
+products and its daily slate products (relevant to The Free Kick / GW1 Saturday profile). This page still does
+**not** list card, minutes-threshold, or penalty-event point values — reinforcing gap #1 above as a genuine
+Underdog omission rather than a sourcing gap on this doc's part. See `docs/research/free-kick-daily-ruleset.md`
+for the full daily-contest investigation this came out of.
