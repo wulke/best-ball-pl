@@ -35,8 +35,17 @@ npm run dev
 | `npm run dev` | Vite dev server for the cheat-sheet UI |
 | `npm run build` | Build the static UI bundle into `dist/ui/` (includes snapshot copy) |
 | `npm run preview` | Preview the built bundle locally |
-| `npm test` | Parser/matcher tests against the committed first-recap fixture |
+| `npm test` | Parser/matcher, headline-driver, model, and contest-profile tests |
 | `npm run typecheck` | TypeScript check across the repo |
+
+## Contest profiles (`src/contest/`)
+
+Every contest the tool supports is a **contest profile** (`src/contest/profiles.ts`, #39): scoring table, roster shape + starter minimums, **window as an explicit fixture list**, draft-room shape, pool restriction, and the tournament/tiering knobs — one data object threaded through the model (`modelConfigFor`), the sheet/live panel (`buildRecommendations`, `LivePanel`), and the draft review (`reviewRoom`). Profiles live in **code**, not the snapshot: they're primary-confirmed contest *rules*, type-checked beside the code that consumes them, and the snapshot stays pure FPL data.
+
+- **`false-nine`** (profile #1) — the season best-ball contest: today's behavior, preserved bit-for-bit (guarded by tests; ETL/model CLI run under it).
+- **`free-kick-gw1-sat`** (profile #2) — Underdog's The Free Kick GW1 Saturday slate: the four 2026-08-22 fixtures kicking off after the 13:41Z close (HUL-MUN excluded — pre-close), roster 1/1/1/1 + 2 FLEX = 6 rounds, **no bench**, draft size 6, pool = the 8 slate clubs, scoring identical to False Nine.
+
+A profile's `WindowSpec` (`season` | `slate` | `fixtures`) resolves via `resolveContest(profile, snapshot.fixtures)` to an explicit fixture list — never a bare GW label; any window is a sum over its fixtures. The **active** profile is the UI's choice, persisted as an id in localStorage (`bbpl-profile`, default False Nine) and resolved by `src/ui/useContestProfile.ts`; the sheet-tab switcher lands with the in-season slice.
 
 ## Project Structure
 
@@ -53,10 +62,14 @@ src/
     scoring.ts  #   Pure statline → points scorer (the substrate)
     project.ts  #   Minutes/rates/volume/team priors → p10/p50/p90 projections
     cli.ts      #   npm run model: recompute + ranked report
+  contest/    # Contest profiles (#39): a contest's rules as one data object
+    profiles.ts   # Profile type + registry (False Nine, The Free Kick GW1 Sat) + window resolution
+    profiles.test.ts # Bit-for-bit False Nine guard + Free Kick slate resolution vs the committed snapshot
   ui/         # Browser-only React cheat sheet (Vite)
     App.tsx         #   Snapshot load, view nav (Sheet/Drafts), carry-card pin, sticky controls bar
     PlayerTable.tsx #   Ranked tier table: bands, rows, flags
     useDrafted.ts   #   Mark-drafted state persisted to localStorage
+    useContestProfile.ts # Active contest profile (localStorage id → profiles registry)
     drafts/         # Draft-review slice (#20): rooms, intake, review lenses
       types.ts      #   Parsed-log + room-record contract (the #22 parser produces this)
       parse.ts      #   Recap paste-parser + name matcher (#22, built against the first real recap)

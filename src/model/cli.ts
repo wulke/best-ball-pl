@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_MODEL_CONFIG } from './config.js';
+import { FALSE_NINE, modelConfigFor } from '../contest/profiles.js';
 import { buildProjections } from './project.js';
 import type { Position, Snapshot } from '../etl/types.js';
 
@@ -85,7 +85,9 @@ function printTeamContext(
 
 function main() {
   const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8')) as Snapshot;
-  const { projections, teamContexts } = buildProjections(snapshot.players, DEFAULT_MODEL_CONFIG);
+  // Profile #1 — value-identical to DEFAULT_MODEL_CONFIG (guarded by test):
+  // the config-tuning loop's output cannot drift from the profile threading.
+  const { projections, teamContexts } = buildProjections(snapshot.players, modelConfigFor(FALSE_NINE));
 
   const players = snapshot.players.map((p, i) => ({ ...p, projection: projections[i] }));
   const out: Snapshot = { ...snapshot, players, generated_at: snapshot.generated_at };

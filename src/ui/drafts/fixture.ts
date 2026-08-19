@@ -8,6 +8,7 @@
  */
 import type { SnapshotPlayer } from '../types.js';
 import type { PreviewPick } from './types.js';
+import { FALSE_NINE, type ContestProfile } from '../../contest/profiles.js';
 
 const MY_TEAM = 'sheethead';
 const TEAMS = [
@@ -24,9 +25,6 @@ const TEAMS = [
   'late_gk_guy',
   'xfactor',
 ];
-const ROOM_SIZE = 12;
-const ROUNDS = 18;
-const STARTER_NEEDS: Record<string, number> = { G: 1, D: 2, MD: 2, FW: 2 };
 
 /** Deterministic PRNG — same fixture every load, for a given snapshot. */
 function mulberry32(seed: number): () => number {
@@ -52,7 +50,18 @@ export type FixturePreview = {
   myTeam: string;
 };
 
-export function buildFixturePreview(pool: SnapshotPlayer[]): FixturePreview {
+export function buildFixturePreview(
+  pool: SnapshotPlayer[],
+  profile: ContestProfile = FALSE_NINE,
+): FixturePreview {
+  // The fixture's engineering (reach moves, round-5 GK, concentration blocks)
+  // is tuned to the 12×18 False Nine room shape.
+  if (profile.id !== FALSE_NINE.id) {
+    throw new Error('dev fixture simulates the False Nine profile only');
+  }
+  const ROOM_SIZE = profile.draft.draftSize;
+  const ROUNDS = profile.roster.rosterSize;
+  const STARTER_NEEDS = profile.roster.starters;
   const rand = mulberry32(0xfa17ba11);
   const sheet = pool
     .filter((p) => p.projection)

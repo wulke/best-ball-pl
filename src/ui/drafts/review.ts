@@ -7,15 +7,15 @@
  */
 import type { Position, SnapshotPlayer } from '../types.js';
 import type { CarryFlag, PickLogEntry } from './types.js';
+import {
+  FALSE_NINE,
+  POSITIONS,
+  fullLogFloor,
+  starterSlots,
+  type ContestProfile,
+} from '../../contest/profiles.js';
 
 export type { CarryFlag };
-
-/** Starter shape: 1 G / 2 D / 2 MD / 2 FW / 2 FLEX = 9 starting slots. */
-const STARTER_NEEDS: Record<Position, number> = { G: 1, D: 2, MD: 2, FW: 2 };
-const POSITIONS: Position[] = ['G', 'D', 'MD', 'FW'];
-const ROSTER_SIZE = 18;
-/** A full 12-team room drafts ~216 picks; below this the BPA board is suspect. */
-const FULL_LOG_FLOOR = 180;
 
 export type DeviationRow = {
   pick: number;
@@ -154,13 +154,15 @@ function computeDeviations(
 }
 
 /**
- * Sheet-perfect top-18: the literal top of the sheet repaired to a legal
- * minimum shape (≥1 G / 2 D / 2 MD / 2 FW). Take the top 18 by rank, then swap
- * the lowest-ranked surplus players for the best available quota fillers —
+ * Sheet-perfect top-roster: the literal top of the sheet repaired to a legal
+ * minimum starter shape. Take the top rosterSize by rank, then swap the
+ * lowest-ranked surplus players for the best available quota fillers —
  * exchange-optimal for this quota structure (18 slots vs 8 quota slots always
  * leaves droppable surplus).
  */
-function sheetPerfect(pool: Pool): Pool {
+function sheetPerfect(pool: Pool, profile: ContestProfile): Pool {
+  const STARTER_NEEDS = profile.roster.starters;
+  const ROSTER_SIZE = profile.roster.rosterSize;
   const sorted = [...pool].filter((p) => p.projection).sort((a, b) => rank(a) - rank(b));
   const chosen = sorted.slice(0, ROSTER_SIZE);
   const chosenIds = (): Set<string> => new Set(chosen.map((p) => p.id));
@@ -189,8 +191,8 @@ function sheetPerfect(pool: Pool): Pool {
   return chosen;
 }
 
-function computeHeadline(pool: Pool, roster: Pool): Headline {
-  const perfect = sheetPerfect(pool);
+function computeHeadline(pool: Pool, roster: Pool, profile: ContestProfile): Headline {
+  const perfect = sheetPerfect(pool, profile);
   const rosterScore = roster.reduce((sum, p) => sum + score(p), 0);
   const perfectScore = perfect.reduce((sum, p) => sum + score(p), 0);
   const rosterP50 = roster.reduce((sum, p) => sum + (p.projection?.points.p50 ?? 0), 0);
@@ -205,8 +207,9 @@ function computeHeadline(pool: Pool, roster: Pool): Headline {
   };
 }
 
-/** Best legal 9 from the roster: 1G/2D/2MD/2FW starters + 2 FLEX (any position). */
-function computeStarters(roster: Pool): PseudoStarters {
+/** Best legal starting lineup from the roster: the profile's position slots
+ *  (each position's best-scored first) then FLEX fillers — False Nine's best 9. */
+function computeStarters(roster: Pool, profile: ContestProfile): PseudoStarters {
   const byPos: Record<Position, SnapshotPlayer[]> = { G: [], D: [], MD: [], FW: [] };
   for (const p of roster) byPos[p.position].push(p);
   POSITIONS.forEach((pos) => byPos[pos].sort((a, b) => score(b) - score(a)));
@@ -220,15 +223,16 @@ function computeStarters(roster: Pool): PseudoStarters {
 
   const slots: StarterSlot[] = [];
   const missing: Position[] = [];
-  (['G', 'D', 'D', 'MD', 'MD', 'FW', 'FW'] as const).forEach((pos) => {
-    const player = take(pos);
-    if (!player) missing.push(pos);
-    slots.push({ slot: pos, player });
+  starterSlots(profile).forEach((slot) => {
+    if (slot === 'FLEX') return; // filled below, from the remainder
+    const player = take(slot);
+    if (!player) missing.push(slot);
+    slots.push({ slot, player });
   });
   const rest = roster
     .filter((p) => !used.has(p.id))
     .sort((a, b) => score(b) - score(a));
-  for (let i = 0; i < 2; i += 1) slots.push({ slot: 'FLEX', player: rest[i] ?? null });
+  for (let i = 0; i < profile.roster.flex; i += 1) slots.push({ slot: 'FLEX', player: rest[i] ?? null });
 
   const total = slots.reduce((sum, s) => sum + (s.player ? score(s.player) : 0), 0);
   return { slots, legal: missing.length === 0, missing, total };
@@ -320,6 +324,7 @@ function buildFlags(
   clubGrid: ClubGrid,
   roster: Pool,
   unmatchedMine: { rawName: string }[],
+  profile: ContestProfile,
 ): CarryFlag[] {
   const red: CarryFlag[] = [];
   const amber: CarryFlag[] = [];
@@ -390,7 +395,7 @@ function buildFlags(
   if (!starters.legal) {
     amber.push({
       severity: 'amber',
-      text: `Cannot field a legal 9: short ${starters.missing.join('/')}.`,
+      text: `Cannot field a legal ${starterSlots(profile).length}: short ${starters.missing.join('/')}.`,
     });
   }
   // 12-team rooms sit ~50–55% of the naive sheet-perfect baseline by construction
@@ -416,6 +421,7 @@ export function reviewRoom(
   pool: Pool,
   picks: PickLogEntry[],
   myTeam: string | null,
+  profile: ContestProfile = FALSE_NINE,
 ): DraftReview | null {
   if (!myTeam || picks.length === 0) return null;
   const projected = pool.filter((p) => p.projection);
@@ -431,18 +437,18 @@ export function reviewRoom(
     .map((p) => projected.find((q) => q.id === p.playerId!))
     .filter((p): p is SnapshotPlayer => Boolean(p?.projection));
 
-  const headline = computeHeadline(projected, mine);
-  const starters = computeStarters(mine);
+  const headline = computeHeadline(projected, mine, profile);
+  const starters = computeStarters(mine, profile);
   const tierMix = computeTierMix(mine, starters);
   const clubGrid = computeClubGrid(pool, mine);
-  const flags = buildFlags(deviations, headline, starters, tierMix, clubGrid, mine, unmatchedMine);
+  const flags = buildFlags(deviations, headline, starters, tierMix, clubGrid, mine, unmatchedMine, profile);
 
   return {
     teamCount: teams.size,
     pickCount: picks.length,
     matchedCount: picks.filter((p) => p.playerId).length,
     unmatchedCount: picks.filter((p) => !p.playerId).length,
-    partialLog: picks.length < FULL_LOG_FLOOR,
+    partialLog: picks.length < fullLogFloor(profile),
     deviations,
     unmatchedMine,
     headline,

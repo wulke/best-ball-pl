@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import type { SnapshotPlayer } from '../types.js';
 import type { PickLogEntry } from './types.js';
 import { reviewRoom } from './review.js';
+import { FALSE_NINE, type ContestProfile } from '../../contest/profiles.js';
 import { CarryCard } from './CarryCard.js';
 
 const POS_BADGE: Record<string, string> = {
@@ -29,13 +30,18 @@ type Props = {
   myTeam: string;
   carryNote: string;
   onCarryNoteChange: (note: string) => void;
+  /** Contest profile the room drafted under — roster shape drives the lenses. */
+  profile?: ContestProfile;
 };
 
 const SECTION_TITLE = 'font-condensed text-sm font-semibold uppercase tracking-wider text-accent';
 const PANEL = 'rounded-md border border-default bg-surface';
 
-export function ReviewPanel({ pool, picks, myTeam, carryNote, onCarryNoteChange }: Props) {
-  const review = useMemo(() => reviewRoom(pool, picks, myTeam), [pool, picks, myTeam]);
+export function ReviewPanel({ pool, picks, myTeam, carryNote, onCarryNoteChange, profile = FALSE_NINE }: Props) {
+  const review = useMemo(
+    () => reviewRoom(pool, picks, myTeam, profile),
+    [pool, picks, myTeam, profile],
+  );
   if (!review) return null;
 
   const { headline, deviations, starters, tierMix, clubGrid, flags } = review;
@@ -182,7 +188,7 @@ export function ReviewPanel({ pool, picks, myTeam, carryNote, onCarryNoteChange 
       {/* Pseudo-starters + tier mix (lenses 3+4) */}
       <section className={PANEL}>
         <div className="flex items-baseline gap-2 border-b border-default px-3 py-2">
-          <span className={SECTION_TITLE}>Best 9 (pseudo-starters)</span>
+          <span className={SECTION_TITLE}>Best {starters.slots.length} (pseudo-starters)</span>
           <span className="ml-auto text-xs tabular-nums text-muted">
             {starters.legal ? 'legal lineup' : `short: ${starters.missing.join('/')}`} ·{' '}
             {starters.total.toFixed(0)} pts
