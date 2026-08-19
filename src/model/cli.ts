@@ -14,7 +14,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FALSE_NINE, modelConfigFor, profileById, resolveContest } from '../contest/profiles.js';
+import {
+  FALSE_NINE,
+  modelConfigFor,
+  profileById,
+  replacementConfigFor,
+  resolveContest,
+} from '../contest/profiles.js';
 import { buildProjections } from './project.js';
 import type { Position, Snapshot, SnapshotPlayer } from '../etl/types.js';
 
@@ -116,6 +122,7 @@ function main() {
     snapshot.players,
     modelConfigFor(profile),
     contest,
+    replacementConfigFor(profile),
   );
 
   const players = snapshot.players.map((p, i) => ({ ...p, projection: projections[i] }));

@@ -31,9 +31,14 @@ const POS_BADGE: Record<string, string> = {
   FW: 'border-pos-fw/30 bg-pos-fw/10 text-pos-fw',
 };
 
+/** How the "ALL" view ranks/sorts cross-position. Within one position, points
+ *  and VORP order agree (draftValue is tournamentScore minus a per-position
+ *  constant) — this only changes the overall, cross-position ordering. */
+export type RankMode = 'points' | 'vorp';
+
 type Row = {
   player: SnapshotPlayer;
-  /** Rank shown: posRank in a position view, overallRank otherwise. */
+  /** Rank shown: posRank in a position view, overall rank (by rankMode) otherwise. */
   rank: number;
 };
 
@@ -50,6 +55,8 @@ type Props = {
   onToggleQueued: (id: string) => void;
   /** true when a single position is filtered → contiguous tier band rows. */
   groupByTier: boolean;
+  /** Cross-position rank/sort basis for the ALL view — raw points or VORP. */
+  rankMode: RankMode;
 };
 
 const TH_BASE =
@@ -66,11 +73,16 @@ export function PlayerTable({
   queued,
   onToggleQueued,
   groupByTier,
+  rankMode,
 }: Props) {
   const [breakdownPlayer, setBreakdownPlayer] = useState<SnapshotPlayer | null>(null);
   const rows: Row[] = players.map((player) => ({
     player,
-    rank: groupByTier ? (player.projection?.posRank ?? 0) : (player.projection?.overallRank ?? 0),
+    rank: groupByTier
+      ? (player.projection?.posRank ?? 0)
+      : rankMode === 'vorp'
+        ? (player.projection?.overallRankByValue ?? 0)
+        : (player.projection?.overallRank ?? 0),
   }));
 
   // Interleave tier band rows when grouping (tiers are contiguous in rank order).
@@ -84,7 +96,7 @@ export function PlayerTable({
     const lo = group[group.length - 1].player.projection?.tournamentScore ?? 0;
     body.push(
       <tr key={`band-${tier}`} className="border-y border-default bg-surface-raised print:static">
-        <td colSpan={groupByTier ? 13 : 14} className="px-2 py-1">
+        <td colSpan={groupByTier ? 14 : 15} className="px-2 py-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-accent">
               Tier {tier}
@@ -153,7 +165,13 @@ export function PlayerTable({
             </th>
             <th
               className={`${TH_BASE} w-8 text-right`}
-              title="Rank by tournament-adjusted score (ceiling-weighted toward p90, dampened for durability risk)"
+              title={
+                groupByTier
+                  ? 'Rank within position by tournament-adjusted score (ceiling-weighted toward p90, dampened for durability risk)'
+                  : rankMode === 'vorp'
+                    ? 'Overall rank by draft value (VORP) — points above the last player at that position a full league would still start'
+                    : 'Overall rank by tournament-adjusted score (ceiling-weighted toward p90, dampened for durability risk)'
+              }
             >
               #
             </th>
@@ -192,12 +210,18 @@ export function PlayerTable({
             >
               Val
             </th>
+            <th
+              className={`${TH_BASE} w-12 text-right`}
+              title="Draft value (VORP): tournament-adjusted score minus the score of the last player at this position a full league would still start — how much this player beats his position's replacement level, not just raw points"
+            >
+              VORP
+            </th>
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={groupByTier ? 13 : 14} className="px-2 py-6 text-center text-sm text-muted">
+              <td colSpan={groupByTier ? 14 : 15} className="px-2 py-6 text-center text-sm text-muted">
                 No players match the current filters.
               </td>
             </tr>
@@ -386,6 +410,11 @@ function PlayerRow({
       <td className={`${TD_NUM} text-secondary`}>{projection.per90.toFixed(1)}</td>
       <td className={`${TD_NUM} text-secondary`}>{projection.ceilingPer90.toFixed(1)}</td>
       <td className={`${TD_NUM} text-secondary`}>{projection.value.toFixed(1)}</td>
+      <td className={`${TD_NUM} text-secondary`}>
+        {projection.draftValue == null
+          ? '—'
+          : `${projection.draftValue > 0 ? '+' : ''}${projection.draftValue.toFixed(1)}`}
+      </td>
     </tr>
   );
 }

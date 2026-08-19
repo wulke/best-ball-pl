@@ -26,7 +26,8 @@
  */
 
 import type { PlayerStatus, Position, SnapshotPlayer } from '../etl/types.js';
-import type { FixtureDifficultyConfig, ModelConfig } from './config.js';
+import type { FixtureDifficultyConfig, ModelConfig, ReplacementConfig } from './config.js';
+import { DEFAULT_REPLACEMENT } from './config.js';
 import { scoreStatline } from './scoring.js';
 import type {
   PlayerProjection,
@@ -584,6 +585,7 @@ export function buildProjections(
   players: SnapshotPlayer[],
   cfg: ModelConfig,
   window?: ProjectionWindow,
+  replacement: ReplacementConfig = DEFAULT_REPLACEMENT,
 ): ProjectionResult {
   const windowSpec = window ?? neutralWindowFor(players);
   const clubContexts = new Map<string, ClubFixtureContext>();
@@ -941,6 +943,8 @@ export function buildProjections(
       value: round2(player.price > 0 ? tournamentScore / player.price : 0),
       posRank: 0,
       overallRank: 0,
+      draftValue: 0,
+      overallRankByValue: 0,
       tier: 0,
       confidence,
       tournamentScore,
@@ -954,7 +958,7 @@ export function buildProjections(
     } satisfies PlayerProjection;
   });
 
-  assignRanks(players, projections, cfg, poolIndices(players, windowSpec));
+  assignRanks(players, projections, cfg, poolIndices(players, windowSpec), replacement);
   return { projections, positionMeans, teamContexts: teams };
 }
 
@@ -999,11 +1003,27 @@ function toVolMean(s: VolSums): VolumeMean | null {
   return any ? out : null;
 }
 
+/** FLEX slots are shared by any non-keeper — the rule everywhere else in this
+ *  codebase (ScarcityView's FLEX zone, starterSlots()'s "any non-G"). Splitting
+ *  the FLEX allotment evenly across the three eligible positions gives each
+ *  one a fractional share of replacement depth. */
+const FLEX_ELIGIBLE: readonly Position[] = ['D', 'MD', 'FW'];
+
+/** How many players deep a position stays "startable" league-wide: dedicated
+ *  starters plus this position's even share of the FLEX pool, times the
+ *  number of teams drafting. The (draftValue-th + 1) player at a position is
+ *  the last one a full league of teams would actually start. */
+function replacementDepth(pos: Position, replacement: ReplacementConfig): number {
+  const flexShare = FLEX_ELIGIBLE.includes(pos) ? replacement.flex / FLEX_ELIGIBLE.length : 0;
+  return Math.max(1, Math.round(replacement.draftSize * (replacement.starters[pos] + flexShare)));
+}
+
 function assignRanks(
   players: SnapshotPlayer[],
   projections: PlayerProjection[],
   cfg: ModelConfig,
   pool: number[],
+  replacement: ReplacementConfig,
 ): void {
   // Rank/tier on tournamentScore (ceiling-weighted, risk-dampened) — the
   // best-ball-relevant value, not raw mean points (see #10) — within the
@@ -1021,6 +1041,8 @@ function assignRanks(
     if (!inPool.has(i)) {
       projections[i].overallRank = 0;
       projections[i].posRank = 0;
+      projections[i].draftValue = 0;
+      projections[i].overallRankByValue = 0;
       projections[i].tier = 9;
     }
   });
@@ -1031,6 +1053,25 @@ function assignRanks(
       projections[index].posRank = rank + 1;
     });
     assignNaturalBreakTiers(inPos, projections, cfg.tiering, pos);
+
+    // draftValue (#Pickford-4th): tournamentScore relative to the last
+    // player at this position a full league would still be starting. A
+    // shallow position (e.g. one keeper/team) has a low replacement depth,
+    // so even a big raw score buys little edge over what's left; a deep,
+    // steep position (MD/FW) rewards being ahead of the pack far more.
+    const depth = replacementDepth(pos, replacement);
+    const replacementIndex = Math.min(depth, inPos.length) - 1;
+    const replacementScore =
+      replacementIndex >= 0 ? projections[inPos[replacementIndex]].tournamentScore : 0;
+    inPos.forEach((index) => {
+      projections[index].draftValue = round2(projections[index].tournamentScore - replacementScore);
+    });
+  });
+
+  const byValue = (a: number, b: number) => projections[b].draftValue - projections[a].draftValue;
+  const overallByValue = [...pool].sort(byValue);
+  overallByValue.forEach((index, rank) => {
+    projections[index].overallRankByValue = rank + 1;
   });
 }
 

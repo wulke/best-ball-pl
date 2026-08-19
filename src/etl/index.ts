@@ -23,7 +23,7 @@ import { applyFbrefEnrichment } from './fbref-merge.js';
 import { readFbrefCache } from './fbref.js';
 import { applyPlEnrichment, readPlCache } from './pl-stats.js';
 import { readOverrides } from './match.js';
-import { FALSE_NINE, modelConfigFor, resolveContest } from '../contest/profiles.js';
+import { FALSE_NINE, modelConfigFor, replacementConfigFor, resolveContest } from '../contest/profiles.js';
 import { buildProjections } from '../model/project.js';
 import { buildAsOf, decimalOrNull, finishedEventNumbers, toGwActuals } from './actuals.js';
 import type {
@@ -191,7 +191,12 @@ async function main() {
   // unchanged while the profile becomes the model's single entry point (#39).
   // The season window is explicit (#42): all committed fixtures, whole pool.
   const season = resolveContest(FALSE_NINE, fixtures);
-  const { projections } = buildProjections(players, modelConfigFor(FALSE_NINE), season);
+  const { projections } = buildProjections(
+    players,
+    modelConfigFor(FALSE_NINE),
+    season,
+    replacementConfigFor(FALSE_NINE),
+  );
   const playersWithProjections = players.map((p, i) => ({ ...p, projection: projections[i] }));
 
   const positionCounts = players.reduce(

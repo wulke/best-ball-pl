@@ -145,8 +145,12 @@ test('season window reproduces the committed snapshot projections bit-for-bit', 
   let compared = 0;
   snapshot.players.forEach((p, i) => {
     assert.ok(p.projection, `${p.name} carries a committed projection`);
+    // draftValue/overallRankByValue (VORP) postdate the committed snapshot —
+    // strip them from the fresh side until the next `npm run etl` backfills
+    // them, so this guard still catches drift in every other field.
+    const { draftValue: _dv, overallRankByValue: _orv, ...fresh } = projections[i];
     assert.deepStrictEqual(
-      projections[i],
+      fresh,
       p.projection,
       `${p.name}: window-parametric season projection must equal the committed projection`,
     );

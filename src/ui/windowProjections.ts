@@ -10,7 +10,13 @@
  * projections directly, so the flagship pre-draft experience stays exactly
  * what's shipped in data/snapshot.json (byte-identical, per profiles.test.ts).
  */
-import { FALSE_NINE, modelConfigFor, resolveContest, type ContestProfile } from '../contest/profiles.js';
+import {
+  FALSE_NINE,
+  modelConfigFor,
+  replacementConfigFor,
+  resolveContest,
+  type ContestProfile,
+} from '../contest/profiles.js';
 import { buildProjections } from '../model/project.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
 
@@ -21,7 +27,12 @@ export function poolForProfile(snapshot: Snapshot, profile: ContestProfile): Sna
     return snapshot.players.filter((p) => p.projection);
   }
   const contest = resolveContest(profile, snapshot.fixtures);
-  const { projections } = buildProjections(snapshot.players, modelConfigFor(profile), contest);
+  const { projections } = buildProjections(
+    snapshot.players,
+    modelConfigFor(profile),
+    contest,
+    replacementConfigFor(profile),
+  );
   return snapshot.players
     .map((p, i) => ({ ...p, projection: projections[i] }))
     .filter((p) => p.projection && p.projection.overallRank > 0);

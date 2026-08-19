@@ -323,6 +323,37 @@ export const DEFAULT_TOURNAMENT: TournamentConfig = {
   riskCeilingDampen: 0.3,
 };
 
+/**
+ * Replacement-level shape for VORP-style draft value (#Pickford-4th): raw
+ * tournamentScore ranks cross-position on "how many points," which overrates
+ * shallow, low-variance positions (one keeper needed, flat curve) against
+ * deep ones (multiple MD/FW slots, steep drop-off). `draftValue` instead asks
+ * "how much does this player beat what's left at his position when your
+ * league runs out of starters for it" — the standard fantasy VORP fix.
+ *
+ * Mirrors a profile's roster shape (`RosterShape` + `draft.draftSize` in
+ * src/contest/profiles.ts) but lives here, one level below `contest/`, so the
+ * model has no dependency on the profile module. `replacementConfigFor` in
+ * profiles.ts is the one place that builds this from a profile.
+ */
+export type ReplacementConfig = {
+  /** Starters per position, league-wide. */
+  starters: Record<Position, number>;
+  /** FLEX slots per team — assumed pulled evenly from D/MD/FW (never G, per
+   *  the FLEX rule everywhere else in this codebase). */
+  flex: number;
+  /** Teams in the draft room. */
+  draftSize: number;
+};
+
+/** False Nine's shape (12-team, 1G/2D/2MD/2FW + 2 FLEX) — the default for any
+ *  caller that doesn't pass an explicit contest profile. */
+export const DEFAULT_REPLACEMENT: ReplacementConfig = {
+  starters: { G: 1, D: 2, MD: 2, FW: 2 },
+  flex: 2,
+  draftSize: 12,
+};
+
 export type ModelConfig = {
   scoring: ScoringConfig;
   conversions: ConversionConfig;
