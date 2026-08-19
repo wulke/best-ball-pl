@@ -9,9 +9,10 @@
  *   - fixtures: full-season fixture list with per-fixture difficulty ratings
  *
  * Idempotent and cheap to re-run draft-to-draft: raw responses are cached in
- * `.etl-cache/` (bootstrap/fixtures 5 min, element-summaries 24h). ETL_FRESH=1
- * forces cache misses. Current-season (2026/27) per-GW stats are NOT pulled
- * yet — they land with the in-season refresh slice once GW1 is played.
+ * `.etl-cache/` (bootstrap/fixtures 5 min, element-summaries 24h, event-live
+ * 60 min). ETL_FRESH=1 forces cache misses. Current-season per-GW actuals
+ * (#40) come from `event/{gw}/live` — one call per finished GW — and land in
+ * the snapshot's `actuals` section with an `asOf` stamp on top.
  */
 
 import fs from 'node:fs';
@@ -24,10 +25,12 @@ import { applyPlEnrichment, readPlCache } from './pl-stats.js';
 import { readOverrides } from './match.js';
 import { FALSE_NINE, modelConfigFor, resolveContest } from '../contest/profiles.js';
 import { buildProjections } from '../model/project.js';
+import { buildAsOf, decimalOrNull, finishedEventNumbers, toGwActuals } from './actuals.js';
 import type {
   Position,
   SeasonStatLine,
   Snapshot,
+  SnapshotActuals,
   SnapshotFixture,
   SnapshotPlayer,
 } from './types.js';
@@ -55,12 +58,8 @@ function toPosition(elementType: number): Position {
   return position;
 }
 
-/** FPL ships xG/xA as decimal strings; tolerate absence and junk. */
-function decimalOrNull(value: string | undefined): number | null {
-  if (value == null || value === '') return null;
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
+// decimalOrNull (FPL decimal-string coercion) lives in actuals.ts.
+
 
 function toSeasonStatLine(raw: RawHistoryPastSeason): SeasonStatLine {
   return {
@@ -78,7 +77,6 @@ function toSeasonStatLine(raw: RawHistoryPastSeason): SeasonStatLine {
     fplPoints: raw.total_points,
   };
 }
-
 function toSnapshotPlayer(
   element: RawElement,
   teamShortName: string,
@@ -113,10 +111,16 @@ function toSnapshotFixture(raw: RawFixture, shortNames: Map<number, string>): Sn
     homeDifficulty: raw.team_h_difficulty,
     awayDifficulty: raw.team_a_difficulty,
     kickoff: raw.kickoff_time,
+    // Final scores once played (#40) — spread so unfinished fixtures stay
+    // byte-identical to the pre-actuals contract (no null fields).
+    ...(raw.finished && raw.team_h_score != null && raw.team_a_score != null
+      ? { homeScore: raw.team_h_score, awayScore: raw.team_a_score }
+      : {}),
   };
 }
 
 async function main() {
+  const fetchedAt = new Date().toISOString();
   const api = new FplApi();
 
   console.log('[ETL] Fetching bootstrap-static (players, teams) and fixtures…');
@@ -144,6 +148,19 @@ async function main() {
     toSnapshotPlayer(element, shortNames.get(element.team) ?? '???', summaries.get(element.id) ?? null),
   );
   const fixtures = rawFixtures.map((f) => toSnapshotFixture(f, shortNames));
+
+  // Per-GW actuals (#40): one `event/{gw}/live` call per FINISHED GW — a GW
+  // counts once every one of its fixtures is finished (see actuals.ts). Any
+  // fetch failure here fails the whole run loudly (retry/backoff first) — a
+  // snapshot must never silently ship partial actuals.
+  const finishedGws = finishedEventNumbers(rawFixtures);
+  const gameweeks = [];
+  for (const gw of finishedGws) {
+    const live = await api.fetchEventLive(gw);
+    gameweeks.push(toGwActuals(gw, live));
+  }
+  const actuals: SnapshotActuals = { gameweeks };
+  const asOf = buildAsOf(fetchedAt, rawFixtures, actuals);
 
   // Re-apply committed FBref volume data if present (from `npm run fbref`) so
   // a fresh FPL pull doesn't silently drop back to baseline-only volume.
@@ -185,9 +202,11 @@ async function main() {
 
   const snapshot: Snapshot = {
     generated_at: new Date().toISOString(),
+    asOf,
     meta: { playersWithHistory, positionCounts },
     players: playersWithProjections,
     fixtures,
+    actuals,
   };
 
   fs.mkdirSync(path.dirname(SNAPSHOT_PATH), { recursive: true });
@@ -197,6 +216,10 @@ async function main() {
   console.log(`[ETL] Snapshot written to ${path.relative(repoRoot, SNAPSHOT_PATH)}`);
   console.log(
     `[ETL] ${players.length} players (${playersWithHistory} with history, ${seasonRows} season rows) · ${fixtures.length} fixtures · ${playersWithProjections.length} projected.`,
+  );
+  const actualRows = actuals.gameweeks.reduce((sum, gw) => sum + gw.players.length, 0);
+  console.log(
+    `[ETL] Actuals: ${actuals.gameweeks.length} finished GW(s) · ${actualRows} player rows · asOf ${asOf.fetchedAt} (through GW${asOf.actualsThrough}${asOf.nextKickoff ? `, next kickoff ${asOf.nextKickoff}` : ''}).`,
   );
   console.log(
     `[ETL] Positions: ${Object.entries(positionCounts)
