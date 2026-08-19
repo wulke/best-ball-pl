@@ -209,6 +209,7 @@ export function PlayerTable({
         <PlayerBreakdownModal
           name={breakdownPlayer.name}
           position={breakdownPlayer.position}
+          team={breakdownPlayer.team}
           projection={breakdownPlayer.projection}
           onClose={() => setBreakdownPlayer(null)}
         />
