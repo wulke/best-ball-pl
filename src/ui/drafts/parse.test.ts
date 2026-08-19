@@ -163,6 +163,21 @@ test('shared FPL web names are disambiguated by the first initial', () => {
   assert.equal(resolve('D. Henderson').fullName, 'Dean Henderson');
 });
 
+test('a surname web name does not steal a pick from its namesake (B. Fernandes → Bruno)', () => {
+  // The pool has Mateus Fernandes (TOT) whose FPL web name is literally
+  // "Fernandes"; the recap's "B. Fernandes MD - MUN" is Bruno (MUN). Before
+  // the fix, tier-1 auto-accepted the sole web-name match and Bruno never
+  // entered the taken set — leaving him "on the board" as BPA all draft.
+  const parsed = result();
+  assert.ok(parsed);
+  const pick = parsed.picks.find((p) => p.rawName === 'B. Fernandes');
+  assert.ok(pick);
+  assert.ok(pick.playerId);
+  const matched = pool.find((p) => p.id === pick.playerId!)!;
+  assert.equal(matched.team, 'MUN');
+  assert.match(matched.fullName ?? '', /Bruno/);
+});
+
 test('names absent from the FPL pool stay unmatched and flagged', () => {
   const parsed = result();
   assert.ok(parsed);

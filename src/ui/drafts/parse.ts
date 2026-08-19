@@ -15,8 +15,10 @@
  * anchors, which only the board produces (exactly one per pick).
  *
  * Name matching (the #22 matcher): confident when (a) the pasted name is an
- * exact normalized match of an FPL web name (mononyms: Rayan, Kevin, Igor
- * Jesus), or (b) surname token(s) + first initial resolve to exactly one pool
+ * exact normalized match of an FPL web name AND agrees with the pasted first
+ * initial (mononyms: Rayan, Kevin, Igor Jesus — the initial guard stops a
+ * surname web name like "Fernandes" from stealing "B. Fernandes" away from
+ * Bruno), or (b) surname token(s) + first initial resolve to exactly one pool
  * player — falling back to surname-only uniqueness when the initial conflicts
  * with FPL's display name ("V. Livramento" vs pool "Tino Livramento").
  * Multiple survivors → the preview's one-click confirm queue (`candidates`);
@@ -156,11 +158,19 @@ export function matchName(
 
   // Tier 1: the pasted name is (part of) an FPL web name — mononyms
   // ("Rayan", "Kevin", "Igor Jesus", "Thiago"). Web names are usually but
-  // NOT always unique (Alex + Cole Palmer, both "Martinez") — apply the
-  // first-initial constraint when a web name is shared.
+  // NOT always unique (Alex + Cole Palmer, both "Martinez") and a surname
+  // can be another player's web name (web name "Fernandes" is Mateus, not
+  // Bruno) — so a match must also agree with the pasted first initial before
+  // it is auto-accepted.
   const webExact = [...index.values()].filter((entry) => entry.webName === rest);
-  if (webExact.length === 1) return { kind: 'confident', playerId: webExact[0].id };
-  if (webExact.length > 1) {
+  if (webExact.length === 1) {
+    const candidate = webExact[0];
+    if (!initial || candidate.firstInit === initial) {
+      return { kind: 'confident', playerId: candidate.id };
+    }
+    // Initial names someone else ("B. Fernandes" vs web name "Fernandes") —
+    // fall through to the surname/initial tiers, which resolve by initial.
+  } else if (webExact.length > 1) {
     if (initial) {
       const withInitial = webExact.filter((entry) => entry.firstInit === initial);
       if (withInitial.length === 1) return { kind: 'confident', playerId: withInitial[0].id };
