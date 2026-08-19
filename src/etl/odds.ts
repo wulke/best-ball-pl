@@ -26,7 +26,7 @@ export type OddsSlate = {
 
 /** Odds API EPL labels mapped to FPL short-name IDs in snapshot.json. */
 const CLUBS: Record<string, string> = {
-  arsenal: 'ARS', astonvilla: 'AVL', bournemouth: 'BOU', brentford: 'BRE', brightonandhovealbion: 'BHA', chelsea: 'CHE', coventrycity: 'COV', crystalpalace: 'CRY', everton: 'EVE', fulham: 'FUL', hullcity: 'HUL', ipswichtown: 'IPS', leedsunited: 'LEE', liverpool: 'LIV', manchestercity: 'MCI', manchesterunited: 'MUN', newcastleunited: 'NEW', nottinghamforest: 'NFO', sunderland: 'SUN', tottenhamhotspur: 'TOT', westhamunited: 'WHU', wolverhamptonwanderers: 'WOL', wolves: 'WOL',
+  arsenal: 'ARS', astonvilla: 'AVL', bournemouth: 'BOU', brentford: 'BRE', brightonandhovealbion: 'BHA', chelsea: 'CHE', coventrycity: 'COV', crystalpalace: 'CRY', everton: 'EVE', fulham: 'FUL', hullcity: 'HUL', ipswichtown: 'IPS', leedsunited: 'LEE', liverpool: 'LIV', manchestercity: 'MCI', manchesterunited: 'MUN', newcastleunited: 'NEW', nottinghamforest: 'NFO', sunderland: 'SUN', tottenhamhotspur: 'TOT',
 };
 export function normalizeOddsName(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');

@@ -13,6 +13,7 @@ async function main() {
   const profile = profileById(profileId); if (profile.window.kind !== 'slate') throw new Error(`Profile '${profileId}' is not a single-day slate.`);
   const contest = resolveContest(profile, snapshot.fixtures);
   const bulkEvents = await getJson(new URL(`${apiRoot}/odds?${new URLSearchParams({ apiKey: key, regions: 'us', markets: 'h2h,totals', oddsFormat: 'decimal' })}`));
+  // First retain only priced slate fixtures, avoiding a paid per-event props request for absent team markets.
   const probe = buildOddsSlate(profileId, profile.window.date, contest.fixtures, [], bulkEvents, new Map(), new Date().toISOString());
   const details = new Map<string, OddsEvent>();
   for (const row of probe.fixtures) {
