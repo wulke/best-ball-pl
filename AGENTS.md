@@ -26,6 +26,15 @@ When completing any feature or issue, update `README.md` to reflect changes: new
 - **Free data first**: scraping/free APIs are the default; a paid source needs a demonstrated free-path failure before it's considered.
 - **Time-critical**: drafts are live now, EPL starts Friday 2026-08-21. Usable-first ordering; nothing decorative ahead of the cheat sheet.
 
+## Merge Protocol
+
+`main` auto-deploys the live site and is protected by the branch ruleset **`main-requires-review`**: merging takes **1 approving review** (stale reviews dismissed on new pushes, review threads resolved) plus a green **`check`** CI run (`.github/workflows/ci.yml`). No bypass actors — the rule binds admins too, and agent-issued tokens share the owner's identity, so an agent cannot mechanically self-merge.
+
+- **Agents open PRs; humans merge.** Verification — typecheck, tests, build, green CI — is not review. The agent never merges, force-merges, or admin-bypasses (`gh pr merge --admin`) its own PR. It opens the PR, posts the review summary, and stops; the human merges, or explicitly instructs the merge in-session.
+- **The PR body is the review summary**: what changed and why, what a reviewer should look at, and how it was verified (bit-for-bit / additive-only proofs included while the flagship window is live).
+- **Never push to `main` directly** — including snapshot refreshes. Data updates land via PR (`npm run etl` → commit → PR → review → merge), which CI-guards every data change. Scheduled refresh (#41) must open PRs, not push.
+- **Additive-only until the flagship draft completes** (pre-2026-08-21 15:29 UTC): the default view stays exactly today's False Nine pre-draft experience.
+
 ## UI Development
 
 This project uses a design system defined in [`DESIGN.md`](DESIGN.md). **Read `DESIGN.md` before writing or modifying any UI component.**
