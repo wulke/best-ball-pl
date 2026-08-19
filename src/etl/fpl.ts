@@ -20,6 +20,9 @@ const SECOND = 1000;
 const BOOTSTRAP_TTL = 5 * 60 * SECOND;
 const FIXTURES_TTL = 5 * 60 * SECOND;
 const ELEMENT_SUMMARY_TTL = 24 * 60 * 60 * SECOND;
+/** Finalized GW live data is effectively immutable — the 60-min TTL only
+ *  exists to pick up late bonus/data corrections shortly after full time. */
+const EVENT_LIVE_TTL = 60 * 60 * SECOND;
 const MAX_ATTEMPTS = 3;
 
 /** Raw FPL API shapes — only the fields the ETL reads. */
@@ -68,7 +71,35 @@ export type RawFixture = {
   team_h_difficulty: number;
   team_a_difficulty: number;
   kickoff_time: string;
+  started: boolean;
+  finished: boolean;
+  /** Scores are null until the fixture finishes. */
+  team_h_score: number | null;
+  team_a_score: number | null;
 };
+
+/** One `event/{gw}/live` element: the per-player finalized stats for that GW.
+ *  Only the fields the actuals pipeline reads (the response also carries a
+ *  large `explain` array we ignore). */
+export type RawLiveElement = {
+  /** FPL element id (joins bootstrap elements). */
+  element: number;
+  stats: {
+    minutes: number;
+    goals_scored: number;
+    assists: number;
+    clean_sheets: number;
+    goals_conceded: number;
+    saves: number;
+    penalties_saved: number;
+    total_points: number;
+    /** FPL ships xG/xA as decimal strings; absent until data-checked. */
+    expected_goals?: string | number;
+    expected_assists?: string | number;
+  };
+};
+
+export type RawEventLive = { elements: RawLiveElement[] };
 
 type CacheRecord<T> = { url: string; fetchedAt: string; body: T };
 
@@ -137,6 +168,12 @@ export class FplApi {
 
   async fetchFixtures(): Promise<RawFixture[]> {
     return cached('fixtures', `${API_BASE}/fixtures/`, FIXTURES_TTL);
+  }
+
+  /** Finalized per-player stats for one gameweek — a single call covers all
+   *  ~590 players (#40; docs/research/fpl-api-surface.md). */
+  async fetchEventLive(event: number): Promise<RawEventLive> {
+    return cached(`event-${event}-live`, `${API_BASE}/event/${event}/live/`, EVENT_LIVE_TTL);
   }
 
   async fetchElementSummary(elementId: number): Promise<RawElementSummary> {
