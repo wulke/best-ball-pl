@@ -35,7 +35,7 @@ npm run dev
 | `npm run dev` | Vite dev server for the cheat-sheet UI |
 | `npm run build` | Build the static UI bundle into `dist/ui/` (includes snapshot copy) |
 | `npm run preview` | Preview the built bundle locally |
-| `npm test` | Parser/matcher, headline-driver, model, window, and contest-profile tests |
+| `npm test` | Parser/matcher, headline-driver, window-projection pool, model, window, and contest-profile tests |
 | `npm run typecheck` | TypeScript check across the repo |
 
 ## Contest profiles (`src/contest/`)
@@ -45,7 +45,9 @@ Every contest the tool supports is a **contest profile** (`src/contest/profiles.
 - **`false-nine`** (profile #1) — the season best-ball contest: today's behavior, preserved bit-for-bit (guarded by tests; ETL/model CLI run under it).
 - **`free-kick-gw1-sat`** (profile #2) — Underdog's The Free Kick GW1 Saturday slate: the four 2026-08-22 fixtures kicking off after the 13:41Z close (HUL-MUN excluded — pre-close), roster 1/1/1/1 + 2 FLEX = 6 rounds, **no bench**, draft size 6, pool = the 8 slate clubs, scoring identical to False Nine.
 
-A profile's `WindowSpec` (`season` | `slate` | `fixtures`) resolves via `resolveContest(profile, snapshot.fixtures)` to an explicit fixture list — never a bare GW label; any window is a sum over its fixtures. The **active** profile is the UI's choice, persisted as an id in localStorage (`bbpl-profile`, default False Nine) and resolved by `src/ui/useContestProfile.ts`; the sheet-tab switcher lands with the in-season slice.
+A profile's `WindowSpec` (`season` | `slate` | `fixtures`) resolves via `resolveContest(profile, snapshot.fixtures)` to an explicit fixture list — never a bare GW label; any window is a sum over its fixtures. The **active** profile is the UI's choice, persisted as an id in localStorage (`bbpl-profile`, default False Nine) and resolved by `src/ui/useContestProfile.ts`.
+
+The Sheet tab's header carries a profile switcher (a `<select>` next to the theme toggle, shown once more than one profile is registered). Switching profiles re-ranks the board: False Nine reads the committed season projections as-is; any other profile is window-projected and pool-restricted **client-side** (`src/ui/windowProjections.ts`, same math as `npm run model -- --profile <id>`) — the committed snapshot itself is never touched. Off-board marks, my-roster, and the queue are namespaced per profile (`bbpl-drafted`/`bbpl-mine`/`bbpl-queue`, suffixed `:<profile-id>` for anything but False Nine) so switching to a slate contest never tramples the flagship's marks. Default stays False Nine until explicitly switched — today's pre-draft experience is unchanged.
 
 ## Window-parametric projections (#42)
 
@@ -75,6 +77,7 @@ src/
     PlayerTable.tsx #   Ranked tier table: bands, rows, flags
     useDrafted.ts   #   Mark-drafted state persisted to localStorage
     useContestProfile.ts # Active contest profile (localStorage id → profiles registry)
+    windowProjections.ts # Client-side pool projections for the active profile (#47)
     drafts/         # Draft-review slice (#20): rooms, intake, review lenses
       types.ts      #   Parsed-log + room-record contract (the #22 parser produces this)
       parse.ts      #   Recap paste-parser + name matcher (#22, built against the first real recap)

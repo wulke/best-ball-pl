@@ -11,6 +11,8 @@ import { reviewRoom } from './drafts/review.js';
 import { useRooms } from './drafts/store.js';
 import { ScarcityView } from './ScarcityView.js';
 import { useContestProfile } from './useContestProfile.js';
+import { poolForProfile } from './windowProjections.js';
+import { FALSE_NINE } from '../contest/profiles.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
@@ -30,10 +32,14 @@ export function App() {
   const [carryOpen, setCarryOpen] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { drafted, toggle, clear } = useDrafted();
-  const { mine, queue, toggleMine, toggleQueue, clearAll } = useDraftSession();
+  const { profile, setProfile, profiles } = useContestProfile();
+  // False Nine keeps the original (unsuffixed) storage keys — untouched by
+  // profile switching; any other profile's marks/roster/queue live under
+  // their own namespace so a slate draft never tramples the flagship's.
+  const namespace = profile.id === FALSE_NINE.id ? undefined : profile.id;
+  const { drafted, toggle, clear } = useDrafted(namespace);
+  const { mine, queue, toggleMine, toggleQueue, clearAll } = useDraftSession(namespace);
   const { rooms, upsert, remove } = useRooms();
-  const { profile } = useContestProfile();
 
   // Scarcity brings its own tall panel — collapse Live Draft to make room when switching to it.
   useEffect(() => {
@@ -72,10 +78,13 @@ export function App() {
       ? document.documentElement.getAttribute('data-theme')
       : null) ?? 'pitch';
 
-  /** Players carrying a projection — everything the sheet can rank. */
+  /** Players carrying a projection under the active profile — everything the
+   *  sheet can rank. False Nine reads the committed season projections
+   *  as-is; any other profile is window-projected + pool-restricted client-
+   *  side (#47), the snapshot itself untouched. */
   const players = useMemo(
-    () => (snapshot?.players ?? []).filter((player) => player.projection),
-    [snapshot],
+    () => (snapshot ? poolForProfile(snapshot, profile) : []),
+    [snapshot, profile],
   );
 
   /** The carry-forward pin: the latest room's flags + note, read mid-draft. */
@@ -139,7 +148,7 @@ export function App() {
         <header className="flex items-center justify-between gap-2 print:hidden">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-              The False Nine · EPL Best Ball
+              {profile.id === FALSE_NINE.id ? 'The False Nine · EPL Best Ball' : profile.name}
             </p>
             <h1 className="font-condensed text-2xl font-bold">
               {view === 'drafts' ? 'Draft Rooms' : 'Cheat Sheet'}
@@ -169,6 +178,21 @@ export function App() {
                 </button>
               ))}
             </div>
+            {profiles.length > 1 && (
+              <select
+                value={profile.id}
+                onChange={(event) => setProfile(event.target.value)}
+                aria-label="Contest profile"
+                title="Contest profile — rankings, roster shape, and marks are scoped to the active profile"
+                className="rounded border border-default bg-surface px-2 py-1 text-xs font-semibold text-secondary transition hover:border-strong hover:text-primary focus:border-strong focus:outline-none"
+              >
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <div className="flex items-center gap-1 rounded border border-default p-0.5">
               {THEMES.map((option) => (
                 <button
