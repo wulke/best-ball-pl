@@ -6,6 +6,7 @@
 import type { Position, SnapshotPlayer } from './types.js';
 import type { LiveRecs, Rec, TargetState } from './recommend.js';
 import { Tooltip } from './Tooltip.js';
+import type { ContestProfile } from '../contest/profiles.js';
 
 const POS_BADGE: Record<string, string> = {
   G: 'border-pos-g/30 bg-pos-g/10 text-pos-g',
@@ -34,6 +35,8 @@ type Props = {
   queueOnly: boolean;
   onToggleQueueOnly: () => void;
   queueSize: number;
+  /** Active contest profile — roster size + shape display (#39). */
+  profile: ContestProfile;
 };
 
 export function LivePanel({
@@ -44,6 +47,7 @@ export function LivePanel({
   queueOnly,
   onToggleQueueOnly,
   queueSize,
+  profile,
 }: Props) {
   return (
     <section className="rounded-md border border-default bg-surface print:hidden">
@@ -56,7 +60,7 @@ export function LivePanel({
           {open ? '▾' : '▸'} Live draft
         </button>
         <span className="text-xs tabular-nums text-muted">
-          {recs.picksLeft} picks left · {roster.length}/18 on roster
+          {recs.picksLeft} picks left · {roster.length}/{profile.roster.rosterSize} on roster
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-1">
           {recs.shape.map((s) => (

@@ -11,6 +11,7 @@ import { parseRecap, preserveMatches } from './parse.js';
 import { exportRoomFile } from './store.js';
 import { PickTable } from './PickTable.js';
 import { ReviewPanel } from './ReviewPanel.js';
+import { FALSE_NINE, type ContestProfile } from '../../contest/profiles.js';
 
 type Tab = 'room' | 'log' | 'review';
 
@@ -19,13 +20,15 @@ type Props = {
   players: SnapshotPlayer[];
   onChange: (room: RoomRecord) => void;
   onClose: () => void;
+  /** Contest profile the room drafted under (roster shape drives the review). */
+  profile?: ContestProfile;
 };
 
 const FIELD_LABEL = 'text-xs font-semibold uppercase tracking-wider text-muted';
 const INPUT =
   'rounded border border-default bg-surface px-2 py-1 text-sm text-primary placeholder:text-muted focus:border-strong focus:outline-none';
 
-export function RoomEditor({ room, players, onChange, onClose }: Props) {
+export function RoomEditor({ room, players, onChange, onClose, profile = FALSE_NINE }: Props) {
   const [tab, setTab] = useState<Tab>('room');
   const [reparseNote, setReparseNote] = useState<string | null>(null);
 
@@ -218,6 +221,7 @@ export function RoomEditor({ room, players, onChange, onClose }: Props) {
             myTeam={room.myTeam}
             carryNote={room.carryNote}
             onCarryNoteChange={(carryNote) => patch({ carryNote })}
+            profile={profile}
           />
         ) : (
           <section className="rounded-md border border-default bg-surface px-3 py-6 text-center text-sm text-muted">

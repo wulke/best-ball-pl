@@ -13,12 +13,15 @@ import { buildFixturePreview } from './fixture.js';
 import { exportRoomFile, newRoomId, parseRoomFile } from './store.js';
 import { PickTable } from './PickTable.js';
 import { RoomEditor } from './RoomEditor.js';
+import { FALSE_NINE, type ContestProfile } from '../../contest/profiles.js';
 
 type Props = {
   players: SnapshotPlayer[];
   rooms: RoomRecord[];
   upsert: (room: RoomRecord) => void;
   remove: (id: string) => void;
+  /** Active contest profile — threads through to each room's review lenses. */
+  profile?: ContestProfile;
 };
 
 type Intake =
@@ -28,7 +31,7 @@ type Intake =
 const DEV = import.meta.env.DEV;
 const PANEL = 'rounded-md border border-default bg-surface';
 
-export function DraftsView({ players, rooms, upsert, remove }: Props) {
+export function DraftsView({ players, rooms, upsert, remove, profile = FALSE_NINE }: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [paste, setPaste] = useState('');
   const [intake, setIntake] = useState<Intake>({ stage: 'idle' });
@@ -168,6 +171,7 @@ export function DraftsView({ players, rooms, upsert, remove }: Props) {
         players={players}
         onChange={upsert}
         onClose={() => setOpenId(null)}
+        profile={profile}
       />
     );
   }

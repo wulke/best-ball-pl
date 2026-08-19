@@ -6,14 +6,9 @@
  * three players from the same club") with club-cluster tags.
  */
 import type { Position, SnapshotPlayer } from './types.js';
+import { FALSE_NINE, POSITIONS, type ContestProfile } from '../contest/profiles.js';
 
 export type TargetState = 'need' | 'ok' | 'full';
-
-/** Starter minimums (lineup legality) and a balanced 18-slot shape target. */
-const STARTER_NEEDS: Record<Position, number> = { G: 1, D: 2, MD: 2, FW: 2 };
-const ROSTER_TARGETS: Record<Position, number> = { G: 2, D: 6, MD: 5, FW: 5 };
-const POSITIONS: Position[] = ['G', 'D', 'MD', 'FW'];
-const ROSTER_SIZE = 18;
 
 export type Rec = {
   player: SnapshotPlayer;
@@ -51,7 +46,13 @@ export function buildRecommendations(
   drafted: ReadonlySet<string>,
   mine: ReadonlySet<string>,
   queue: ReadonlySet<string>,
+  profile: ContestProfile = FALSE_NINE,
 ): LiveRecs {
+  // Starter minimums, balanced-shape targets, and roster size come from the
+  // contest profile (#39) — False Nine's shape by default.
+  const STARTER_NEEDS = profile.roster.starters;
+  const ROSTER_TARGETS = profile.roster.targets;
+  const ROSTER_SIZE = profile.roster.rosterSize;
   const board = pool.filter((p) => p.projection && !drafted.has(p.id));
   const roster = pool.filter((p) => mine.has(p.id));
   const score = (p: SnapshotPlayer) => p.projection?.tournamentScore ?? 0;

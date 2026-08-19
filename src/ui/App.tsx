@@ -10,6 +10,7 @@ import { CarryCard } from './drafts/CarryCard.js';
 import { reviewRoom } from './drafts/review.js';
 import { useRooms } from './drafts/store.js';
 import { ScarcityView } from './ScarcityView.js';
+import { useContestProfile } from './useContestProfile.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
@@ -32,6 +33,7 @@ export function App() {
   const { drafted, toggle, clear } = useDrafted();
   const { mine, queue, toggleMine, toggleQueue, clearAll } = useDraftSession();
   const { rooms, upsert, remove } = useRooms();
+  const { profile } = useContestProfile();
 
   // Scarcity brings its own tall panel — collapse Live Draft to make room when switching to it.
   useEffect(() => {
@@ -80,11 +82,11 @@ export function App() {
   const carryPin = useMemo(() => {
     const latest = rooms.find((room) => room.myTeam && room.picks.length > 0);
     if (!latest || !snapshot) return null;
-    const review = reviewRoom(snapshot.players, latest.picks, latest.myTeam);
+    const review = reviewRoom(snapshot.players, latest.picks, latest.myTeam, profile);
     if (!review) return null;
     if (review.flags.length === 0 && latest.carryNote.trim() === '') return null;
     return { room: latest, flags: review.flags, note: latest.carryNote };
-  }, [rooms, snapshot]);
+  }, [rooms, snapshot, profile]);
 
   /** Draft by me: one click sets mine + off board (the M button). */
   const draftMine = useCallback(
@@ -102,8 +104,8 @@ export function App() {
   );
 
   const recs = useMemo(
-    () => buildRecommendations(players, drafted, mine, queue),
-    [players, drafted, mine, queue],
+    () => buildRecommendations(players, drafted, mine, queue, profile),
+    [players, drafted, mine, queue, profile],
   );
 
   const visible = useMemo(() => {
@@ -230,7 +232,7 @@ export function App() {
             <p className="text-sm text-muted">Loading snapshot…</p>
           </main>
         ) : view === 'drafts' ? (
-          <DraftsView players={snapshot.players} rooms={rooms} upsert={upsert} remove={remove} />
+          <DraftsView players={snapshot.players} rooms={rooms} upsert={upsert} remove={remove} profile={profile} />
         ) : players.length === 0 ? (
           <main className="rounded-md border border-default bg-surface px-3 py-2">
             <p className="text-sm text-secondary">
@@ -265,6 +267,7 @@ export function App() {
               queueOnly={queueOnly}
               onToggleQueueOnly={() => setQueueOnly((value) => !value)}
               queueSize={queue.size}
+              profile={profile}
             />
 
             {/* Scarcity is an analysis panel over the same live board state, not a separate
