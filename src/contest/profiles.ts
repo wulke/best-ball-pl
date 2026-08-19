@@ -30,6 +30,7 @@ import {
   DEFAULT_TIERING,
   DEFAULT_TOURNAMENT,
   type ModelConfig,
+  type ReplacementConfig,
   type ScoringConfig,
   type TieringConfig,
   type TournamentConfig,
@@ -244,5 +245,16 @@ export function modelConfigFor(profile: ContestProfile): ModelConfig {
     scoring: profile.scoring,
     tournament: profile.tournament,
     tiering: profile.tiering,
+  };
+}
+
+/** The replacement-level shape (VORP baseline) a profile's roster + draft
+ *  size implies — see `ReplacementConfig` in model/config.ts. For False Nine
+ *  this is value-identical to `DEFAULT_REPLACEMENT`. */
+export function replacementConfigFor(profile: ContestProfile): ReplacementConfig {
+  return {
+    starters: profile.roster.starters,
+    flex: profile.roster.flex,
+    draftSize: profile.draft.draftSize,
   };
 }

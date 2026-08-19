@@ -87,6 +87,18 @@ export type PlayerProjection = {
   /** 1-based rank within position and overall, by tournamentScore. */
   posRank: number;
   overallRank: number;
+  /** VORP-style draft value: this player's tournamentScore minus the
+   *  tournamentScore of the last player at his position still worth starting
+   *  (the replacement rank implied by the contest's roster shape — see
+   *  `ReplacementConfig` in model/config.ts). Answers "how much does this
+   *  player beat what's left at his position," not just "how many points" —
+   *  fixes the shallow-position overrate that raw tournamentScore ranking has
+   *  (a keeper can out-score a forward on points while being nearly
+   *  interchangeable with the next-best keeper). */
+  draftValue: number;
+  /** 1-based overall rank by draftValue instead of tournamentScore — an
+   *  alternate "who to draft next" ordering the sheet can toggle to. */
+  overallRankByValue: number;
   /** Natural-break tier within position (1 = best): the cluster the player's
    *  tournamentScore falls into — cuts where the gap between neighbors is
    *  anomalous (see model config `tiering`). */

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Position, Snapshot } from './types.js';
-import { PlayerTable } from './PlayerTable.js';
+import { PlayerTable, type RankMode } from './PlayerTable.js';
 import { useDrafted } from './useDrafted.js';
 import { useDraftSession } from './useDraftSession.js';
 import { buildRecommendations } from './recommend.js';
@@ -18,6 +18,16 @@ const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
 type View = 'sheet' | 'drafts' | 'scarcity';
 const POSITION_FILTERS: PositionFilter[] = ['ALL', 'G', 'D', 'MD', 'FW'];
+const RANK_MODE_KEY = 'bbpl-rank-mode';
+
+function loadRankMode(): RankMode {
+  try {
+    const raw = localStorage.getItem(RANK_MODE_KEY);
+    return raw === 'vorp' ? 'vorp' : 'points';
+  } catch {
+    return 'points';
+  }
+}
 
 export function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -25,6 +35,7 @@ export function App() {
   const [, setThemeTick] = useState(0);
   const [view, setView] = useState<View>('sheet');
   const [positionFilter, setPositionFilter] = useState<PositionFilter>('ALL');
+  const [rankMode, setRankMode] = useState<RankMode>(loadRankMode);
   const [query, setQuery] = useState('');
   const [hideDrafted, setHideDrafted] = useState(true);
   const [queueOnly, setQueueOnly] = useState(false);
@@ -45,6 +56,14 @@ export function App() {
   useEffect(() => {
     if (view === 'scarcity') setLiveOpen(false);
   }, [view]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(RANK_MODE_KEY, rankMode);
+    } catch {
+      // Storage unavailable — toggle still works for this session.
+    }
+  }, [rankMode]);
 
   // Close the hamburger menu on outside click or Escape.
   useEffect(() => {
@@ -133,14 +152,20 @@ export function App() {
       }
       return true;
     });
-    // Rank order: overall in the ALL view, within-position when filtered.
+    // Rank order: overall in the ALL view (by rankMode), within-position when
+    // filtered. `|| overallRank` covers a snapshot that predates draftValue
+    // (falls back to the points-based rank rather than a no-op NaN sort).
+    const overallRankFor = (p: (typeof filtered)[number]) =>
+      rankMode === 'vorp'
+        ? p.projection!.overallRankByValue || p.projection!.overallRank
+        : p.projection!.overallRank;
     filtered.sort((a, b) =>
       positionFilter === 'ALL'
-        ? (a.projection!.overallRank - b.projection!.overallRank)
+        ? overallRankFor(a) - overallRankFor(b)
         : (a.projection!.posRank - b.projection!.posRank),
     );
     return filtered;
-  }, [players, positionFilter, hideDrafted, queueOnly, query, drafted, queue]);
+  }, [players, positionFilter, hideDrafted, queueOnly, query, drafted, queue, rankMode]);
 
   return (
     <div className="min-h-screen bg-app px-4 py-6">
@@ -315,6 +340,27 @@ export function App() {
                 ))}
               </div>
 
+              {positionFilter === 'ALL' && (
+                <div
+                  className="flex items-center gap-0.5 rounded border border-default p-0.5"
+                  title="How the overall (#) column ranks cross-position — VORP accounts for how deep/scarce each position is"
+                >
+                  {(['points', 'vorp'] as RankMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setRankMode(mode)}
+                      className={`rounded px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition ${
+                        mode === rankMode
+                          ? 'bg-accent text-accent-fg'
+                          : 'text-muted hover:text-secondary'
+                      }`}
+                    >
+                      {mode === 'points' ? 'Points' : 'VORP'}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <input
                 type="search"
                 value={query}
@@ -362,6 +408,7 @@ export function App() {
               queued={queue}
               onToggleQueued={toggleQueue}
               groupByTier={positionFilter !== 'ALL'}
+              rankMode={rankMode}
             />
           </>
         )}
