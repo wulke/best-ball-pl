@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * Live-draft session state (first-$3-draft feedback):
@@ -8,6 +8,11 @@ import { useCallback, useEffect, useState } from 'react';
  *   the board down to them mid-draft.
  * Both persist to localStorage for the hours-long 30s/pick slow drafts;
  * `clearAll` runs between drafts alongside the drafted-board reset.
+ *
+ * `namespace` (a profile id, #47/#44) isolates a non-default profile's
+ * roster/queue under suffixed keys — False Nine's own keys (`namespace`
+ * omitted) are untouched, so switching profiles never tramples the
+ * flagship's session.
  */
 const MINE_KEY = 'bbpl-mine';
 const QUEUE_KEY = 'bbpl-queue';
@@ -24,25 +29,43 @@ function loadSet(key: string): Set<string> {
   }
 }
 
-export function useDraftSession() {
-  const [mine, setMine] = useState<Set<string>>(() => loadSet(MINE_KEY));
-  const [queue, setQueue] = useState<Set<string>>(() => loadSet(QUEUE_KEY));
+export function useDraftSession(namespace?: string) {
+  const mineKey = namespace ? `${MINE_KEY}:${namespace}` : MINE_KEY;
+  const queueKey = namespace ? `${QUEUE_KEY}:${namespace}` : QUEUE_KEY;
+  const [mine, setMine] = useState<Set<string>>(() => loadSet(mineKey));
+  const [queue, setQueue] = useState<Set<string>>(() => loadSet(queueKey));
+  // Each set tracks the key it was last loaded/written for, independently —
+  // a shared ref would race when both keys change in the same commit (the
+  // second effect would see the first effect's already-updated ref and write
+  // stale state into the new namespace before the reload lands).
+  const loadedMineKeyRef = useRef(mineKey);
+  const loadedQueueKeyRef = useRef(queueKey);
 
   useEffect(() => {
+    if (loadedMineKeyRef.current !== mineKey) {
+      loadedMineKeyRef.current = mineKey;
+      setMine(loadSet(mineKey));
+      return; // switching namespace: reload only, don't overwrite the new key yet
+    }
     try {
-      localStorage.setItem(MINE_KEY, JSON.stringify([...mine]));
+      localStorage.setItem(mineKey, JSON.stringify([...mine]));
     } catch {
       /* in-memory only */
     }
-  }, [mine]);
+  }, [mineKey, mine]);
 
   useEffect(() => {
+    if (loadedQueueKeyRef.current !== queueKey) {
+      loadedQueueKeyRef.current = queueKey;
+      setQueue(loadSet(queueKey));
+      return;
+    }
     try {
-      localStorage.setItem(QUEUE_KEY, JSON.stringify([...queue]));
+      localStorage.setItem(queueKey, JSON.stringify([...queue]));
     } catch {
       /* in-memory only */
     }
-  }, [queue]);
+  }, [queueKey, queue]);
 
   const toggleMine = useCallback((id: string) => {
     setMine((prev) => {
