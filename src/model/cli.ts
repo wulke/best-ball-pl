@@ -3,14 +3,20 @@
  * player's projection, writes projections back into data/snapshot.json, and
  * prints the ranked report. The fast iteration loop for tuning config
  * constants without touching the API (ETL cache untouched).
+ *
+ * `npm run model -- --profile <id>` (#42) recomputes under any contest
+ * profile's window — e.g. `--profile free-kick-gw1-sat` prints the GW1
+ * Saturday slate pool ranked for that window (opponent-adjusted, pool-scoped
+ * ranks). Only the default (false-nine) writes the snapshot: the committed
+ * projections stay the flagship's season numbers; other windows are views.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FALSE_NINE, modelConfigFor } from '../contest/profiles.js';
+import { FALSE_NINE, modelConfigFor, profileById, resolveContest } from '../contest/profiles.js';
 import { buildProjections } from './project.js';
-import type { Position, Snapshot } from '../etl/types.js';
+import type { Position, Snapshot, SnapshotPlayer } from '../etl/types.js';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const SNAPSHOT_PATH = path.join(repoRoot, 'data/snapshot.json');
@@ -34,8 +40,8 @@ type Row = {
   risk: boolean;
 };
 
-function toRows(snapshot: Snapshot): Row[] {
-  return snapshot.players
+function toRows(players: SnapshotPlayer[]): Row[] {
+  return players
     .filter((p) => p.projection)
     .map((p) => ({
       rank: p.projection!.overallRank,
@@ -83,23 +89,58 @@ function printTeamContext(
   }
 }
 
+function printWindowFixtures(label: string, fixtures: Snapshot['fixtures']): void {
+  console.log(`\n${label} — ${fixtures.length} fixture${fixtures.length === 1 ? '' : 's'}`);
+  for (const f of fixtures) {
+    console.log(
+      `  GW${String(f.event).padStart(2, ' ')} ${f.kickoff.slice(0, 16).replace('T', ' ')}Z  ${f.home}–${f.away}  (FDR ${f.homeDifficulty}/${f.awayDifficulty})`,
+    );
+  }
+}
+
+function profileArg(): string {
+  const argv = process.argv.slice(2);
+  const eq = argv.find((a) => a.startsWith('--profile='));
+  if (eq) return eq.split('=')[1];
+  const i = argv.indexOf('--profile');
+  if (i >= 0 && argv[i + 1]) return argv[i + 1];
+  return FALSE_NINE.id;
+}
+
 function main() {
   const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8')) as Snapshot;
-  // Profile #1 — value-identical to DEFAULT_MODEL_CONFIG (guarded by test):
-  // the config-tuning loop's output cannot drift from the profile threading.
-  const { projections, teamContexts } = buildProjections(snapshot.players, modelConfigFor(FALSE_NINE));
+  const profile = profileById(profileArg()); // fail loudly on unknown ids
+  const contest = resolveContest(profile, snapshot.fixtures);
+
+  const { projections, teamContexts } = buildProjections(
+    snapshot.players,
+    modelConfigFor(profile),
+    contest,
+  );
 
   const players = snapshot.players.map((p, i) => ({ ...p, projection: projections[i] }));
-  const out: Snapshot = { ...snapshot, players, generated_at: snapshot.generated_at };
-  fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(out, null, 2)}\n`);
-  console.log(`[model] Projections written for ${players.length} players → data/snapshot.json`);
+  // Pool only — non-pool players sit unranked (rank 0) outside the contest.
+  const rows = toRows(players)
+    .filter((r) => r.rank > 0)
+    .sort((a, b) => a.rank - b.rank);
 
-  const rows = toRows(out).sort((a, b) => a.rank - b.rank);
-
-  printTeamContext(teamContexts);
+  if (profile.id === FALSE_NINE.id) {
+    // Default path — byte-identical to the pre-#42 CLI: write + full report.
+    const out: Snapshot = { ...snapshot, players, generated_at: snapshot.generated_at };
+    fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(out, null, 2)}\n`);
+    console.log(`[model] Projections written for ${players.length} players → data/snapshot.json`);
+    printTeamContext(teamContexts);
+  } else {
+    console.log(
+      `[model] ${profile.name} — window report only (snapshot untouched; committed projections stay season/false-nine)`,
+    );
+    printWindowFixtures(profile.name, contest.fixtures);
+    const poolClubs = new Set(contest.clubs ?? []);
+    printTeamContext(new Map([...teamContexts].filter(([team]) => poolClubs.has(team))));
+  }
 
   printTable(
-    `TOP 25 OVERALL (ranked by tournament-adjusted score) — as of ${snapshot.generated_at.slice(0, 10)} — tier = within-position cluster`,
+    `${profile.name.toUpperCase()} — TOP 25 IN POOL (ranked by tournament-adjusted score) — as of ${snapshot.generated_at.slice(0, 10)} — tier = within-position cluster`,
     rows.slice(0, 25),
   );
 
