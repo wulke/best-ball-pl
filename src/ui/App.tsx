@@ -6,6 +6,7 @@ import { useDraftSession } from './useDraftSession.js';
 import { buildRecommendations } from './recommend.js';
 import { LivePanel } from './LivePanel.js';
 import { DraftsView } from './drafts/DraftsView.js';
+import { ExposureView } from './drafts/ExposureView.js';
 import { CarryCard } from './drafts/CarryCard.js';
 import { reviewRoom } from './drafts/review.js';
 import { useRooms } from './drafts/store.js';
@@ -17,7 +18,7 @@ import type { OddsSlate } from '../etl/odds.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
-type View = 'sheet' | 'drafts' | 'scarcity';
+type View = 'sheet' | 'drafts' | 'exposure' | 'scarcity';
 const POSITION_FILTERS: PositionFilter[] = ['ALL', 'G', 'D', 'MD', 'FW'];
 const RANK_MODE_KEY = 'bbpl-rank-mode';
 
@@ -206,8 +207,8 @@ export function App() {
               {profile.id === FALSE_NINE.id ? 'The False Nine · EPL Best Ball' : profile.name}
             </p>
             <h1 className="font-condensed text-2xl font-bold">
-              {view === 'drafts' ? 'Draft Rooms' : 'Cheat Sheet'}
-              {view !== 'drafts' && snapshot && (
+              {view === 'drafts' ? 'Draft Rooms' : view === 'exposure' ? 'Exposure' : 'Cheat Sheet'}
+              {view !== 'drafts' && view !== 'exposure' && snapshot && (
                 <span className="ml-2 align-middle font-condensed text-sm font-semibold text-muted tabular-nums">
                   {snapshot.generated_at.slice(0, 10)} · {players.length} players
                 </span>
@@ -273,7 +274,7 @@ export function App() {
                 aria-expanded={menuOpen}
                 aria-label="More views"
                 className={`rounded border border-default px-2 py-1.5 text-sm transition ${
-                  view === 'drafts' || menuOpen
+                  view === 'drafts' || view === 'exposure' || menuOpen
                     ? 'border-strong text-primary'
                     : 'text-muted hover:text-secondary'
                 }`}
@@ -296,6 +297,20 @@ export function App() {
                   >
                     Drafts
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setView('exposure');
+                      setMenuOpen(false);
+                    }}
+                    className={`block w-full px-3 py-1.5 text-left text-sm font-semibold transition ${
+                      view === 'exposure'
+                        ? 'text-accent'
+                        : 'text-secondary hover:bg-surface-hover hover:text-primary'
+                    }`}
+                  >
+                    Exposure
+                  </button>
                 </div>
               )}
             </div>
@@ -312,6 +327,8 @@ export function App() {
           </main>
         ) : view === 'drafts' ? (
           <DraftsView players={snapshot.players} rooms={rooms} upsert={upsert} remove={remove} profile={profile} />
+        ) : view === 'exposure' ? (
+          <ExposureView players={snapshot.players} rooms={rooms} />
         ) : players.length === 0 ? (
           <main className="rounded-md border border-default bg-surface px-3 py-2">
             <p className="text-sm text-secondary">
