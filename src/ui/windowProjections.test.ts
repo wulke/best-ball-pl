@@ -76,6 +76,14 @@ test('daily odds blend adds Odds Pts without changing model-only ranks, and fall
   const partialProjection = byId.get(partial.id)!;
 
   assert.notEqual(coveredProjection.oddsPoints, coveredProjection.points.p50);
+  assert.ok(coveredProjection.odds);
+  assert.ok(
+    Math.abs(
+      coveredProjection.odds.goals.blended -
+      (0.65 * coveredProjection.odds.goals.model + 0.35 * coveredProjection.odds.goals.oddsImplied!),
+    ) < 1e-12,
+    'the 0.35 knob gives market rates exactly 35% weight',
+  );
   assert.ok(partialProjection.odds);
   assert.equal(partialProjection.odds.goals.oddsImplied, null, 'missing player prop falls back');
   assert.equal(partialProjection.odds.goals.blended, partialProjection.odds.goals.model);

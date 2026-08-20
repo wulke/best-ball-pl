@@ -418,7 +418,7 @@ function mean(values: number[]): number | null {
 }
 
 /** Decimal quotes become no-vig probabilities within a mutually-exclusive
- * market. Anytime scorer is converted from P(score) to a Poisson mean. */
+ * market. The 0.5 anytime/assist props become Poisson means from P(≥1). */
 function normalizedProbability(prices: number[]): number | null {
   const inverse = prices.map((price) => 1 / price).filter(Number.isFinite);
   const total = inverse.reduce((sum, value) => sum + value, 0);
@@ -454,7 +454,16 @@ function oddsContext(slate: OddsSlate | undefined): OddsProjectionContext | unde
       const goals = goalProbability != null && goalProbability < 1 ? -Math.log(1 - goalProbability) : null;
       const over = mean(prop.assists.filter((quote) => quote.side === 'over').map((quote) => quote.price));
       const under = mean(prop.assists.filter((quote) => quote.side === 'under').map((quote) => quote.price));
-      const assists = over != null && under != null ? normalizedProbability([over, under]) : null;
+      const assistProbability = over != null && under != null ? normalizedProbability([over, under]) : null;
+      // The Odds API assist market is expected to be the standard 0.5 line:
+      // P(assist ≥ 1) converts to the per-match Poisson mean just as the
+      // anytime-goalscorer market does. Other lines remain uncovered rather
+      // than pretending their over probability is an expected count.
+      const assists = prop.assists.some((quote) => quote.point !== 0.5)
+        ? null
+        : assistProbability != null && assistProbability < 1
+          ? -Math.log(1 - assistProbability)
+          : null;
       player.set(prop.playerId, { goals, assists });
     }
     fixtures.set(fixture.fixtureId, { player, teams });
@@ -551,18 +560,18 @@ function buildWindowStatline(
       : odds?.fixtures.get(club.windowFixtures[index].id!);
     const playerMarket = playerId == null ? undefined : market?.player.get(playerId);
     const a = perFixtureMatches * f.attack; // opponent-adjusted match time
-    const oddsGoalsCoef = playerMarket?.goals == null ? goalsCoef : blend(goalsCoef, playerMarket.goals / 90, cfg.odds.playerGoals);
-    const oddsAssistsCoef = playerMarket?.assists == null ? assistsCoef : blend(assistsCoef, playerMarket.assists / 90, cfg.odds.playerAssists);
+    const oddsGoalsCoef = playerMarket?.goals == null ? goalsCoef : blendTowardMarket(goalsCoef, playerMarket.goals / 90, cfg.odds.playerGoals);
+    const oddsAssistsCoef = playerMarket?.assists == null ? assistsCoef : blendTowardMarket(assistsCoef, playerMarket.assists / 90, cfg.odds.playerAssists);
     raw.goals += oddsGoalsCoef * a;
     raw.assists += oddsAssistsCoef * a;
     raw.shotsOnTarget += sotCoef * a;
     raw.shotsOffTarget += offTargetCoef * a;
     raw.chancesCreated += chancesCoef * a;
     const teamOdds = market?.teams.get(clubName);
-    raw.cleanSheets += (teamOdds ? blend(csCoef, teamOdds.cleanSheets * csEligible, cfg.odds.team) : csCoef) * perFixtureMatches * f.cs;
-    raw.goalsConceded += (teamOdds ? blend(gcCoef, teamOdds.goalsConceded, cfg.odds.team) : gcCoef) * perFixtureMatches * f.gc;
+    raw.cleanSheets += (teamOdds ? blendTowardMarket(csCoef, teamOdds.cleanSheets * csEligible, cfg.odds.team) : csCoef) * perFixtureMatches * f.cs;
+    raw.goalsConceded += (teamOdds ? blendTowardMarket(gcCoef, teamOdds.goalsConceded, cfg.odds.team) : gcCoef) * perFixtureMatches * f.gc;
     raw.saves += savesCoef * perFixtureMatches * f.saves;
-    raw.gkWins += (teamOdds ? blend(winCoef, gk ? teamOdds.gkWins : 0, cfg.odds.team) : winCoef) * perFixtureMatches * f.win;
+    raw.gkWins += (teamOdds ? blendTowardMarket(winCoef, gk ? teamOdds.gkWins : 0, cfg.odds.team) : winCoef) * perFixtureMatches * f.win;
   }
 
   return finalizeStatline(raw, position);
@@ -1044,13 +1053,16 @@ export function buildProjections(
       const playerOdds = fixtureOdds?.player.get(player.id);
       const teamOdds = fixtureOdds?.teams.get(player.team);
       projection.oddsPoints = oddsPoints!;
+      const csEligible = player.position === 'G' ? 0.95 : player.position === 'D' ? 0.25 + 0.75 * rates.startFraction : 0;
+      const defensive = player.position === 'G' || player.position === 'D';
+      const oddsCleanSheets = teamOdds?.cleanSheets;
       projection.odds = {
         fetchedAt: odds.slate.fetchedAt,
         goals: rateComparison(attack.goals, playerOdds?.goals ?? null, cfg.odds.playerGoals),
         assists: rateComparison(attack.assists, playerOdds?.assists ?? null, cfg.odds.playerAssists),
-        cleanSheets: rateComparison(team.cleanSheetRate, teamOdds?.cleanSheets ?? null, cfg.odds.team),
-        goalsConceded: rateComparison(team.goalsConcededPerMatch, teamOdds?.goalsConceded ?? null, cfg.odds.team),
-        gkWins: rateComparison(team.gkWinRate, teamOdds?.gkWins ?? null, cfg.odds.team),
+        cleanSheets: rateComparison(defensive ? team.cleanSheetRate * csEligible : 0, defensive && oddsCleanSheets != null ? oddsCleanSheets * csEligible : null, cfg.odds.team),
+        goalsConceded: rateComparison(defensive ? team.goalsConcededPerMatch : 0, defensive ? teamOdds?.goalsConceded ?? null : null, cfg.odds.team),
+        gkWins: rateComparison(player.position === 'G' ? team.gkWinRate : 0, player.position === 'G' ? teamOdds?.gkWins ?? null : null, cfg.odds.team),
       };
     }
     return projection;
@@ -1061,7 +1073,13 @@ export function buildProjections(
 }
 
 function rateComparison(model: number, oddsImplied: number | null, weight: number) {
-  return { model, oddsImplied, blended: oddsImplied == null ? model : blend(model, oddsImplied, weight) };
+  return { model, oddsImplied, blended: oddsImplied == null ? model : blendTowardMarket(model, oddsImplied, weight) };
+}
+
+/** Unlike the historical xG helper above, this parameter names the market's
+ * own weight, making the daily-slate shrinkage contract unambiguous. */
+function blendTowardMarket(model: number, market: number, marketWeight: number): number {
+  return (1 - marketWeight) * model + marketWeight * market;
 }
 
 /** Indices of players inside the window's draft pool (null clubs = everyone). */
