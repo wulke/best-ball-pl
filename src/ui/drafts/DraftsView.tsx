@@ -7,7 +7,7 @@
 import { useRef, useState } from 'react';
 import type { SnapshotPlayer } from '../types.js';
 import type { PreviewPick, RoomRecord } from './types.js';
-import { renumber } from './types.js';
+import { defaultCompetition, renumber } from './types.js';
 import { extractRecapText, parseRecap, sniffDraftUrl } from './parse.js';
 import { buildFixturePreview } from './fixture.js';
 import { exportRoomFile, newRoomId, parseRoomFile } from './store.js';
@@ -48,6 +48,7 @@ export function DraftsView({ players, rooms, upsert, remove, profile = FALSE_NIN
       id: newRoomId(),
       name: init.name ?? '',
       entryCost: init.entryCost ?? 3,
+      competition: init.competition ?? defaultCompetition(profile),
       draftDate: init.draftDate ?? now.slice(0, 10),
       rawPaste: init.rawPaste ?? '',
       picks: init.picks ?? [],
@@ -168,6 +169,7 @@ export function DraftsView({ players, rooms, upsert, remove, profile = FALSE_NIN
     return (
       <RoomEditor
         room={openRoom}
+        rooms={rooms}
         players={players}
         onChange={upsert}
         onClose={() => setOpenId(null)}
