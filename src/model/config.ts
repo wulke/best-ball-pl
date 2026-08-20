@@ -162,6 +162,20 @@ export const DEFAULT_RATES: RateConfig = {
   regressionMinutes: 2400,
 };
 
+/** Conservative market shrinkage for daily-slate odds. Odds complement the
+ * model's priors; they never replace them outright. */
+export type OddsBlendConfig = {
+  playerGoals: number;
+  playerAssists: number;
+  team: number;
+};
+
+export const DEFAULT_ODDS_BLEND: OddsBlendConfig = {
+  playerGoals: 0.35,
+  playerAssists: 0.35,
+  team: 0.35,
+};
+
 /**
  * Percentile scenarios — parametric, deliberately simple and auditable (full
  * Monte Carlo is out of scope per the map). "Burst" terms (goals, assists,
@@ -360,6 +374,7 @@ export type ModelConfig = {
   volume: VolumeConfig;
   minutes: MinutesConfig;
   rates: RateConfig;
+  odds: OddsBlendConfig;
   scenarios: ScenarioConfig;
   team: TeamRegression;
   fixture: FixtureDifficultyConfig;
@@ -373,6 +388,7 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   volume: DEFAULT_VOLUME_CONFIG,
   minutes: DEFAULT_MINUTES,
   rates: DEFAULT_RATES,
+  odds: DEFAULT_ODDS_BLEND,
   scenarios: DEFAULT_SCENARIOS,
   team: DEFAULT_TEAM_REGRESSION,
   fixture: DEFAULT_FIXTURE_DIFFICULTY,

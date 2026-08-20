@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react';
 const uiRoot = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = path.resolve(uiRoot, '../..');
 const snapshotSourcePath = path.join(repoRoot, 'data/snapshot.json');
+const oddsSourcePath = path.join(repoRoot, 'data/odds');
 
 export const SNAPSHOT_MISSING_MESSAGE =
   'data/snapshot.json not found — run npm run etl first';
@@ -18,6 +19,19 @@ function createSnapshotServePlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const url = req.url ?? '';
+
+        const oddsMatch = url.match(/\/data\/odds\/([a-z0-9-]+)\.json$/);
+        if (oddsMatch) {
+          const sourcePath = path.join(oddsSourcePath, `${oddsMatch[1]}.json`);
+          if (!fs.existsSync(sourcePath)) {
+            res.statusCode = 404;
+            res.end();
+            return;
+          }
+          res.setHeader('Content-Type', 'application/json');
+          res.end(fs.readFileSync(sourcePath, 'utf8'));
+          return;
+        }
 
         if (!url.endsWith('/data/snapshot.json')) {
           next();
@@ -49,6 +63,9 @@ function createSnapshotServePlugin(): Plugin {
       const destinationPath = path.join(outDir, 'data/snapshot.json');
       fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
       fs.copyFileSync(snapshotSourcePath, destinationPath);
+      if (fs.existsSync(oddsSourcePath)) {
+        fs.cpSync(oddsSourcePath, path.join(outDir, 'data/odds'), { recursive: true });
+      }
     },
   };
 }
