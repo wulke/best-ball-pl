@@ -26,6 +26,7 @@
  */
 
 import type { PlayerStatus, Position, SnapshotPlayer } from '../etl/types.js';
+import type { OddsSlate } from '../etl/odds.js';
 import type { FixtureDifficultyConfig, ModelConfig, ReplacementConfig } from './config.js';
 import { DEFAULT_REPLACEMENT } from './config.js';
 import { scoreStatline } from './scoring.js';
@@ -325,6 +326,8 @@ const STATUS_FACTORS: Partial<Record<PlayerStatus, number>> = {
 export type ClubFixtureContext = {
   /** Difficulty of each of the club's fixtures inside the window (FDR 1–5). */
   windowDifficulties: number[];
+  /** Fixtures carrying those difficulties, retained to match static odds by id. */
+  windowFixtures: WindowFixture[];
   /** Calendar fixture count — the per-fixture minutes denominator (38 in a
    *  full EPL season; the season's minutes allocate 1/n per fixture). */
   calendarGames: number;
@@ -350,6 +353,7 @@ function buildClubFixtureContext(club: string, window: ProjectionWindow): ClubFi
     windowDifficulties: window.fixtures
       .filter((f) => f.home === club || f.away === club)
       .map((f) => difficultyOf(f, club)),
+    windowFixtures: window.fixtures.filter((f) => f.home === club || f.away === club),
     calendarGames: calendar.length,
     calendarMeanDifficulty: dMean,
   };
@@ -402,6 +406,62 @@ const EMPTY_RAW: RawStatline = {
 
 type AttackRates = { goals: number; assists: number };
 
+type OddsFixtureRates = {
+  player: Map<string, { goals: number | null; assists: number | null }>;
+  teams: Map<string, { cleanSheets: number; goalsConceded: number; gkWins: number }>;
+};
+
+type OddsProjectionContext = { slate: OddsSlate; fixtures: Map<number, OddsFixtureRates> };
+
+function mean(values: number[]): number | null {
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+}
+
+/** Decimal quotes become no-vig probabilities within a mutually-exclusive
+ * market. Anytime scorer is converted from P(score) to a Poisson mean. */
+function normalizedProbability(prices: number[]): number | null {
+  const inverse = prices.map((price) => 1 / price).filter(Number.isFinite);
+  const total = inverse.reduce((sum, value) => sum + value, 0);
+  return total > 0 ? inverse[0] / total : null;
+}
+
+function oddsContext(slate: OddsSlate | undefined): OddsProjectionContext | undefined {
+  if (!slate) return undefined;
+  const fixtures = new Map<number, OddsFixtureRates>();
+  for (const fixture of slate.fixtures) {
+    const winners = new Map<'home' | 'draw' | 'away', number[]>();
+    for (const quote of fixture.matchWinner) {
+      const prices = winners.get(quote.selection) ?? [];
+      prices.push(quote.price);
+      winners.set(quote.selection, prices);
+    }
+    const winPrices = (selection: 'home' | 'draw' | 'away') => mean(winners.get(selection) ?? []);
+    const homePrice = winPrices('home'), drawPrice = winPrices('draw'), awayPrice = winPrices('away');
+    const inverse = [homePrice, drawPrice, awayPrice].map((price) => price ? 1 / price : 0);
+    const totalInverse = inverse.reduce((sum, value) => sum + value, 0);
+    const totalGoals = mean(fixture.totalGoals.map((quote) => quote.point));
+    const teams = new Map<string, { cleanSheets: number; goalsConceded: number; gkWins: number }>();
+    if (totalInverse > 0 && totalGoals != null) {
+      const [homeWin, draw, awayWin] = inverse.map((value) => value / totalInverse);
+      const homeGoals = totalGoals * (homeWin + draw / 2);
+      const awayGoals = totalGoals * (awayWin + draw / 2);
+      teams.set(fixture.home, { cleanSheets: Math.exp(-awayGoals), goalsConceded: awayGoals, gkWins: homeWin });
+      teams.set(fixture.away, { cleanSheets: Math.exp(-homeGoals), goalsConceded: homeGoals, gkWins: awayWin });
+    }
+    const player = new Map<string, { goals: number | null; assists: number | null }>();
+    for (const prop of fixture.playerProps) {
+      const goalProbability = mean(prop.anytimeGoalscorer.map((quote) => 1 / quote.price));
+      const goals = goalProbability != null && goalProbability < 1 ? -Math.log(1 - goalProbability) : null;
+      const over = mean(prop.assists.filter((quote) => quote.side === 'over').map((quote) => quote.price));
+      const under = mean(prop.assists.filter((quote) => quote.side === 'under').map((quote) => quote.price));
+      const assists = over != null && under != null ? normalizedProbability([over, under]) : null;
+      player.set(prop.playerId, { goals, assists });
+    }
+    fixtures.set(fixture.fixtureId, { player, teams });
+  }
+  return { slate, fixtures };
+}
+
 /** Sum a player's stat line over the club's fixtures inside the window.
  *
  *  Structure: every term is linear in either `m × attack` (chance-quality
@@ -421,6 +481,9 @@ function buildWindowStatline(
   cfg: ModelConfig,
   volume: VolumeRates | null,
   club: ClubFixtureContext,
+  clubName: string,
+  playerId?: string,
+  odds?: OddsProjectionContext,
 ): ProjectedStatline {
   const gk = position === 'G';
   const baseline = cfg.volume.baselines[position];
@@ -481,18 +544,25 @@ function buildWindowStatline(
   raw.penaltiesSaved = gk ? rates.penaltiesSavedRate * (windowMinutes / SEASON_MINUTES) : 0;
 
   const perFixtureMatches = perFixtureMinutes / 90; // one fixture's share of the season job
-  for (const d of club.windowDifficulties) {
+  for (const [index, d] of club.windowDifficulties.entries()) {
     const f = fixtureFactors(d, club.calendarMeanDifficulty, cfg.fixture);
+    const market = club.windowFixtures[index].id == null
+      ? undefined
+      : odds?.fixtures.get(club.windowFixtures[index].id!);
+    const playerMarket = playerId == null ? undefined : market?.player.get(playerId);
     const a = perFixtureMatches * f.attack; // opponent-adjusted match time
-    raw.goals += goalsCoef * a;
-    raw.assists += assistsCoef * a;
+    const oddsGoalsCoef = playerMarket?.goals == null ? goalsCoef : blend(goalsCoef, playerMarket.goals / 90, cfg.odds.playerGoals);
+    const oddsAssistsCoef = playerMarket?.assists == null ? assistsCoef : blend(assistsCoef, playerMarket.assists / 90, cfg.odds.playerAssists);
+    raw.goals += oddsGoalsCoef * a;
+    raw.assists += oddsAssistsCoef * a;
     raw.shotsOnTarget += sotCoef * a;
     raw.shotsOffTarget += offTargetCoef * a;
     raw.chancesCreated += chancesCoef * a;
-    raw.cleanSheets += csCoef * perFixtureMatches * f.cs;
-    raw.goalsConceded += gcCoef * perFixtureMatches * f.gc;
+    const teamOdds = market?.teams.get(clubName);
+    raw.cleanSheets += (teamOdds ? blend(csCoef, teamOdds.cleanSheets * csEligible, cfg.odds.team) : csCoef) * perFixtureMatches * f.cs;
+    raw.goalsConceded += (teamOdds ? blend(gcCoef, teamOdds.goalsConceded, cfg.odds.team) : gcCoef) * perFixtureMatches * f.gc;
     raw.saves += savesCoef * perFixtureMatches * f.saves;
-    raw.gkWins += winCoef * perFixtureMatches * f.win;
+    raw.gkWins += (teamOdds ? blend(winCoef, gk ? teamOdds.gkWins : 0, cfg.odds.team) : winCoef) * perFixtureMatches * f.win;
   }
 
   return finalizeStatline(raw, position);
@@ -586,7 +656,9 @@ export function buildProjections(
   cfg: ModelConfig,
   window?: ProjectionWindow,
   replacement: ReplacementConfig = DEFAULT_REPLACEMENT,
+  oddsSlate?: OddsSlate,
 ): ProjectionResult {
+  const odds = oddsContext(oddsSlate);
   const windowSpec = window ?? neutralWindowFor(players);
   const clubContexts = new Map<string, ClubFixtureContext>();
   for (const club of new Set(players.map((p) => p.team))) {
@@ -887,7 +959,15 @@ export function buildProjections(
       cfg,
       volumeRates[i],
       clubContexts.get(player.team)!,
+      player.team,
     );
+
+    const oddsLine = odds
+      ? buildWindowStatline(
+          minutes, player.position, rates, attack, team, cfg, volumeRates[i],
+          clubContexts.get(player.team)!, player.team, player.id, odds,
+        )
+      : undefined;
 
     const p10Line = applyScenario(base, cfg.scenarios.p10, cfg.minutes.maxMinutes);
     const p90Cfg = cfg.scenarios.p90;
@@ -905,6 +985,7 @@ export function buildProjections(
     const p50 = scoreStatline(base, player.position, cfg.scoring);
     const p10 = scoreStatline(p10Line, player.position, cfg.scoring);
     const p90 = scoreStatline(p90Line, player.position, cfg.scoring);
+    const oddsPoints = oddsLine ? scoreStatline(oddsLine, player.position, cfg.scoring) : undefined;
 
     const confidence: PlayerProjection['confidence'] =
       rates.seasonCount >= 2 && rates.weightedMinutes >= 1800
@@ -934,7 +1015,7 @@ export function buildProjections(
     const ceilingWeight = tCfg.ceilingWeight * (durabilityRisk ? tCfg.riskCeilingDampen : 1);
     const tournamentScore = round2(p50 + ceilingWeight * (p90 - p50));
 
-    return {
+    const projection: PlayerProjection = {
       points: { p10, p50, p90 },
       statline: base,
       per90: round2(minutes > 0 ? (p50 / minutes) * 90 : 0),
@@ -955,11 +1036,32 @@ export function buildProjections(
       newcomerPrior: { value: round2(newcomerPriorByPlayer[i]), applied: newcomerPriorApplied[i] },
       congestionApplied: congestionApplied[i],
       teamContext: team,
-    } satisfies PlayerProjection;
+    };
+    if (odds) {
+      const fixtureOdds = clubContexts.get(player.team)!.windowFixtures
+        .map((fixture) => fixture.id == null ? undefined : odds.fixtures.get(fixture.id))
+        .find((entry) => entry != null);
+      const playerOdds = fixtureOdds?.player.get(player.id);
+      const teamOdds = fixtureOdds?.teams.get(player.team);
+      projection.oddsPoints = oddsPoints!;
+      projection.odds = {
+        fetchedAt: odds.slate.fetchedAt,
+        goals: rateComparison(attack.goals, playerOdds?.goals ?? null, cfg.odds.playerGoals),
+        assists: rateComparison(attack.assists, playerOdds?.assists ?? null, cfg.odds.playerAssists),
+        cleanSheets: rateComparison(team.cleanSheetRate, teamOdds?.cleanSheets ?? null, cfg.odds.team),
+        goalsConceded: rateComparison(team.goalsConcededPerMatch, teamOdds?.goalsConceded ?? null, cfg.odds.team),
+        gkWins: rateComparison(team.gkWinRate, teamOdds?.gkWins ?? null, cfg.odds.team),
+      };
+    }
+    return projection;
   });
 
   assignRanks(players, projections, cfg, poolIndices(players, windowSpec), replacement);
   return { projections, positionMeans, teamContexts: teams };
+}
+
+function rateComparison(model: number, oddsImplied: number | null, weight: number) {
+  return { model, oddsImplied, blended: oddsImplied == null ? model : blend(model, oddsImplied, weight) };
 }
 
 /** Indices of players inside the window's draft pool (null clubs = everyone). */

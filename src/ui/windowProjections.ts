@@ -18,11 +18,12 @@ import {
   type ContestProfile,
 } from '../contest/profiles.js';
 import { buildProjections } from '../model/project.js';
+import type { OddsSlate } from '../etl/odds.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
 
 /** The player pool for a profile: window-projected and pool-restricted (players
  *  outside the contest sit at rank 0 from `buildProjections` and are dropped). */
-export function poolForProfile(snapshot: Snapshot, profile: ContestProfile): SnapshotPlayer[] {
+export function poolForProfile(snapshot: Snapshot, profile: ContestProfile, odds?: OddsSlate): SnapshotPlayer[] {
   if (profile.id === FALSE_NINE.id) {
     return snapshot.players.filter((p) => p.projection);
   }
@@ -32,6 +33,7 @@ export function poolForProfile(snapshot: Snapshot, profile: ContestProfile): Sna
     modelConfigFor(profile),
     contest,
     replacementConfigFor(profile),
+    odds,
   );
   return snapshot.players
     .map((p, i) => ({ ...p, projection: projections[i] }))

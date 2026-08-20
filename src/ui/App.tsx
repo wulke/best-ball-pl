@@ -13,6 +13,7 @@ import { ScarcityView } from './ScarcityView.js';
 import { useContestProfile } from './useContestProfile.js';
 import { poolForProfile } from './windowProjections.js';
 import { FALSE_NINE } from '../contest/profiles.js';
+import type { OddsSlate } from '../etl/odds.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
@@ -31,6 +32,7 @@ function loadRankMode(): RankMode {
 
 export function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [odds, setOdds] = useState<OddsSlate | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [, setThemeTick] = useState(0);
   const [view, setView] = useState<View>('sheet');
@@ -92,6 +94,22 @@ export function App() {
       .catch((err: Error) => setError(err.message));
   }, []);
 
+  // Daily odds are an optional static companion asset. Missing, stale, or
+  // malformed coverage never blocks the slate sheet: the projection layer
+  // simply uses its model-only terms for those fixtures/players.
+  useEffect(() => {
+    if (profile.kind !== 'daily') {
+      setOdds(undefined);
+      return;
+    }
+    let cancelled = false;
+    fetch(`data/odds/${profile.id}.json`)
+      .then((res) => (res.ok ? res.json() as Promise<OddsSlate> : undefined))
+      .then((asset) => { if (!cancelled) setOdds(asset); })
+      .catch(() => { if (!cancelled) setOdds(undefined); });
+    return () => { cancelled = true; };
+  }, [profile]);
+
   const theme =
     (typeof document !== 'undefined'
       ? document.documentElement.getAttribute('data-theme')
@@ -102,8 +120,8 @@ export function App() {
    *  as-is; any other profile is window-projected + pool-restricted client-
    *  side (#47), the snapshot itself untouched. */
   const players = useMemo(
-    () => (snapshot ? poolForProfile(snapshot, profile) : []),
-    [snapshot, profile],
+    () => (snapshot ? poolForProfile(snapshot, profile, odds) : []),
+    [snapshot, profile, odds],
   );
 
   /** The carry-forward pin: the latest room's flags + note, read mid-draft. */

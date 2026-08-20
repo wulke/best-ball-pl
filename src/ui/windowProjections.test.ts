@@ -66,6 +66,9 @@ test('daily odds blend adds Odds Pts without changing model-only ranks, and fall
     }],
   };
   const plain = poolForProfile(snapshot, FREE_KICK_GW1_SAT);
+  const noCoverage = poolForProfile(snapshot, FREE_KICK_GW1_SAT, {
+    schemaVersion: 1, profileId: FREE_KICK_GW1_SAT.id, slateDate: '2026-08-22', fetchedAt: null, fixtures: [],
+  });
   const blended = poolForProfile(snapshot, FREE_KICK_GW1_SAT, odds);
   const byId = new Map(blended.map((p) => [p.id, p.projection!]));
   const plainById = new Map(plain.map((p) => [p.id, p.projection!]));
@@ -73,10 +76,13 @@ test('daily odds blend adds Odds Pts without changing model-only ranks, and fall
   const partialProjection = byId.get(partial.id)!;
 
   assert.notEqual(coveredProjection.oddsPoints, coveredProjection.points.p50);
+  assert.ok(partialProjection.odds);
   assert.equal(partialProjection.odds.goals.oddsImplied, null, 'missing player prop falls back');
   assert.equal(partialProjection.odds.goals.blended, partialProjection.odds.goals.model);
   assert.deepEqual(
     blended.map((p) => [p.id, p.projection!.overallRank, p.projection!.posRank, p.projection!.tier, p.projection!.tournamentScore]),
     plain.map((p) => [p.id, plainById.get(p.id)!.overallRank, plainById.get(p.id)!.posRank, plainById.get(p.id)!.tier, plainById.get(p.id)!.tournamentScore]),
   );
+  assert.ok(noCoverage.every((p) => p.projection!.oddsPoints === p.projection!.points.p50));
+  assert.ok(noCoverage.every((p) => p.projection!.odds?.goals.oddsImplied === null));
 });

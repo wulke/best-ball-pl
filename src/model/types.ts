@@ -34,6 +34,7 @@ export type ProjectionScenario = 'p10' | 'p50' | 'p90';
  * snapshot's fixture (id/kickoff/event are window-irrelevant to the model).
  */
 export type WindowFixture = {
+  id?: number;
   home: string;
   away: string;
   homeDifficulty: number;
@@ -144,4 +145,23 @@ export type PlayerProjection = {
     gkWinRate: number;
     observed: boolean;
   };
+  /** Daily-slate score using market-shrunk rates. It is display-only: all
+   * ranking fields above always remain based on `points`/tournamentScore. */
+  oddsPoints?: number;
+  /** Inputs retained for the odds/model breakdown modal. Absent unless a
+   * daily slate actually supplied an odds asset. */
+  odds?: {
+    fetchedAt: string | null;
+    goals: OddsRateComparison;
+    assists: OddsRateComparison;
+    cleanSheets: OddsRateComparison;
+    goalsConceded: OddsRateComparison;
+    gkWins: OddsRateComparison;
+  };
+};
+
+export type OddsRateComparison = {
+  model: number;
+  oddsImplied: number | null;
+  blended: number;
 };
