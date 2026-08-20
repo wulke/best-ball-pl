@@ -154,7 +154,7 @@ export function PlayerTable({
               </Tooltip>
             </th>
             <th className={`${TH_BASE} w-6`}>
-              <Tooltip text="Queue / watch — my target pool for this draft" wide>
+              <Tooltip text="Queue / watch — my target pool, persists across drafts" wide>
                 <span>★</span>
               </Tooltip>
             </th>

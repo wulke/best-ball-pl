@@ -49,7 +49,7 @@ export function App() {
   // their own namespace so a slate draft never tramples the flagship's.
   const namespace = profile.id === FALSE_NINE.id ? undefined : profile.id;
   const { drafted, toggle, clear } = useDrafted(namespace);
-  const { mine, queue, toggleMine, toggleQueue, clearAll } = useDraftSession(namespace);
+  const { mine, queue, toggleMine, toggleQueue, clearAll, clearQueue } = useDraftSession(namespace);
   const { rooms, upsert, remove } = useRooms();
 
   // Scarcity brings its own tall panel — collapse Live Draft to make room when switching to it.
@@ -121,8 +121,20 @@ export function App() {
     (id: string) => {
       toggleMine(id);
       if (!drafted.has(id) && !mine.has(id)) toggle(id);
+      setQuery('');
     },
     [toggleMine, toggle, drafted, mine],
+  );
+
+  /** Off-board toggle: clears the search box too, so a live-draft capture
+   *  ("check" a player someone else took) snaps the sheet back to the full
+   *  available pool instead of staying filtered to the just-searched name. */
+  const toggleDrafted = useCallback(
+    (id: string) => {
+      toggle(id);
+      setQuery('');
+    },
+    [toggle],
   );
 
   /** My roster as player objects (for the live panel). */
@@ -379,18 +391,30 @@ export function App() {
                 Hide off-board ({drafted.size})
               </button>
 
-              {(drafted.size > 0 || mine.size > 0 || queue.size > 0) && (
+              {(drafted.size > 0 || mine.size > 0) && (
                 <button
                   onClick={() => {
-                    if (confirm('Clear the board, my roster, and queue? (New draft)')) {
+                    if (confirm('Clear the board and my roster? (New draft — your ★ queue is kept)')) {
                       clear();
                       clearAll();
                     }
                   }}
                   className="rounded border border-default px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-secondary transition hover:border-strong hover:text-primary"
-                  title="Full reset between drafts: off-board marks, my roster, queue"
+                  title="Reset between drafts: off-board marks, my roster — the ★ queue persists across drafts"
                 >
                   New draft
+                </button>
+              )}
+
+              {queue.size > 0 && (
+                <button
+                  onClick={() => {
+                    if (confirm('Clear your ★ target queue?')) clearQueue();
+                  }}
+                  className="rounded border border-default px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-secondary transition hover:border-strong hover:text-primary"
+                  title="Empty the ★ target queue (it otherwise persists across drafts)"
+                >
+                  Clear queue
                 </button>
               )}
 
@@ -402,7 +426,7 @@ export function App() {
             <PlayerTable
               players={visible}
               drafted={drafted}
-              onToggleDrafted={toggle}
+              onToggleDrafted={toggleDrafted}
               mine={mine}
               onDraftMine={draftMine}
               queued={queue}

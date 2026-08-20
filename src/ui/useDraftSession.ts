@@ -13,6 +13,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * roster/queue under suffixed keys — False Nine's own keys (`namespace`
  * omitted) are untouched, so switching profiles never tramples the
  * flagship's session.
+ *
+ * The queue is a perma-queue (#57): it survives `clearAll()` (the "New
+ * draft" reset) so targets queued ahead of a draft — a late-round sleeper
+ * whose situation changed since the last snapshot/model run — aren't lost
+ * once the draft clock starts. `clearQueue()` empties it explicitly.
  */
 const MINE_KEY = 'bbpl-mine';
 const QUEUE_KEY = 'bbpl-queue';
@@ -85,11 +90,15 @@ export function useDraftSession(namespace?: string) {
     });
   }, []);
 
-  /** Full reset between drafts: my roster, queue, and the off-board marks. */
+  /** Reset between drafts: my roster only — the queue is a perma-queue and
+   *  survives this (use `clearQueue` to empty it explicitly). */
   const clearAll = useCallback(() => {
     setMine(new Set());
+  }, []);
+
+  const clearQueue = useCallback(() => {
     setQueue(new Set());
   }, []);
 
-  return { mine, queue, toggleMine, toggleQueue, clearAll };
+  return { mine, queue, toggleMine, toggleQueue, clearAll, clearQueue };
 }
