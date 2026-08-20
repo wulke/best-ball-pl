@@ -57,6 +57,8 @@ type Props = {
   groupByTier: boolean;
   /** Cross-position rank/sort basis for the ALL view — raw points or VORP. */
   rankMode: RankMode;
+  /** A single-day slate can carry the optional odds-blended companion score. */
+  showOddsPoints: boolean;
 };
 
 const TH_BASE =
@@ -74,6 +76,7 @@ export function PlayerTable({
   onToggleQueued,
   groupByTier,
   rankMode,
+  showOddsPoints,
 }: Props) {
   const [breakdownPlayer, setBreakdownPlayer] = useState<SnapshotPlayer | null>(null);
   const rows: Row[] = players.map((player) => ({
@@ -96,7 +99,7 @@ export function PlayerTable({
     const lo = group[group.length - 1].player.projection?.tournamentScore ?? 0;
     body.push(
       <tr key={`band-${tier}`} className="border-y border-default bg-surface-raised print:static">
-        <td colSpan={groupByTier ? 14 : 15} className="px-2 py-1">
+        <td colSpan={(groupByTier ? 14 : 15) + (showOddsPoints ? 1 : 0)} className="px-2 py-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-accent">
               Tier {tier}
@@ -122,6 +125,7 @@ export function PlayerTable({
         key={row.player.id}
         row={row}
         showTierColumn={!groupByTier}
+        showOddsPoints={showOddsPoints}
         isDrafted={drafted.has(row.player.id)}
         onToggleDrafted={onToggleDrafted}
         isMine={mine.has(row.player.id)}
@@ -187,6 +191,14 @@ export function PlayerTable({
             >
               Pts
             </th>
+            {showOddsPoints && (
+              <th
+                className={`${TH_BASE} w-16 text-right`}
+                title="Odds-informed slate points — blended where a player or fixture market is available; otherwise equals model Pts"
+              >
+                Odds Pts
+              </th>
+            )}
             {!groupByTier && (
               <th
                 className={`${TH_BASE} w-8 text-right`}
@@ -221,7 +233,7 @@ export function PlayerTable({
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={groupByTier ? 14 : 15} className="px-2 py-6 text-center text-sm text-muted">
+              <td colSpan={(groupByTier ? 14 : 15) + (showOddsPoints ? 1 : 0)} className="px-2 py-6 text-center text-sm text-muted">
                 No players match the current filters.
               </td>
             </tr>
@@ -245,6 +257,7 @@ export function PlayerTable({
 function PlayerRow({
   row,
   showTierColumn,
+  showOddsPoints,
   isDrafted,
   onToggleDrafted,
   isMine,
@@ -255,6 +268,7 @@ function PlayerRow({
 }: {
   row: Row;
   showTierColumn: boolean;
+  showOddsPoints: boolean;
   isDrafted: boolean;
   onToggleDrafted: (id: string) => void;
   isMine: boolean;
@@ -267,6 +281,7 @@ function PlayerRow({
   const projection = player.projection!; // upstream filters projection-less players
   const statusLabel =
     player.status !== 'a' ? STATUS_LABELS[player.status] ?? player.status : null;
+  const oddsCovered = showOddsPoints && hasOddsCoverage(projection);
 
   return (
     <tr
@@ -388,6 +403,13 @@ function PlayerRow({
               </span>
             </Tooltip>
           )}
+          {oddsCovered && (
+            <Tooltip text="Odds coverage: at least one player or fixture term informed Odds Pts" wide>
+              <span className="rounded border border-info/30 bg-info/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info">
+                O
+              </span>
+            </Tooltip>
+          )}
         </div>
       </td>
       <td className="px-1 py-1">
@@ -404,6 +426,11 @@ function PlayerRow({
       <td className={`${TD_NUM} font-bold text-primary`}>
         {projection.points.p50.toFixed(1)}
       </td>
+      {showOddsPoints && (
+        <td className={`${TD_NUM} font-bold text-info`}>
+          {(projection.oddsPoints ?? projection.points.p50).toFixed(1)}
+        </td>
+      )}
       {showTierColumn && (
         <td className={`${TD_NUM} w-8 text-xs text-muted`}>T{projection.tier}</td>
       )}
@@ -417,4 +444,9 @@ function PlayerRow({
       </td>
     </tr>
   );
+}
+
+function hasOddsCoverage(projection: NonNullable<SnapshotPlayer['projection']>) {
+  const { fetchedAt: _fetchedAt, ...terms } = projection.odds ?? {};
+  return Object.values(terms).some((term) => term.oddsImplied != null);
 }
