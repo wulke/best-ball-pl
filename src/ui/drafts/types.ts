@@ -33,9 +33,28 @@ export type PreviewPick = PickLogEntry & { candidates?: PickCandidate[] };
 
 export const ROOM_RECORD_VERSION = 1;
 
+/** "2026-08-22" -> "Aug 22", to detect a date already spelled out in a profile name. */
+function shortDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 /** Editable initial grouping only; rooms do not retain a profile-object link. */
 export function defaultCompetition(profile: ContestProfile): string {
-  return profile.window.kind === 'slate' ? `${profile.name} — ${profile.window.date}` : profile.name;
+  const { window } = profile;
+  switch (window.kind) {
+    case 'slate':
+      // Some profile names already spell out the slate date (e.g. "(Aug 22)"); avoid showing it twice.
+      return profile.name.includes(shortDate(window.date))
+        ? profile.name
+        : `${profile.name} — ${window.date}`;
+    case 'season':
+    case 'fixtures':
+      return profile.name;
+  }
 }
 
 /**
@@ -68,13 +87,23 @@ export type RoomRecord = {
   updatedAt: string;
 };
 
-/** Teams present in a pick log, in first-appearance order. */
-export function teamsInLog(picks: PickLogEntry[]): string[] {
+/** Distinct non-empty values, in first-appearance order. */
+export function distinctStrings(values: (string | null | undefined)[]): string[] {
   const seen = new Set<string>();
-  for (const pick of picks) {
-    if (pick.team && !seen.has(pick.team)) seen.add(pick.team);
+  for (const value of values) {
+    if (value) seen.add(value);
   }
   return [...seen];
+}
+
+/** Teams present in a pick log, in first-appearance order. */
+export function teamsInLog(picks: PickLogEntry[]): string[] {
+  return distinctStrings(picks.map((pick) => pick.team));
+}
+
+/** Distinct competition labels across a set of rooms, in first-appearance order. */
+export function competitionsInRooms(rooms: RoomRecord[]): string[] {
+  return distinctStrings(rooms.map((room) => room.competition));
 }
 
 /**

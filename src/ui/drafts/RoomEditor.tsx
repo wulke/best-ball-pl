@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react';
 import type { SnapshotPlayer } from '../types.js';
 import type { RoomRecord } from './types.js';
-import { teamsInLog } from './types.js';
+import { competitionsInRooms, teamsInLog } from './types.js';
 import { parseRecap, preserveMatches } from './parse.js';
 import { exportRoomFile } from './store.js';
 import { PickTable } from './PickTable.js';
@@ -38,10 +38,7 @@ export function RoomEditor({ room, rooms, players, onChange, onClose, profile = 
     onChange({ ...room, ...changes, updatedAt: new Date().toISOString() });
 
   const teams = useMemo(() => teamsInLog(room.picks), [room.picks]);
-  const competitions = useMemo(
-    () => [...new Set(rooms.flatMap(({ competition }) => (competition ? [competition] : [])))],
-    [rooms],
-  );
+  const competitions = useMemo(() => competitionsInRooms(rooms), [rooms]);
 
   const reparse = () => {
     const result = parseRecap(room.rawPaste, players);
