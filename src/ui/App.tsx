@@ -451,6 +451,7 @@ export function App() {
               onToggleQueued={toggleQueue}
               groupByTier={positionFilter !== 'ALL'}
               rankMode={rankMode}
+              showOddsPoints={profile.window.kind === 'slate'}
             />
           </>
         )}
