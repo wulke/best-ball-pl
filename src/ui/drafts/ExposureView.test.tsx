@@ -66,7 +66,7 @@ test('defaults to the most recently updated competition and ranks its players by
   );
 
   assert.match(html, /Exposure by competition/);
-  assert.match(html, /<option selected="" value="Free Kick">Free Kick<\/option>/);
+  assert.match(html, /<option value="Free Kick" selected="">Free Kick<\/option>/);
   assert.match(html, />100\.0%<\/td>/);
   assert.match(html, />50\.0%<\/td>/);
   assert.match(html, />\$20\.00<\/td>/);
