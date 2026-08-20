@@ -10,6 +10,7 @@ const room: RoomRecord = {
   id: 'room-1',
   name: 'Saturday room',
   entryCost: 3,
+  competition: null,
   draftDate: '2026-08-20',
   rawPaste: '',
   picks: [],

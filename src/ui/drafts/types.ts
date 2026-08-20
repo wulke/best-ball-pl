@@ -3,6 +3,7 @@
  * #19 (intake), built in #20. The recap parser itself is #22: everything here
  * is the contract it must produce and the review UI consumes.
  */
+import type { ContestProfile } from '../../contest/profiles.js';
 
 /** One pick in a parsed draft-recap log. Persisted in the room record. */
 export type PickLogEntry = {
@@ -32,6 +33,11 @@ export type PreviewPick = PickLogEntry & { candidates?: PickCandidate[] };
 
 export const ROOM_RECORD_VERSION = 1;
 
+/** Editable initial grouping only; rooms do not retain a profile-object link. */
+export function defaultCompetition(profile: ContestProfile): string {
+  return profile.window.kind === 'slate' ? `${profile.name} — ${profile.window.date}` : profile.name;
+}
+
 /**
  * A completed draft room. localStorage is the working store; Export writes
  * this record verbatim to data/drafts/&lt;yyyy-mm-dd&gt;-&lt;room-slug&gt;.json for
@@ -44,6 +50,8 @@ export type RoomRecord = {
   name: string;
   /** Entry cost in $ — 3 (practice) / 15 (flagship) / manual. */
   entryCost: number | null;
+  /** Editable contest grouping; null means Uncategorized. */
+  competition: string | null;
   /** Draft date, yyyy-mm-dd. */
   draftDate: string;
   /** The recap paste, stored verbatim — re-parse and debug source of truth. */

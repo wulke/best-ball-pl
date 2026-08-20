@@ -17,6 +17,8 @@ type Tab = 'room' | 'log' | 'review';
 
 type Props = {
   room: RoomRecord;
+  /** Current local rooms provide reusable competition labels. */
+  rooms: RoomRecord[];
   players: SnapshotPlayer[];
   onChange: (room: RoomRecord) => void;
   onClose: () => void;
@@ -28,7 +30,7 @@ const FIELD_LABEL = 'text-xs font-semibold uppercase tracking-wider text-muted';
 const INPUT =
   'rounded border border-default bg-surface px-2 py-1 text-sm text-primary placeholder:text-muted focus:border-strong focus:outline-none';
 
-export function RoomEditor({ room, players, onChange, onClose, profile = FALSE_NINE }: Props) {
+export function RoomEditor({ room, rooms, players, onChange, onClose, profile = FALSE_NINE }: Props) {
   const [tab, setTab] = useState<Tab>('room');
   const [reparseNote, setReparseNote] = useState<string | null>(null);
 
@@ -36,6 +38,10 @@ export function RoomEditor({ room, players, onChange, onClose, profile = FALSE_N
     onChange({ ...room, ...changes, updatedAt: new Date().toISOString() });
 
   const teams = useMemo(() => teamsInLog(room.picks), [room.picks]);
+  const competitions = useMemo(
+    () => [...new Set(rooms.flatMap(({ competition }) => (competition ? [competition] : [])))],
+    [rooms],
+  );
 
   const reparse = () => {
     const result = parseRecap(room.rawPaste, players);
@@ -108,6 +114,22 @@ export function RoomEditor({ room, players, onChange, onClose, profile = FALSE_N
                 onChange={(event) => patch({ draftDate: event.target.value })}
                 className={INPUT}
               />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={FIELD_LABEL}>Competition</span>
+              <input
+                type="text"
+                list="room-competition-options"
+                value={room.competition ?? ''}
+                onChange={(event) => patch({ competition: event.target.value || null })}
+                placeholder="Uncategorized"
+                className={INPUT}
+              />
+              <datalist id="room-competition-options">
+                {competitions.map((competition) => (
+                  <option key={competition} value={competition} />
+                ))}
+              </datalist>
             </label>
             <div className="flex flex-col gap-1">
               <span className={FIELD_LABEL}>Entry cost</span>

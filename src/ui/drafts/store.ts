@@ -14,7 +14,7 @@ function load(): RoomRecord[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isRoomRecord);
+    return parsed.filter(isRoomRecord).map(normalizeRoomRecord);
   } catch {
     return [];
   }
@@ -27,8 +27,14 @@ function isRoomRecord(value: unknown): value is RoomRecord {
     typeof room.id === 'string' &&
     typeof room.name === 'string' &&
     typeof room.rawPaste === 'string' &&
-    Array.isArray(room.picks)
+    Array.isArray(room.picks) &&
+    (room.competition === undefined || room.competition === null || typeof room.competition === 'string')
   );
+}
+
+/** Additive v1 migration: old locally persisted rooms did not have competition. */
+function normalizeRoomRecord(room: RoomRecord): RoomRecord {
+  return { ...room, competition: room.competition ?? null };
 }
 
 export function newRoomId(): string {
@@ -75,7 +81,7 @@ export function parseRoomFile(text: string): RoomRecord {
   if (parsed.version !== ROOM_RECORD_VERSION) {
     throw new Error(`unsupported record version ${String(parsed.version)}`);
   }
-  return parsed;
+  return normalizeRoomRecord(parsed);
 }
 
 /** The rooms working store. One instance lives in App (shared with the sheet pin). */
