@@ -22,6 +22,7 @@ import {
   resolveContest,
 } from '../contest/profiles.js';
 import { buildProjections } from './project.js';
+import { aggregateSeasonActuals } from './actuals.js';
 import type { Position, Snapshot, SnapshotPlayer } from '../etl/types.js';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
@@ -123,6 +124,13 @@ function main() {
     modelConfigFor(profile),
     contest,
     replacementConfigFor(profile),
+    undefined,
+    aggregateSeasonActuals(
+      snapshot.players,
+      snapshot.fixtures,
+      snapshot.actuals,
+      modelConfigFor(profile).actuals.startMinutesThreshold,
+    ) ?? undefined,
   );
 
   const players = snapshot.players.map((p, i) => ({ ...p, projection: projections[i] }));
