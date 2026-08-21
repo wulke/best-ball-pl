@@ -1,13 +1,15 @@
 name: Scheduled snapshot refresh
 
-# Tue+Thu ~06:00 UTC ETL + re-projection (#41): pulls fresh FPL data, runs
-# guardrail checks, and — only if everything passes and the snapshot
-# actually changed — opens a PR with the refreshed data/snapshot.json.
-# Never pushes to main directly (AGENTS.md merge protocol): a human still
-# reviews and merges every data update, same as a manual `npm run etl`.
+# Daily 06:00 UTC ETL + re-projection in-season (#41): pulls fresh FPL
+# data, runs guardrail checks, and — only if everything passes and the
+# snapshot actually changed — opens a PR with the refreshed data/snapshot.json.
+# Days with no completed gameweeks (early season, international breaks) produce
+# no diff and are no-ops. Never pushes to main directly (AGENTS.md merge
+# protocol): a human still reviews and merges every data update, same as a
+# manual `npm run etl`.
 on:
   schedule:
-    - cron: '0 6 * * 2,4'
+    - cron: '0 6 * * *'
   workflow_dispatch: {}
 
 permissions:
