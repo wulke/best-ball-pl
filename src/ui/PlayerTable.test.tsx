@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PlayerTable } from './PlayerTable.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
+import type { OddsSlate } from '../etl/odds.js';
+import { hasOddsCoverage } from './windowProjections.js';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const snapshot = JSON.parse(
@@ -62,4 +64,20 @@ test('Odds Pts and odds-coverage marker render only for a single-day slate', () 
   const season = renderTable([covered, fallback], false);
   assert.doesNotMatch(season, />Odds Pts<\/th>/);
   assert.doesNotMatch(season, />O<\/span>/);
+});
+
+test('Odds Pts stays hidden for an unpulled slate placeholder', () => {
+  const placeholder: OddsSlate = {
+    schemaVersion: 1,
+    profileId: 'daily-placeholder',
+    slateDate: '2026-08-22',
+    fetchedAt: null,
+    fixtures: [],
+  };
+  const player = structuredClone(snapshot.players.find((candidate) => candidate.projection)!);
+  player.projection!.oddsPoints = player.projection!.points.p50;
+
+  const markup = renderTable([player], hasOddsCoverage(placeholder));
+  assert.doesNotMatch(markup, />Odds Pts<\/th>/);
+  assert.doesNotMatch(markup, />O<\/span>/);
 });

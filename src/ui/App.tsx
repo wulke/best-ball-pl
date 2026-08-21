@@ -12,7 +12,7 @@ import { reviewRoom } from './drafts/review.js';
 import { useRooms } from './drafts/store.js';
 import { ScarcityView } from './ScarcityView.js';
 import { useContestProfile } from './useContestProfile.js';
-import { poolForProfile } from './windowProjections.js';
+import { hasOddsCoverage, poolForProfile } from './windowProjections.js';
 import { FALSE_NINE } from '../contest/profiles.js';
 import type { OddsSlate } from '../etl/odds.js';
 
@@ -468,7 +468,7 @@ export function App() {
               onToggleQueued={toggleQueue}
               groupByTier={positionFilter !== 'ALL'}
               rankMode={rankMode}
-              showOddsPoints={profile.window.kind === 'slate'}
+              showOddsPoints={profile.window.kind === 'slate' && hasOddsCoverage(odds)}
             />
           </>
         )}
