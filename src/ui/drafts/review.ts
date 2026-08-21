@@ -5,12 +5,13 @@
  * The sheet's ranking currency is `tournamentScore` (ceiling-weighted, #10);
  * raw p50 stays visible alongside, never folded into one number.
  */
-import type { Position, SnapshotPlayer } from '../types.js';
+import type { Position, SnapshotFixture, SnapshotPlayer } from '../types.js';
 import type { CarryFlag, PickLogEntry } from './types.js';
 import {
   FALSE_NINE,
   POSITIONS,
   fullLogFloor,
+  resolveContest,
   starterSlots,
   type ContestProfile,
 } from '../../contest/profiles.js';
@@ -416,15 +417,20 @@ function buildFlags(
   return [...red, ...amber].slice(0, 5);
 }
 
-/** Run every lens over a room's pick log. Null until myTeam is picked. */
+/** Run every lens over a room's pick log. Null until myTeam is picked.
+ * The full fixture calendar resolves the profile's eligible clubs before any
+ * comparison math runs, so slate rooms never see unavailable players. */
 export function reviewRoom(
   pool: Pool,
   picks: PickLogEntry[],
   myTeam: string | null,
   profile: ContestProfile = FALSE_NINE,
+  fixtures: SnapshotFixture[],
 ): DraftReview | null {
   if (!myTeam || picks.length === 0) return null;
-  const projected = pool.filter((p) => p.projection);
+  const { clubs } = resolveContest(profile, fixtures);
+  const scopedPool = clubs ? pool.filter((p) => clubs.includes(p.team)) : pool;
+  const projected = scopedPool.filter((p) => p.projection);
   const teams = new Set(picks.map((p) => p.team));
 
   const { rows: deviations, unmatched: unmatchedMine } = computeDeviations(
@@ -440,7 +446,7 @@ export function reviewRoom(
   const headline = computeHeadline(projected, mine, profile);
   const starters = computeStarters(mine, profile);
   const tierMix = computeTierMix(mine, starters);
-  const clubGrid = computeClubGrid(pool, mine);
+  const clubGrid = computeClubGrid(projected, mine);
   const flags = buildFlags(deviations, headline, starters, tierMix, clubGrid, mine, unmatchedMine, profile);
 
   return {

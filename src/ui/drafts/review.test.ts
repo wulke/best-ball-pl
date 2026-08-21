@@ -70,7 +70,7 @@ test('daily room review compares picks and sheet-perfect only against slate club
 
   const review = reviewRoom(
     pool,
-    [{ pick: 1, round: 1, team: 'Me', rawName: 'My Pick', playerId: 'mine' }],
+    [{ pick: 1, round: 1, team: 'Me', rawName: 'My Pick', playerId: 'mine', unmatched: false }],
     'Me',
     FREE_KICK_GW1_SAT,
     fixtures,

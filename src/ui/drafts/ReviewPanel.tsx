@@ -4,7 +4,7 @@
  * carry-forward card. Budget: 5–15 min per draft.
  */
 import { useMemo } from 'react';
-import type { SnapshotPlayer } from '../types.js';
+import type { SnapshotFixture, SnapshotPlayer } from '../types.js';
 import type { PickLogEntry } from './types.js';
 import { reviewRoom } from './review.js';
 import { FALSE_NINE, type ContestProfile } from '../../contest/profiles.js';
@@ -26,6 +26,7 @@ const QUARTILE_SHADE = [
 
 type Props = {
   pool: SnapshotPlayer[];
+  fixtures: SnapshotFixture[];
   picks: PickLogEntry[];
   myTeam: string;
   carryNote: string;
@@ -37,10 +38,10 @@ type Props = {
 const SECTION_TITLE = 'font-condensed text-sm font-semibold uppercase tracking-wider text-accent';
 const PANEL = 'rounded-md border border-default bg-surface';
 
-export function ReviewPanel({ pool, picks, myTeam, carryNote, onCarryNoteChange, profile = FALSE_NINE }: Props) {
+export function ReviewPanel({ pool, fixtures, picks, myTeam, carryNote, onCarryNoteChange, profile = FALSE_NINE }: Props) {
   const review = useMemo(
-    () => reviewRoom(pool, picks, myTeam, profile),
-    [pool, picks, myTeam, profile],
+    () => reviewRoom(pool, picks, myTeam, profile, fixtures),
+    [pool, fixtures, picks, myTeam, profile],
   );
   if (!review) return null;
 
