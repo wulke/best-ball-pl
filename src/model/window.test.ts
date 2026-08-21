@@ -27,6 +27,7 @@ import {
 } from '../contest/profiles.js';
 import type { PlayerStatus, Position, SeasonStatLine, Snapshot, SnapshotPlayer } from '../etl/types.js';
 import type { ProjectionWindow, WindowFixture } from './types.js';
+import type { LineupSlate, StartOverrideMap } from './lineups.js';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const SNAPSHOT_PATH = path.join(repoRoot, 'data/snapshot.json');
@@ -160,6 +161,41 @@ test('per90 divides window points by windowed minutes (#46 review regression)', 
     // — assert we are nowhere near that deflated scale.
     assert.ok(proj.per90 > 1, `${id}: per90 must be on a per-90 scale, not season-deflated`);
   }
+});
+
+test('slate minutes are start-aware: override > lineup > model, with bench cameo floor', () => {
+  const calendar = abCalendar();
+  const window: ProjectionWindow = { calendar, fixtures: [calendar[0]], clubs: null };
+  const lineups: LineupSlate = {
+    schemaVersion: 1, profileId: 'daily', slateDate: '2026-08-22', fetchedAt: '2026-08-21T12:00:00Z',
+    fixtureCoverage: [{ fixtureId: 1, covered: true }],
+    players: [
+      { fixtureId: 1, playerId: 'A-FW', status: 'starter' },
+      { fixtureId: 1, playerId: 'A-GK', status: 'bench' },
+    ],
+  };
+  // The synthetic window fixture does not normally carry an id; lineup assets
+  // deliberately join by id, so make the fixture identity explicit here.
+  window.fixtures[0].id = 1;
+  const overrides: StartOverrideMap = { 'A-FW': { 1: 'bench' } };
+  const players = abPlayers();
+  const plain = buildProjections(players, DEFAULT_MODEL_CONFIG, window);
+  const aware = buildProjections(players, DEFAULT_MODEL_CONFIG, window, undefined, undefined, undefined, undefined, lineups, overrides);
+  const plainById = new Map(players.map((p, i) => [p.id, plain.projections[i]]));
+  const byId = new Map(players.map((p, i) => [p.id, aware.projections[i]]));
+
+  const fw = byId.get('A-FW')!;
+  const gk = byId.get('A-GK')!;
+  const untouched = byId.get('B-GK')!;
+  assert.equal(fw.startAwareMinutes?.source, 'override');
+  assert.equal(fw.startAwareMinutes?.fixtures[0].status, 'bench');
+  assert.ok(fw.statline.minutes < plainById.get('A-FW')!.statline.minutes, 'override bench call lowers minutes');
+  assert.equal(gk.startAwareMinutes?.source, 'lineup');
+  assert.equal(gk.statline.minutes, DEFAULT_MODEL_CONFIG.minutes.cameoFloorMinutes, 'known bench gets the cameo floor, not zero');
+  assert.equal(untouched.startAwareMinutes?.source, 'model');
+  assert.equal(untouched.startAwareMinutes?.factor, 1);
+  assert.equal(untouched.statline.minutes, plainById.get('B-GK')!.statline.minutes, 'unknown remains model-default');
+  assert.ok(fw.points.p10 < fw.points.p50 && fw.points.p50 < fw.points.p90, 'scenario minutes remain widened around the called base');
 });
 
 test('season window reproduces the committed snapshot projections bit-for-bit', () => {

@@ -27,6 +27,7 @@
 
 import type { PlayerStatus, Position, SnapshotPlayer, SnapshotStrength } from '../etl/types.js';
 import type { OddsSlate } from '../etl/odds.js';
+import { startCallForFixture, type LineupSlate, type StartOverrideMap } from './lineups.js';
 import type { FixtureDifficultyConfig, FixtureStrengthConfig, ModelConfig, ReplacementConfig } from './config.js';
 import type { SeasonActuals } from './actuals.js';
 import { DEFAULT_REPLACEMENT } from './config.js';
@@ -540,6 +541,7 @@ function buildWindowStatline(
   clubName: string,
   playerId?: string,
   odds?: OddsProjectionContext,
+  fixtureMinutesOverride?: number[],
 ): ProjectedStatline {
   const gk = position === 'G';
   const baseline = cfg.volume.baselines[position];
@@ -588,7 +590,9 @@ function buildWindowStatline(
   // fixtures — their coefficients are blended floats that never sit on
   // round2 boundaries.
   const nWindow = club.windowDifficulties.length;
-  const windowMinutes = seasonMinutes * (nWindow / club.calendarGames);
+  const windowMinutes = fixtureMinutesOverride
+    ? fixtureMinutesOverride.reduce((sum, minutes) => sum + minutes, 0)
+    : seasonMinutes * (nWindow / club.calendarGames);
   const windowMatches = windowMinutes / 90;
 
   const raw = { ...EMPTY_RAW };
@@ -599,8 +603,9 @@ function buildWindowStatline(
   raw.passes = passesCoef * windowMatches;
   raw.penaltiesSaved = gk ? rates.penaltiesSavedRate * (windowMinutes / SEASON_MINUTES) : 0;
 
-  const perFixtureMatches = perFixtureMinutes / 90; // one fixture's share of the season job
   for (const [index, d] of club.windowDifficulties.entries()) {
+    const fixtureMinutes = fixtureMinutesOverride?.[index] ?? perFixtureMinutes;
+    const perFixtureMatches = fixtureMinutes / 90;
     const f = club.factors?.[index] ?? fixtureFactors(d, club.calendarMeanDifficulty, cfg.fixture);
     const market = club.windowFixtures[index].id == null
       ? undefined
@@ -715,6 +720,8 @@ export function buildProjections(
   oddsSlate?: OddsSlate,
   actuals?: SeasonActuals,
   strength?: SnapshotStrength,
+  lineupSlate?: LineupSlate,
+  startOverrides?: StartOverrideMap,
 ): ProjectionResult {
   const odds = oddsContext(oddsSlate);
   const windowSpec = window ?? neutralWindowFor(players);
@@ -1121,6 +1128,21 @@ export function buildProjections(
     }
 
     const minutes = minutesByPlayer[i];
+    const club = clubContexts.get(player.team)!;
+    const basePerFixtureMinutes = minutes / club.calendarGames;
+    const startCalls = club.windowFixtures.map((fixture) => {
+      const call = startCallForFixture(player.id, fixture.id, startOverrides, lineupSlate);
+      const calledMinutes = call.status === 'starter'
+        ? Math.min(90, basePerFixtureMinutes / effRates.startFraction)
+        : call.status === 'bench'
+          ? cfg.minutes.cameoFloorMinutes
+          : basePerFixtureMinutes;
+      // A zero-prior backup cannot express a multiplicative uplift; retain a
+      // finite audit factor and its exact called minutes instead of NaN/∞.
+      const factor = basePerFixtureMinutes > 0 ? calledMinutes / basePerFixtureMinutes : 0;
+      return { fixtureId: fixture.id ?? null, ...call, factor, minutes: calledMinutes };
+    });
+    const fixtureMinutes = lineupSlate || startOverrides ? startCalls.map((call) => call.minutes) : undefined;
     const base = buildWindowStatline(
       minutes,
       player.position,
@@ -1129,14 +1151,17 @@ export function buildProjections(
       team,
       cfg,
       volumeRates[i],
-      clubContexts.get(player.team)!,
+      club,
       player.team,
+      undefined,
+      undefined,
+      fixtureMinutes,
     );
 
     const oddsLine = odds
       ? buildWindowStatline(
           minutes, player.position, effRates, attack, team, cfg, volumeRates[i],
-          clubContexts.get(player.team)!, player.team, player.id, odds,
+          club, player.team, player.id, odds, fixtureMinutes,
         )
       : undefined;
 
@@ -1219,6 +1244,18 @@ export function buildProjections(
       congestionApplied: congestionApplied[i],
       teamContext: team,
     };
+    if (fixtureMinutes) {
+      const source = startCalls.some((call) => call.source === 'override')
+        ? 'override'
+        : startCalls.some((call) => call.source === 'lineup') ? 'lineup' : 'model';
+      projection.startAwareMinutes = {
+        source,
+        factor: round2(startCalls.reduce((sum, call) => sum + call.factor, 0) / Math.max(1, startCalls.length)),
+        fixtures: startCalls.map(({ fixtureId, status, source: fixtureSource, factor, minutes: fixtureMinutes }) => ({
+          fixtureId, status, source: fixtureSource, factor: round2(factor), minutes: round2(fixtureMinutes),
+        })),
+      };
+    }
     if (actuals) {
       projection.actualsBlend = {
         played: actuals.teams.get(player.team)?.played ?? 0,

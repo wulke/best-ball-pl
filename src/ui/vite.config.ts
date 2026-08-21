@@ -8,6 +8,7 @@ const uiRoot = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = path.resolve(uiRoot, '../..');
 const snapshotSourcePath = path.join(repoRoot, 'data/snapshot.json');
 const oddsSourcePath = path.join(repoRoot, 'data/odds');
+const lineupsSourcePath = path.join(repoRoot, 'data/lineups');
 
 export const SNAPSHOT_MISSING_MESSAGE =
   'data/snapshot.json not found — run npm run etl first';
@@ -28,6 +29,14 @@ function createSnapshotServePlugin(): Plugin {
             res.end();
             return;
           }
+          res.setHeader('Content-Type', 'application/json');
+          res.end(fs.readFileSync(sourcePath, 'utf8'));
+          return;
+        }
+        const lineupsMatch = url.match(/\/data\/lineups\/([a-z0-9-]+)\.json$/);
+        if (lineupsMatch) {
+          const sourcePath = path.join(lineupsSourcePath, `${lineupsMatch[1]}.json`);
+          if (!fs.existsSync(sourcePath)) { res.statusCode = 404; res.end(); return; }
           res.setHeader('Content-Type', 'application/json');
           res.end(fs.readFileSync(sourcePath, 'utf8'));
           return;
@@ -65,6 +74,9 @@ function createSnapshotServePlugin(): Plugin {
       fs.copyFileSync(snapshotSourcePath, destinationPath);
       if (fs.existsSync(oddsSourcePath)) {
         fs.cpSync(oddsSourcePath, path.join(outDir, 'data/odds'), { recursive: true });
+      }
+      if (fs.existsSync(lineupsSourcePath)) {
+        fs.cpSync(lineupsSourcePath, path.join(outDir, 'data/lineups'), { recursive: true });
       }
     },
   };

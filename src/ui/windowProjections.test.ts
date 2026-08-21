@@ -13,6 +13,7 @@ import type { Snapshot } from './types.js';
 import { FALSE_NINE, FREE_KICK_GW1_SAT } from '../contest/profiles.js';
 import { hasOddsCoverage, poolForProfile } from './windowProjections.js';
 import type { OddsSlate } from '../etl/odds.js';
+import type { LineupSlate, StartOverrideMap } from '../model/lineups.js';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const snapshot = JSON.parse(
@@ -35,6 +36,37 @@ test('Free Kick GW1 Saturday pool is restricted to the 8 slate clubs', () => {
     ['BRE', 'CRY', 'EVE', 'IPS', 'LEE', 'NFO', 'SUN', 'TOT'],
   );
   assert.ok(pool.every((p) => p.projection && p.projection.overallRank > 0));
+});
+
+test('daily lineup asset and UI map make minutes start-aware without changing model fallback', () => {
+  const fixture = snapshot.fixtures.find((f) => f.home === 'BRE' && f.away === 'TOT' && f.kickoff.startsWith('2026-08-22'));
+  const starter = snapshot.players.find((p) => p.team === 'BRE' && p.position === 'FW');
+  const zeroPriorBench = snapshot.players.find((p) => p.id === '495');
+  assert.ok(fixture && starter && zeroPriorBench);
+  const lineups: LineupSlate = {
+    schemaVersion: 1, profileId: FREE_KICK_GW1_SAT.id, slateDate: '2026-08-22', fetchedAt: '2026-08-21T12:00:00Z',
+    fixtureCoverage: [{ fixtureId: fixture.id, covered: true }],
+    players: [
+      { fixtureId: fixture.id, playerId: starter.id, status: 'starter' },
+      { fixtureId: fixture.id, playerId: zeroPriorBench.id, status: 'bench' },
+    ],
+  };
+  const overrides: StartOverrideMap = { [starter.id]: { [fixture.id]: 'bench' } };
+  const plain = poolForProfile(snapshot, FREE_KICK_GW1_SAT);
+  const lineup = poolForProfile(snapshot, FREE_KICK_GW1_SAT, undefined, lineups);
+  const override = poolForProfile(snapshot, FREE_KICK_GW1_SAT, undefined, lineups, overrides);
+  const plainProjection = plain.find((p) => p.id === starter.id)!.projection!;
+  const lineupProjection = lineup.find((p) => p.id === starter.id)!.projection!;
+  const overrideProjection = override.find((p) => p.id === starter.id)!.projection!;
+  assert.equal(lineupProjection.startAwareMinutes?.source, 'lineup');
+  assert.equal(overrideProjection.startAwareMinutes?.source, 'override');
+  assert.ok(overrideProjection.statline.minutes < plainProjection.statline.minutes);
+  assert.ok(overrideProjection.statline.minutes < lineupProjection.statline.minutes);
+  assert.equal(
+    lineup.find((p) => p.id === zeroPriorBench.id)!.projection!.statline.minutes,
+    18,
+    'a zero-prior backup still receives the known-bench cameo floor',
+  );
 });
 
 test('daily odds blend adds Odds Pts without changing model-only ranks, and falls back per missing term', () => {

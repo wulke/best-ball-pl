@@ -232,6 +232,20 @@ export function PlayerBreakdownModal({
           <RangeChart p10={projection.points.p10} p50={projection.points.p50} p90={projection.points.p90} />
         </div>
 
+        {projection.startAwareMinutes && (
+          <section className="mt-4" aria-label="Start-aware minutes detail">
+            <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-accent">Start call</span>
+            <p className="mt-0.5 text-xs text-secondary">
+              {sourceLabel(projection.startAwareMinutes.source)} · {projection.startAwareMinutes.factor.toFixed(2)}× normal per-fixture minutes
+            </p>
+            {projection.startAwareMinutes.fixtures.map((fixture, index) => (
+              <p key={`${fixture.fixtureId}-${index}`} className="text-xs tabular-nums text-muted">
+                {fixture.fixtureId == null ? 'Fixture' : `Fixture ${fixture.fixtureId}`}: {fixture.status} · {fixture.minutes.toFixed(0)} min · {sourceLabel(fixture.source)} · {fixture.factor.toFixed(2)}×
+              </p>
+            ))}
+          </section>
+        )}
+
         <div className="mt-4">
           <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-accent">
             Why this projection
@@ -257,6 +271,10 @@ export function PlayerBreakdownModal({
       </div>
     </div>
   );
+}
+
+function sourceLabel(source: 'override' | 'lineup' | 'model') {
+  return source === 'override' ? 'Override' : source === 'lineup' ? 'Lineup' : 'Model default';
 }
 
 function RangeChart({ p10, p50, p90 }: { p10: number; p50: number; p90: number }) {

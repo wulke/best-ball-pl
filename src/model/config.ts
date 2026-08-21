@@ -118,6 +118,9 @@ export type MinutesConfig = {
   statusFactors: { i: number; d: number };
   /** Hard cap: 38 × 90. */
   maxMinutes: number;
+  /** Daily-slate minutes for a confirmed non-starter. A no-bench contest
+   * still receives substitution minutes; this is deliberately not zero. */
+  cameoFloorMinutes: number;
   /**
    * Fixture-congestion rotation: outfield players on the top-N teams by
    * projected win rate (proxy for European/domestic-cup football — those are
@@ -154,6 +157,7 @@ export const DEFAULT_MINUTES: MinutesConfig = {
   noHistoryMinutes: 850,
   statusFactors: { i: 0.5, d: 0.8 },
   maxMinutes: 3420,
+  cameoFloorMinutes: 18,
   congestion: { topTeams: 6, factor: 0.95 },
   defenderSlots: 4,
   gkStartsPerSeason: 38,

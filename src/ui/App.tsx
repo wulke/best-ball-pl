@@ -15,6 +15,8 @@ import { useContestProfile } from './useContestProfile.js';
 import { hasOddsCoverage, poolForProfile } from './windowProjections.js';
 import { FALSE_NINE } from '../contest/profiles.js';
 import type { OddsSlate } from '../etl/odds.js';
+import type { LineupSlate } from '../model/lineups.js';
+import { loadStartOverrides } from './startOverrides.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
@@ -34,6 +36,7 @@ function loadRankMode(): RankMode {
 export function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [odds, setOdds] = useState<OddsSlate | undefined>(undefined);
+  const [lineups, setLineups] = useState<LineupSlate | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [, setThemeTick] = useState(0);
   const [view, setView] = useState<View>('sheet');
@@ -111,6 +114,18 @@ export function App() {
     return () => { cancelled = true; };
   }, [profile]);
 
+  useEffect(() => {
+    if (profile.kind !== 'daily') { setLineups(undefined); return; }
+    let cancelled = false;
+    fetch(`data/lineups/${profile.id}.json`)
+      .then((res) => (res.ok ? res.json() as Promise<LineupSlate> : undefined))
+      .then((asset) => { if (!cancelled) setLineups(asset); })
+      .catch(() => { if (!cancelled) setLineups(undefined); });
+    return () => { cancelled = true; };
+  }, [profile]);
+
+  const startOverrides = useMemo(() => loadStartOverrides(profile.id), [profile]);
+
   const theme =
     (typeof document !== 'undefined'
       ? document.documentElement.getAttribute('data-theme')
@@ -121,8 +136,8 @@ export function App() {
    *  as-is; any other profile is window-projected + pool-restricted client-
    *  side (#47), the snapshot itself untouched. */
   const players = useMemo(
-    () => (snapshot ? poolForProfile(snapshot, profile, odds) : []),
-    [snapshot, profile, odds],
+    () => (snapshot ? poolForProfile(snapshot, profile, odds, lineups, startOverrides) : []),
+    [snapshot, profile, odds, lineups, startOverrides],
   );
 
   /** The carry-forward pin: the latest room's flags + note, read mid-draft. */
