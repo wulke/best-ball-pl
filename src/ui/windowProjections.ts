@@ -21,6 +21,12 @@ import { buildProjections } from '../model/project.js';
 import type { OddsSlate } from '../etl/odds.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
 
+/** A committed placeholder is not a slate pull: it must leave the sheet
+ * identical to the model-only view until an actual odds asset arrives. */
+export function hasOddsCoverage(odds: OddsSlate | undefined): odds is OddsSlate & { fetchedAt: string } {
+  return odds?.fetchedAt != null && odds.fixtures.length > 0;
+}
+
 /** The player pool for a profile: window-projected and pool-restricted (players
  *  outside the contest sit at rank 0 from `buildProjections` and are dropped). */
 export function poolForProfile(snapshot: Snapshot, profile: ContestProfile, odds?: OddsSlate): SnapshotPlayer[] {
@@ -33,7 +39,7 @@ export function poolForProfile(snapshot: Snapshot, profile: ContestProfile, odds
     modelConfigFor(profile),
     contest,
     replacementConfigFor(profile),
-    odds,
+    hasOddsCoverage(odds) ? odds : undefined,
   );
   return snapshot.players
     .map((p, i) => ({ ...p, projection: projections[i] }))
