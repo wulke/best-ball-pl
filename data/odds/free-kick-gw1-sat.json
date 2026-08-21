@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "profileId": "free-kick-gw1-sat",
   "slateDate": "2026-08-22",
-  "fetchedAt": "2026-08-21T11:37:03.697Z",
+  "fetchedAt": "2026-08-21T11:50:59.879Z",
   "fixtures": [
     {
       "fixtureId": 3,
@@ -1005,7 +1005,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 15
+              "price": 14.5
             },
             {
               "bookmaker": "draftkings",
@@ -1971,7 +1971,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 6.75
+              "price": 6.25
             },
             {
               "bookmaker": "draftkings",
@@ -1983,7 +1983,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 6.25
+              "price": 4.5
             },
             {
               "bookmaker": "mybookieag",
@@ -2008,7 +2008,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 12.5
+              "price": 11
             },
             {
               "bookmaker": "draftkings",
@@ -2202,7 +2202,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 10
+              "price": 8.5
             },
             {
               "bookmaker": "draftkings",
@@ -2371,7 +2371,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 3.9
+              "price": 3.75
             },
             {
               "bookmaker": "draftkings",
@@ -2478,7 +2478,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 5.5
+              "price": 5
             },
             {
               "bookmaker": "draftkings",
@@ -2552,7 +2552,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 5.75
+              "price": 5.5
             },
             {
               "bookmaker": "draftkings",
@@ -2585,7 +2585,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 15
+              "price": 13.5
             },
             {
               "bookmaker": "draftkings",
@@ -2684,7 +2684,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 9.5
+              "price": 9.75
             },
             {
               "bookmaker": "draftkings",
@@ -2750,7 +2750,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 3.3
+              "price": 3.4
             },
             {
               "bookmaker": "draftkings",
@@ -2787,7 +2787,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 7.5
+              "price": 8
             },
             {
               "bookmaker": "draftkings",
@@ -2849,7 +2849,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 16.5
+              "price": 19
             },
             {
               "bookmaker": "draftkings",
@@ -2886,7 +2886,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 12
+              "price": 11
             },
             {
               "bookmaker": "draftkings",
@@ -2923,7 +2923,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 12
+              "price": 12.5
             },
             {
               "bookmaker": "draftkings",
@@ -3034,7 +3034,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 3.3
+              "price": 3.25
             },
             {
               "bookmaker": "draftkings",
@@ -3133,7 +3133,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 13
+              "price": 12.5
             },
             {
               "bookmaker": "draftkings",
@@ -3166,7 +3166,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 14.5
+              "price": 14
             },
             {
               "bookmaker": "draftkings",
@@ -3203,7 +3203,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 16
+              "price": 15
             },
             {
               "bookmaker": "draftkings",
@@ -3277,7 +3277,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 9
+              "price": 9.25
             },
             {
               "bookmaker": "draftkings",
@@ -3314,7 +3314,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 15.5
+              "price": 14.5
             },
             {
               "bookmaker": "draftkings",
@@ -3351,7 +3351,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 12.5
+              "price": 12
             },
             {
               "bookmaker": "draftkings",
@@ -3380,7 +3380,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "betmgm",
-              "price": 3.4
+              "price": 3.5
             }
           ],
           "assists": []
