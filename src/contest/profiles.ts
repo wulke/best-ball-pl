@@ -26,11 +26,13 @@
 import type { Position, SnapshotFixture } from '../etl/types.js';
 import {
   DEFAULT_MODEL_CONFIG,
+  DEFAULT_SCENARIOS,
   DEFAULT_SCORING,
   DEFAULT_TIERING,
   DEFAULT_TOURNAMENT,
   type ModelConfig,
   type ReplacementConfig,
+  type ScenarioConfig,
   type ScoringConfig,
   type TieringConfig,
   type TournamentConfig,
@@ -94,6 +96,12 @@ export type ContestProfile = {
   tournament: TournamentConfig;
   /** Tier params (natural-break cuts over the profile's own distribution). */
   tiering: TieringConfig;
+  /** Scenario knobs (p10/p90 spread). Optional: season-shaped by default —
+   *  multiplicative bursts are window-invariant, but short windows need
+   *  discreteness-honest ceilings (#46): a goal is 8 points on a board whose
+   *  top p50s are single-digit, and a starter's single-fixture q90 is "scores
+   *  once" (≈×2.5 on goal expectation), not "×1.25 of a good season". */
+  scenarios?: ScenarioConfig;
 };
 
 /**
@@ -129,8 +137,23 @@ export const FALSE_NINE: ContestProfile = {
  * Roster 1 G / 1 D / 1 MD / 1 FW / 2 FLEX = 6 rounds, **no bench** — every
  * pick starts, a total-points contest. Draft size 6, 30-second clock, pool =
  * the slate's 8 clubs. Scoring primary-confirmed identical to False Nine.
- * Tournament/tiering parity with False Nine holds until short-window
- * calibration (#46) tunes them for 1-fixture ceilings.
+ * Tournament/tiering parity with False Nine held until short-window
+ * calibration (#46); this profile now diverges — it is GPP-shaped
+ * (top-heavy payouts, no bench, 6/6 starters) and window-scaled (top p50s
+ * are single-digit; a goal is 8 points):
+ *  - ceilingWeight 0.4 (vs 0.2): lean toward the boom outcome that wins
+ *    top-heavy dailies;
+ *  - tiering on window scale: minGap 1.0 (≈ one SoT, ~12% of a top p50 —
+ *    the season gap of 8 deflated by the ~38× window ratio), maxTiers 4,
+ *    maxTierSize 8 (a 6-round room reads 3-4 tiers; per-position pools run
+ *    ~9-25 players, so 15-player chunks never split the blobs that matter);
+ *  - scenarios: attacker bursts widened to single-fixture q90/expectation
+ *    ratios (Poisson small-count: a starter's q90 is "scores once" ≈ ×2.5
+ *    on goals, ≈×2.2 on SoT; blended points-weighted FW 2.0 / MD 1.8), D
+ *    moderately (attack returns only — the CS lump stays season-shaped:
+ *    fixture-level and shared across the whole back line), G near season
+ *    (saves/CS anti-correlated in truth, every entry carries a keeper —
+ *    thin edge, and a busy-keeper day is rarely the contest-winner).
  */
 export const FREE_KICK_GW1_SAT: ContestProfile = {
   id: 'free-kick-gw1-sat',
@@ -145,8 +168,15 @@ export const FREE_KICK_GW1_SAT: ContestProfile = {
     targets: { G: 1, D: 1, MD: 1, FW: 1 },
   },
   draft: { draftSize: 6, clockSeconds: 30 },
-  tournament: DEFAULT_TOURNAMENT,
-  tiering: DEFAULT_TIERING,
+  tournament: { ...DEFAULT_TOURNAMENT, ceilingWeight: 0.4 },
+  tiering: { ...DEFAULT_TIERING, minGap: 1.0, maxTiers: 4, maxTierSize: 8 },
+  scenarios: {
+    p10: { ...DEFAULT_SCENARIOS.p10, burstFactor: 0.65 },
+    p90: {
+      ...DEFAULT_SCENARIOS.p90,
+      burstByPosition: { G: 1.1, D: 1.45, MD: 1.8, FW: 2.0 },
+    },
+  },
 };
 
 /** The registry — the switcher's option list, in display order. */
@@ -245,6 +275,7 @@ export function modelConfigFor(profile: ContestProfile): ModelConfig {
     scoring: profile.scoring,
     tournament: profile.tournament,
     tiering: profile.tiering,
+    scenarios: profile.scenarios ?? DEFAULT_SCENARIOS,
   };
 }
 
