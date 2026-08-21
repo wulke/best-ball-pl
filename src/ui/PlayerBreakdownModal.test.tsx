@@ -80,3 +80,17 @@ test('model-only projections leave the existing modal without odds detail', () =
   assert.doesNotMatch(markup, /Odds fetched/);
   assert.doesNotMatch(markup, />Model<\/th>/);
 });
+
+test('start-aware minutes audit shows source and factor', () => {
+  const player = structuredClone(snapshot.players.find((candidate) => candidate.projection)!);
+  assert.ok(player.projection);
+  player.projection.startAwareMinutes = {
+    source: 'override', factor: 0.2,
+    fixtures: [{ fixtureId: 1, status: 'bench', source: 'override', factor: 0.2 }],
+  };
+  const markup = renderModal(player);
+  assert.match(markup, /Start call/);
+  assert.match(markup, /Override/);
+  assert.match(markup, /bench/);
+  assert.match(markup, /0.20×/);
+});
