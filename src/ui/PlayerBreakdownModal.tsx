@@ -4,6 +4,8 @@ import type { PlayerProjection, ProjectedStatline } from '../model/types.js';
 import { DEFAULT_SCORING, FALSE_NINE_POINTS } from '../model/config.js';
 import { headlineDrivers } from './headlineDrivers.js';
 
+type OddsTerm = Exclude<keyof NonNullable<PlayerProjection['odds']>, 'fetchedAt'>;
+
 /**
  * Scoring terms in the order the ticket's table should read — one universal
  * list driven by scoring.ts, not a per-position template. `appliesTo` mirrors
@@ -45,6 +47,20 @@ const TERMS: {
     appliesTo: (p) => p === 'G' },
 ];
 
+/** Market-covered terms only. The position gates match the scoring breakdown
+ * above, so a midfielder never sees defensive or keeper-only market rows. */
+const ODDS_TERMS: {
+  label: string;
+  term: OddsTerm;
+  appliesTo?: (position: Position) => boolean;
+}[] = [
+  { label: 'Goals', term: 'goals' },
+  { label: 'Assists', term: 'assists' },
+  { label: 'Clean sheets', term: 'cleanSheets', appliesTo: (p) => p === 'G' || p === 'D' },
+  { label: 'Goals conceded', term: 'goalsConceded', appliesTo: (p) => p === 'G' || p === 'D' },
+  { label: 'Wins', term: 'gkWins', appliesTo: (p) => p === 'G' },
+];
+
 export function PlayerBreakdownModal({
   name,
   position,
@@ -76,6 +92,11 @@ export function PlayerBreakdownModal({
       subtotal: statline[t.stat] * DEFAULT_SCORING[t.weight],
     }))
     .filter((t) => t.weight !== 0 && t.value !== 0);
+  const oddsRows = projection.odds
+    ? ODDS_TERMS.filter((term) => term.appliesTo?.(position) ?? true)
+      .map((term) => ({ ...term, comparison: projection.odds![term.term] }))
+      .filter(({ comparison }) => comparison.oddsImplied != null)
+    : [];
 
   return (
     <div
@@ -150,6 +171,55 @@ export function PlayerBreakdownModal({
             </tr>
           </tfoot>
         </table>
+
+        {oddsRows.length > 0 && projection.odds && (
+          <section className="mt-4" aria-label="Odds rate detail">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-accent">
+                Odds rate detail
+              </span>
+              {projection.odds.fetchedAt && (
+                <span className="text-xs tabular-nums text-muted">
+                  Odds fetched {projection.odds.fetchedAt}
+                </span>
+              )}
+            </div>
+            <table className="mt-1 w-full border-collapse">
+              <thead>
+                <tr className="border-b border-default">
+                  <th className="px-1 py-1 text-left font-condensed text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
+                    Term
+                  </th>
+                  <th className="px-1 py-1 text-right font-condensed text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
+                    Model
+                  </th>
+                  <th className="px-1 py-1 text-right font-condensed text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
+                    Odds
+                  </th>
+                  <th className="px-1 py-1 text-right font-condensed text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
+                    Blended
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {oddsRows.map(({ label, comparison }) => (
+                  <tr key={label} className="border-b border-default last:border-b-0">
+                    <td className="px-1 py-1 text-sm text-secondary">{label}</td>
+                    <td className="px-1 py-1 text-right font-condensed text-sm tabular-nums text-secondary">
+                      {comparison.model.toFixed(3)}
+                    </td>
+                    <td className="px-1 py-1 text-right font-condensed text-sm tabular-nums text-secondary">
+                      {comparison.oddsImplied!.toFixed(3)}
+                    </td>
+                    <td className="px-1 py-1 text-right font-condensed text-sm font-medium tabular-nums text-primary">
+                      {comparison.blended.toFixed(3)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
 
         <div className="mt-4">
           <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-accent">
