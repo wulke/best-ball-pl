@@ -25,12 +25,18 @@
  *              players; p50 stays visible unadjusted as the raw "Pts" column
  */
 
-import type { PlayerStatus, Position, SnapshotPlayer } from '../etl/types.js';
+import type { PlayerStatus, Position, SnapshotPlayer, SnapshotStrength } from '../etl/types.js';
 import type { OddsSlate } from '../etl/odds.js';
-import type { FixtureDifficultyConfig, ModelConfig, ReplacementConfig } from './config.js';
+import type { FixtureDifficultyConfig, FixtureStrengthConfig, ModelConfig, ReplacementConfig } from './config.js';
 import type { SeasonActuals } from './actuals.js';
 import { DEFAULT_REPLACEMENT } from './config.js';
 import { scoreStatline } from './scoring.js';
+import {
+  buildStrengthModel,
+  strengthFixtureFactorsFor,
+  type FixtureFactors,
+  type StrengthModel,
+} from './strength.js';
 import type {
   PlayerProjection,
   ProjectedStatline,
@@ -364,13 +370,22 @@ export type ClubFixtureContext = {
   /** Calendar-mean difficulty — factors average exactly 1 against it, so a
    *  full-season window is opponent-neutral by construction. */
   calendarMeanDifficulty: number;
+  /** Results-driven opponent factors (#92), aligned with `windowFixtures` —
+   *  present only when the snapshot carries a `strength` section; the
+   *  legacy linear-FDR factors below are computed otherwise (parity). */
+  factors?: FixtureFactors[];
 };
 
 function difficultyOf(fixture: WindowFixture, club: string): number {
   return fixture.home === club ? fixture.homeDifficulty : fixture.awayDifficulty;
 }
 
-function buildClubFixtureContext(club: string, window: ProjectionWindow): ClubFixtureContext {
+function buildClubFixtureContext(
+  club: string,
+  window: ProjectionWindow,
+  strengthModel?: StrengthModel,
+  strengthCfg?: FixtureStrengthConfig,
+): ClubFixtureContext {
   const calendar = window.calendar.filter((f) => f.home === club || f.away === club);
   if (calendar.length === 0) {
     throw new Error(
@@ -379,13 +394,15 @@ function buildClubFixtureContext(club: string, window: ProjectionWindow): ClubFi
   }
   const dMean =
     calendar.reduce((sum, f) => sum + difficultyOf(f, club), 0) / calendar.length;
+  const windowFixtures = window.fixtures.filter((f) => f.home === club || f.away === club);
   return {
-    windowDifficulties: window.fixtures
-      .filter((f) => f.home === club || f.away === club)
-      .map((f) => difficultyOf(f, club)),
-    windowFixtures: window.fixtures.filter((f) => f.home === club || f.away === club),
+    windowDifficulties: windowFixtures.map((f) => difficultyOf(f, club)),
+    windowFixtures,
     calendarGames: calendar.length,
     calendarMeanDifficulty: dMean,
+    factors: strengthModel && strengthCfg
+      ? strengthFixtureFactorsFor(club, window.calendar, windowFixtures, strengthModel, strengthCfg)
+      : undefined,
   };
 }
 
@@ -409,9 +426,9 @@ export function neutralWindowFor(players: SnapshotPlayer[]): ProjectionWindow {
 
 /** Fixture factor families (see config.ts `FixtureDifficultyConfig`).
  *  `rel` = club-mean difficulty − this fixture's difficulty: positive means
- *  an easier-than-average fixture. */
-type FixtureFactors = { attack: number; cs: number; gc: number; saves: number; win: number };
-
+ *  an easier-than-average fixture. This is the LEGACY FDR path (#42); when
+ *  the snapshot carries a `strength` section, #92's ratio factors
+ *  (src/model/strength.ts) replace it — the call site picks per snapshot. */
 function fixtureFactors(d: number, dMean: number, cfg: FixtureDifficultyConfig): FixtureFactors {
   const rel = dMean - d;
   return {
@@ -584,7 +601,7 @@ function buildWindowStatline(
 
   const perFixtureMatches = perFixtureMinutes / 90; // one fixture's share of the season job
   for (const [index, d] of club.windowDifficulties.entries()) {
-    const f = fixtureFactors(d, club.calendarMeanDifficulty, cfg.fixture);
+    const f = club.factors?.[index] ?? fixtureFactors(d, club.calendarMeanDifficulty, cfg.fixture);
     const market = club.windowFixtures[index].id == null
       ? undefined
       : odds?.fixtures.get(club.windowFixtures[index].id!);
@@ -697,12 +714,17 @@ export function buildProjections(
   replacement: ReplacementConfig = DEFAULT_REPLACEMENT,
   oddsSlate?: OddsSlate,
   actuals?: SeasonActuals,
+  strength?: SnapshotStrength,
 ): ProjectionResult {
   const odds = oddsContext(oddsSlate);
   const windowSpec = window ?? neutralWindowFor(players);
+  // #92: a strength section switches the fixture factors from legacy FDR
+  // slopes to results-driven opponent multipliers — built once per run,
+  // consumed by every club's factor list. No section → legacy path, bit-for-bit.
+  const strengthModel = strength ? buildStrengthModel(strength, windowSpec.calendar, cfg.strength) : undefined;
   const clubContexts = new Map<string, ClubFixtureContext>();
   for (const club of new Set(players.map((p) => p.team))) {
-    clubContexts.set(club, buildClubFixtureContext(club, windowSpec));
+    clubContexts.set(club, buildClubFixtureContext(club, windowSpec, strengthModel, cfg.strength));
   }
 
   const teams = buildTeamContexts(players, cfg, actuals);

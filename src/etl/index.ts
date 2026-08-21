@@ -28,6 +28,7 @@ import { FALSE_NINE, modelConfigFor, replacementConfigFor, resolveContest } from
 import { buildProjections } from '../model/project.js';
 import { aggregateSeasonActuals } from '../model/actuals.js';
 import { buildAsOf, decimalOrNull, finishedEventNumbers, toGwActuals } from './actuals.js';
+import { buildStrengthSection } from './strength.js';
 import type {
   Position,
   SeasonStatLine,
@@ -165,6 +166,7 @@ async function main() {
   }
   const actuals: SnapshotActuals = { gameweeks };
   const asOf = buildAsOf(fetchedAt, rawFixtures, actuals);
+  const strength = await buildStrengthSection(fixtures);
 
   // Re-apply committed FBref volume data if present (from `npm run fbref`) so
   // a fresh FPL pull doesn't silently drop back to baseline-only volume.
@@ -208,6 +210,7 @@ async function main() {
     replacementConfigFor(FALSE_NINE),
     undefined,
     seasonActuals ?? undefined,
+    strength,
   );
   const playersWithProjections = players.map((p, i) => ({ ...p, projection: projections[i] }));
 
@@ -224,6 +227,7 @@ async function main() {
     players: playersWithProjections,
     fixtures,
     actuals,
+    ...(strength ? { strength } : {}),
   };
 
   fs.mkdirSync(path.dirname(SNAPSHOT_PATH), { recursive: true });
@@ -235,6 +239,12 @@ async function main() {
     `[ETL] ${players.length} players (${playersWithHistory} with history, ${seasonRows} season rows) · ${fixtures.length} fixtures · ${playersWithProjections.length} projected.`,
   );
   const actualRows = actuals.gameweeks.reduce((sum, gw) => sum + gw.players.length, 0);
+  if (strength) {
+    const playedTeams = Object.values(strength.clubs).reduce((sum, c) => sum + c.n, 0);
+    console.log(
+      `[ETL] Strength: ${strength.source} · ${playedTeams} team-matches · μ ${strength.leagueAttackPerMatch}/match · through ${strength.through}.`,
+    );
+  }
   console.log(
     `[ETL] Actuals: ${actuals.gameweeks.length} finished GW(s) · ${actualRows} player rows · asOf ${asOf.fetchedAt} (through GW${asOf.actualsThrough}${asOf.nextKickoff ? `, next kickoff ${asOf.nextKickoff}` : ''}).`,
   );

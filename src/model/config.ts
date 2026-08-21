@@ -298,6 +298,58 @@ export const DEFAULT_FIXTURE_DIFFICULTY: FixtureDifficultyConfig = {
   gkWinSlope: 0.12,
 };
 
+/**
+ * Results-driven opponent strength knobs (#92) — the DVOA-style layer that
+ * replaces the FDR slopes once the snapshot carries a `strength` section
+ * (docs/research/opponent-strength-signals.md). Estimator: shrunk
+ * league-mean multipliers in the #43 pseudo-count form —
+ *   A_i = (Σattack_i + kA·μ·Fᴬ_i)/(n_i + kA)/μ ,  D_i likewise on concede —
+ * seeded from FDR-extracted club quality so n=0 is pure FDR (no cliff
+ * between the paths) and shrinking toward observed results as matches
+ * accumulate. Factors are RATIO-formed per fixture,
+ *   factor = (M_fixture / M̄_calendar)^γ  (then renormalized to calendar-mean
+ *   exactly 1 — γ curvature would otherwise drift season means ~1% low),
+ * where M is the opponent-keyed multiplier: attack family reads the
+ * opponent's concession multiplier × own venue boost; cs/gc/saves read the
+ * opponent's attack multiplier × their venue boost; gk-win reads the
+ * composite (own venue × opponent leakiness)/(their venue × their attack).
+ * Own-club strength cancels in the ratio by construction — it lives in the
+ * #43 actuals blending, so the fixture factor carries only "who you're
+ * playing", never "who you are".
+ *
+ * - `gamma.*` — response magnitude per family (the power dial). 0.6 ≈ the
+ *   empirical shrunk spread (±40% season extremes) × FDR's ±24% response;
+ *   family ratios mirror the FDR slopes' proportions.
+ * - `homeBoost` — league-wide venue multiplier (arithmetic-symmetric pair
+ *   homeBoost / 2 − homeBoost averages exactly 1 over a balanced calendar).
+ *   Club-specific venue quality = the sample split the research measured as
+ *   noise; revisit with 2+ seasons of Understat history.
+ * - `seedSlope` — FDR-extracted quality → seed-multiplier slope; sign
+ *   symmetric (strong club: attack seed up, concession seed down).
+ * - shrinkage: xG-scale constants (kA 6 = #43's teamK, kD 10) per the
+ *   walk-forward calibration; goal-scale (the fixture-scores fallback) needs
+ *   roughly double (kA 18, kD 13) to be equally competitive.
+ */
+export type FixtureStrengthConfig = {
+  kAttack: number;
+  kDefense: number;
+  kAttackGoals: number;
+  kDefenseGoals: number;
+  gamma: { attack: number; cs: number; gc: number; saves: number; win: number };
+  homeBoost: number;
+  seedSlope: number;
+};
+
+export const DEFAULT_FIXTURE_STRENGTH: FixtureStrengthConfig = {
+  kAttack: 6,
+  kDefense: 10,
+  kAttackGoals: 18,
+  kDefenseGoals: 13,
+  gamma: { attack: 0.6, cs: 0.75, gc: 0.6, saves: 0.4, win: 0.6 },
+  homeBoost: 1.11,
+  seedSlope: 0.12,
+};
+
 /** Team-defensive priors: last season blended with league mean. */
 export type TeamRegression = {
   /** Weight on last season's rates (rest = league mean). */
@@ -427,6 +479,7 @@ export type ModelConfig = {
   scenarios: ScenarioConfig;
   team: TeamRegression;
   fixture: FixtureDifficultyConfig;
+  strength: FixtureStrengthConfig;
   tiering: TieringConfig;
   tournament: TournamentConfig;
 };
@@ -442,6 +495,7 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   scenarios: DEFAULT_SCENARIOS,
   team: DEFAULT_TEAM_REGRESSION,
   fixture: DEFAULT_FIXTURE_DIFFICULTY,
+  strength: DEFAULT_FIXTURE_STRENGTH,
   tiering: DEFAULT_TIERING,
   tournament: DEFAULT_TOURNAMENT,
 };

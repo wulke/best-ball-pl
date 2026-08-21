@@ -136,6 +136,7 @@ function main() {
       snapshot.actuals,
       modelConfigFor(profile).actuals.startMinutesThreshold,
     ) ?? undefined,
+    snapshot.strength,
   );
 
   const players = snapshot.players.map((p, i) => ({ ...p, projection: projections[i] }));
