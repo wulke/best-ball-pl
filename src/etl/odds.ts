@@ -2,7 +2,9 @@
 import type { SnapshotFixture, SnapshotPlayer } from './types.js';
 
 export const ODDS_SCHEMA_VERSION = 1;
-/** `description` identifies the player on Odds API O/U player markets. */
+/** The player is carried in `description` on Odds API soccer prop markets —
+ * anytime-goalscorer outcomes are { name: "Yes", description: "<player>" } and
+ * assists O/U are { name: "Over"/"Under", description: "<player>" }. */
 export type OddsOutcome = { name: string; price: number; point?: number; description?: string };
 export type OddsMarket = { key: string; outcomes: OddsOutcome[] };
 export type OddsBookmaker = { key: string; title: string; markets: OddsMarket[] };
@@ -36,10 +38,31 @@ const finitePrice = (value: unknown): value is number => typeof value === 'numbe
 function eventForFixture(fixture: SnapshotFixture, events: OddsEvent[]) {
   return events.find((event) => clubForOddsName(event.home_team) === fixture.home && clubForOddsName(event.away_team) === fixture.away);
 }
-function playerByOddsName(players: SnapshotPlayer[], name: string) {
+function playerByOddsName(players: SnapshotPlayer[], name: string, clubs: Set<string>) {
   const target = normalizeOddsName(name);
-  const matches = players.filter((player) => normalizeOddsName(player.fullName) === target || normalizeOddsName(player.name) === target);
-  return matches.length === 1 ? matches[0] : undefined;
+  // Tokenize the raw name before normalization so word boundaries survive
+  // ("Dominic Solanke" -> [dominic, solanke]).
+  const tokens = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9]/).filter(Boolean);
+  // Scope to the fixture's two clubs first: books quote full names while the
+  // snapshot uses short names, and surname collisions across clubs are the
+  // reason naive substring matching is unsafe.
+  const candidates = players.filter((player) => clubs.has(player.team));
+  const exact = candidates.filter((player) => normalizeOddsName(player.fullName) === target || normalizeOddsName(player.name) === target);
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) return undefined; // genuinely ambiguous within the fixture
+  // Tolerant match: the book's full name contains the FPL short name
+  // ("Dominic Solanke" -> "Solanke"), or a name token does. Uniqueness within
+  // the fixture's two clubs is still required; short needles (< 4 chars) are
+  // ignored except against a full token, dodging 3-char false hits.
+  const tolerant = candidates.filter((player) => {
+    const names = [normalizeOddsName(player.fullName), normalizeOddsName(player.name)];
+    return names.some((n) => {
+      if (!n) return false;
+      if (n.length >= 4 && target.includes(n)) return true; // compound surnames: "vandeven" within "mickeyvandeven"
+      return tokens.some((t) => t === n || (n.length >= 4 && (t.startsWith(n) || t.endsWith(n))));
+    });
+  });
+  return tolerant.length === 1 ? tolerant[0] : undefined;
 }
 
 /** Turns bulk/team and per-event/player API responses into the static asset. Missing coverage stays absent. */
@@ -62,10 +85,14 @@ export function buildOddsSlate(profileId: string, slateDate: string, fixtures: S
       }
     }
     const props = new Map<string, OddsSlate['fixtures'][number]['playerProps'][number]>();
+    const fixtureClubs = new Set([fixture.home, fixture.away]);
     for (const book of eventDetails.get(bulk.id)?.bookmakers ?? []) for (const market of book.markets) {
       if (market.key !== 'player_goal_scorer_anytime' && market.key !== 'player_assists') continue;
+      // Both prop markets name the player in `description` (assists: Over/Under
+      // in `name`; anytime goalscorer: "Yes" in `name`). Fall back to `name`
+      // defensively for any book that inlines the player name there instead.
       for (const outcome of market.outcomes) {
-        const player = playerByOddsName(players, market.key === 'player_assists' ? outcome.description ?? '' : outcome.name);
+        const player = playerByOddsName(players, outcome.description ?? outcome.name, fixtureClubs);
         if (!player || !finitePrice(outcome.price)) continue;
         const prop = props.get(player.id) ?? { playerId: player.id, anytimeGoalscorer: [], assists: [] };
         if (market.key === 'player_goal_scorer_anytime') prop.anytimeGoalscorer.push({ bookmaker: book.key, price: outcome.price });
