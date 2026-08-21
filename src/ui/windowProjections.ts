@@ -47,6 +47,7 @@ export function poolForProfile(snapshot: Snapshot, profile: ContestProfile, odds
       snapshot.actuals,
       modelConfigFor(profile).actuals.startMinutesThreshold,
     ) ?? undefined,
+    snapshot.strength,
   );
   return snapshot.players
     .map((p, i) => ({ ...p, projection: projections[i] }))
