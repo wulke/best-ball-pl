@@ -1,0 +1,75 @@
+name: Scheduled snapshot refresh
+
+# Daily 06:00 UTC ETL + re-projection in-season (#41): pulls fresh FPL
+# data, runs guardrail checks, and — only if everything passes and the
+# snapshot actually changed — opens a PR with the refreshed data/snapshot.json.
+# Days with no completed gameweeks (early season, international breaks) produce
+# no diff and are no-ops. Never pushes to main directly (AGENTS.md merge
+# protocol): a human still reviews and merges every data update, same as a
+# manual `npm run etl`.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+env:
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Capture previous actualsThrough
+        run: |
+          prev=$(node -e "console.log(JSON.parse(require('fs').readFileSync('data/snapshot.json','utf8')).asOf.actualsThrough)")
+          echo "PREV_ACTUALS_THROUGH=$prev" >> "$GITHUB_ENV"
+
+      - name: Run ETL (fresh)
+        run: ETL_FRESH=1 npm run etl
+
+      - name: Sanity-check the refreshed snapshot
+        run: npm run etl:sanity-check
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet -- data/snapshot.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open refresh PR
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="refresh/snapshot-$(date -u +%Y-%m-%d)-${GITHUB_RUN_NUMBER}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add data/snapshot.json
+          git commit -m "chore: scheduled snapshot refresh ($(date -u +%Y-%m-%d))"
+          git push origin "$branch"
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "chore: scheduled snapshot refresh ($(date -u +%Y-%m-%d))" \
+            --body "Automated ETL refresh (cron). Sanity checks passed: player count, projection non-degeneracy, asOf freshness, actualsThrough non-regression (previous: ${PREV_ACTUALS_THROUGH}). Review the diff and merge — this workflow never pushes to main directly."
+
+          # PRs opened by GITHUB_TOKEN don't trigger ci.yml's pull_request
+          # event, so dispatch it manually against this branch to populate
+          # the required "check" status on the same commit.
+          gh workflow run ci.yml --ref "$branch"

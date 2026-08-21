@@ -8,6 +8,8 @@ Sibling of [dynastyff](https://github.com/wulke/dynastyff) — same TypeScript/s
 
 **Live site**: https://wulke.github.io/best-ball-pl/ — redeploys automatically from `main` via GitHub Actions (`.github/workflows/deploy.yml`). It publishes whatever `data/snapshot.json` is committed; run `npm run etl` and commit the refreshed snapshot to update the live data. Pull requests run a separate check workflow (`.github/workflows/ci.yml`: typecheck, test, build) but do not deploy. `main` is protected (ruleset `main-requires-review`): a PR needs one approving review and a green check run before merging, so every change — snapshot refreshes included — lands via a reviewed PR.
 
+**Scheduled refresh (#41)**: `.github/workflows/scheduled-refresh.yml` runs `ETL_FRESH=1 npm run etl` on a **daily 06:00 UTC cron** in-season (also triggerable via "Run workflow"), then `npm run etl:sanity-check` — player count, projection non-degeneracy, `asOf` freshness, and `actualsThrough` never regressing versus the previously committed snapshot. Any guardrail failure fails the run and nothing is committed. If the snapshot changed and passed, it opens a PR (never pushes to `main` directly) and dispatches `ci.yml` on that branch so the required check populates — GitHub doesn't fire `pull_request` events for PRs opened by a workflow's own token. Manual `ETL_FRESH=1 npm run etl` stays available anytime between cron fires.
+
 ## Prerequisites
 
 - Node.js 20+
@@ -33,6 +35,7 @@ npm run dev
 | `npm run fbref` | Parse manually-saved FBref pages (data/fbref-raw/) → commit `data/fbref.json` → enrich snapshot volume terms → **fetch the PL stats API for the passing terms (passes completed / key passes)** → commit `data/pl-stats.json` → reproject (reuses the committed parses when the raw folder is empty) |
 | `npm run model` | Recompute projections against the committed snapshot and print the ranked report (no API calls — the config-tuning loop). `npm run model -- --profile free-kick-gw1-sat` prints the GW1 Saturday slate pool ranked for that window (report only — the snapshot keeps the season projections) |
 | `ETL_FRESH=1 npm run etl` | Same, bypassing the cache for fresh API reads |
+| `npm run etl:sanity-check` | Guardrail checks against the current `data/snapshot.json` (player count, projection non-degeneracy, `asOf` freshness, optional `actualsThrough` non-regression via `PREV_ACTUALS_THROUGH`); used by the scheduled refresh, exits non-zero on failure |
 | `npm run dev` | Vite dev server for the cheat-sheet UI |
 | `npm run build` | Build the static UI bundle into `dist/ui/` (includes snapshot copy) |
 | `npm run preview` | Preview the built bundle locally |
