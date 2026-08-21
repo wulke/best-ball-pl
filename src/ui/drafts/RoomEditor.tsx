@@ -4,7 +4,7 @@
  * working store.
  */
 import { useMemo, useState } from 'react';
-import type { SnapshotPlayer } from '../types.js';
+import type { SnapshotFixture, SnapshotPlayer } from '../types.js';
 import type { RoomRecord } from './types.js';
 import { competitionsInRooms, teamsInLog } from './types.js';
 import { parseRecap, preserveMatches } from './parse.js';
@@ -20,6 +20,7 @@ type Props = {
   /** Current local rooms provide reusable competition labels. */
   rooms: RoomRecord[];
   players: SnapshotPlayer[];
+  fixtures: SnapshotFixture[];
   onChange: (room: RoomRecord) => void;
   onClose: () => void;
   /** Contest profile the room drafted under (roster shape drives the review). */
@@ -30,7 +31,7 @@ const FIELD_LABEL = 'text-xs font-semibold uppercase tracking-wider text-muted';
 const INPUT =
   'rounded border border-default bg-surface px-2 py-1 text-sm text-primary placeholder:text-muted focus:border-strong focus:outline-none';
 
-export function RoomEditor({ room, rooms, players, onChange, onClose, profile = FALSE_NINE }: Props) {
+export function RoomEditor({ room, rooms, players, fixtures, onChange, onClose, profile = FALSE_NINE }: Props) {
   const [tab, setTab] = useState<Tab>('room');
   const [reparseNote, setReparseNote] = useState<string | null>(null);
 
@@ -236,6 +237,7 @@ export function RoomEditor({ room, rooms, players, onChange, onClose, profile = 
         (room.myTeam ? (
           <ReviewPanel
             pool={players}
+            fixtures={fixtures}
             picks={room.picks}
             myTeam={room.myTeam}
             carryNote={room.carryNote}

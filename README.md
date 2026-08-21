@@ -193,8 +193,8 @@ The **Exposure** view, beside Drafts in the More views menu, turns that live agg
 
 - **Rooms**: localStorage is the working store; **Export** downloads the record verbatim as `data/drafts/<yyyy-mm-dd>-<room-slug>.json` to move into the repo and commit (the archival step), **Import** restores it. Room facts: name, draft date, entry cost ($3/$15/other), editable competition (new rooms prefill from the active profile; slate profiles include their date; blank is Uncategorized), draft URL, my team (dropdown of recap teams), carry note. Competition values from existing rooms are offered as autocomplete choices.
 - **Pick log**: the full ~216-pick log with inline editing as the pressure valve — re-match a player (search-select), fix a team name, delete/add picks; pick/round renumber automatically.
-- **Review panel** (needs my team picked) — the #18 lenses:
-  - **Headline**: roster total vs naive sheet-perfect top-18 legal shape, as % (tournament score, raw p50 alongside — 12-team rooms sit ~50–55% of the unattainable baseline by construction)
+- **Review panel** (needs my team picked) — the #18 lenses, all scoped to the active contest profile's eligible clubs (a daily slate never compares against out-of-slate players):
+  - **Headline**: roster total vs the profile's naive sheet-perfect legal roster, as % (tournament score, raw p50 alongside — 12-team rooms sit ~50–55% of the unattainable baseline by construction)
   - **Per-pick deviation**: each own pick vs the best sheet player still on the board — BPA delta primary (rank + points), best same-position secondary
   - **Best 9**: pseudo-starters (1 G / 2 D / 2 MD / 2 FW / 2 FLEX) by projection, with the tier mix and a floor gauge (avg p10/p50)
   - **Club coverage**: 20 clubs × G/D/MD/FW counts, shaded by model strength (CS quartile for G/D, attack quartile for MD/FW) with auto gap-flags

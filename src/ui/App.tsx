@@ -129,7 +129,7 @@ export function App() {
   const carryPin = useMemo(() => {
     const latest = rooms.find((room) => room.myTeam && room.picks.length > 0);
     if (!latest || !snapshot) return null;
-    const review = reviewRoom(snapshot.players, latest.picks, latest.myTeam, profile);
+    const review = reviewRoom(snapshot.players, latest.picks, latest.myTeam, profile, snapshot.fixtures);
     if (!review) return null;
     if (review.flags.length === 0 && latest.carryNote.trim() === '') return null;
     return { room: latest, flags: review.flags, note: latest.carryNote };
@@ -326,7 +326,7 @@ export function App() {
             <p className="text-sm text-muted">Loading snapshot…</p>
           </main>
         ) : view === 'drafts' ? (
-          <DraftsView players={snapshot.players} rooms={rooms} upsert={upsert} remove={remove} profile={profile} />
+          <DraftsView players={snapshot.players} fixtures={snapshot.fixtures} rooms={rooms} upsert={upsert} remove={remove} profile={profile} />
         ) : view === 'exposure' ? (
           <ExposureView players={snapshot.players} rooms={rooms} />
         ) : players.length === 0 ? (

@@ -27,6 +27,7 @@ test('room editor offers current-room competition values as autocomplete choices
       room={room}
       rooms={[room, { ...room, id: 'room-2', competition: 'The Free Kick — 2026-08-22' }]}
       players={[]}
+      fixtures={[]}
       onChange={() => {}}
       onClose={() => {}}
       profile={FREE_KICK_GW1_SAT}
