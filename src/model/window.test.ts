@@ -8,6 +8,9 @@
  * 3. Slate windows — the Free Kick GW1 Saturday slice: pool-scoped ranks,
  *    per-fixture minutes/GK starts distribution, sane single-fixture output.
  * 4. Window composition — a season window equals its fixture windows summed.
+ * 5. Windowed per-90 — the per90 denominator regression (#46 review): points
+ *    are a window sum, so per90 must divide by windowed minutes, not the
+ *    season-scale risk-flag denominator the live UI would otherwise render.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -136,6 +139,28 @@ function projectAb(window: ProjectionWindow) {
 // ---------------------------------------------------------------------------
 // 1. Season parity — the flagship guard
 // ---------------------------------------------------------------------------
+
+test('per90 divides window points by windowed minutes (#46 review regression)', () => {
+  // The bug: projection.per90 divided the window p50 by the season-scale
+  // minutes — on a 1/38 window that deflates per90 ~38×, and the live UI
+  // renders this field directly (PlayerTable). Season byte-parity is guarded
+  // separately by test 1 (the season ratio is exactly 1, so the windowed
+  // denominator is float-identical to the committed one).
+  const calendar = abCalendar();
+  const window: ProjectionWindow = { calendar, fixtures: [calendar[0]], clubs: null };
+  const { byId } = projectAb(window);
+  for (const id of ['A-GK', 'A-FW', 'B-GK']) {
+    const proj = byId.get(id)!;
+    const expected = (proj.points.p50 / proj.statline.minutes) * 90;
+    assert.ok(
+      Math.abs(proj.per90 - expected) < 0.1,
+      `${id}: per90 ${proj.per90} ≈ p50 ${proj.points.p50} / windowed minutes ${proj.statline.minutes} × 90`,
+    );
+    // The pre-fix value divides by a thousands-of-minutes season denominator
+    // — assert we are nowhere near that deflated scale.
+    assert.ok(proj.per90 > 1, `${id}: per90 must be on a per-90 scale, not season-deflated`);
+  }
+});
 
 test('season window reproduces the committed snapshot projections bit-for-bit', () => {
   const snapshot = loadSnapshot();

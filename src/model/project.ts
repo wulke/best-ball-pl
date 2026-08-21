@@ -1164,10 +1164,21 @@ export function buildProjections(
     const ceilingWeight = tCfg.ceilingWeight * (durabilityRisk ? tCfg.riskCeilingDampen : 1);
     const tournamentScore = round2(p50 + ceilingWeight * (p90 - p50));
 
+    // Windowed per-90 (#46 review): points are a sum over the window, so the
+    // denominator must be the windowed minutes — the season-scale `minutes`
+    // (the risk-flag denominator) deflates per90 ~n× on a 1/n window, and the
+    // live UI renders this field directly (PlayerTable). Mirrors
+    // buildWindowStatline's exact unrounded expression: a rounded denominator
+    // (statline.minutes) could flip round2 boundaries and break False Nine
+    // byte-parity. Season windows carry ratio exactly 1 → bit-identical.
+    const clubCtx = clubContexts.get(player.team)!;
+    const windowMinutes =
+      minutes * (clubCtx.windowDifficulties.length / clubCtx.calendarGames);
+
     const projection: PlayerProjection = {
       points: { p10, p50, p90 },
       statline: base,
-      per90: round2(minutes > 0 ? (p50 / minutes) * 90 : 0),
+      per90: round2(windowMinutes > 0 ? (p50 / windowMinutes) * 90 : 0),
       ceilingPer90: round2(p90Line.minutes > 0 ? (p90 / p90Line.minutes) * 90 : 0),
       minutes: Math.round(minutes),
       value: round2(player.price > 0 ? tournamentScore / player.price : 0),

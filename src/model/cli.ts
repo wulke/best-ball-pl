@@ -60,13 +60,12 @@ function toRows(players: SnapshotPlayer[]): Row[] {
       p10: p.projection!.points.p10,
       p90: p.projection!.points.p90,
       // Window report: projection.minutes is season-scale (risk-flag
-      // denominator); the board's expMin//90 must read the windowed statline
-      // or a 1-fixture p50 sits next to a 3420-minute season. Season windows
-      // are identical by construction (statline.minutes = round(minutes)).
+      // denominator); the board's expMin must read the windowed statline or
+      // a 1-fixture p50 sits next to a 3420-minute season. Season windows
+      // are identical by construction (statline.minutes = round(minutes));
+      // per90 is windowed at the source (project.ts, #46 review).
       minutes: p.projection!.statline.minutes,
-      per90: p.projection!.statline.minutes > 0
-        ? Math.round((p.projection!.points.p50 / p.projection!.statline.minutes) * 90 * 100) / 100
-        : 0,
+      per90: p.projection!.per90,
       value: p.projection!.value,
       conf: p.projection!.confidence,
       tier: p.projection!.tier,
