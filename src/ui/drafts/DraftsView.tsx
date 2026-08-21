@@ -5,7 +5,7 @@
  * fixture exercises the full flow when no real paste is handy.
  */
 import { useRef, useState } from 'react';
-import type { SnapshotPlayer } from '../types.js';
+import type { SnapshotFixture, SnapshotPlayer } from '../types.js';
 import type { PreviewPick, RoomRecord } from './types.js';
 import { defaultCompetition, renumber } from './types.js';
 import { extractRecapText, parseRecap, sniffDraftUrl } from './parse.js';
@@ -17,6 +17,7 @@ import { FALSE_NINE, type ContestProfile } from '../../contest/profiles.js';
 
 type Props = {
   players: SnapshotPlayer[];
+  fixtures: SnapshotFixture[];
   rooms: RoomRecord[];
   upsert: (room: RoomRecord) => void;
   remove: (id: string) => void;
@@ -31,7 +32,7 @@ type Intake =
 const DEV = import.meta.env.DEV;
 const PANEL = 'rounded-md border border-default bg-surface';
 
-export function DraftsView({ players, rooms, upsert, remove, profile = FALSE_NINE }: Props) {
+export function DraftsView({ players, fixtures, rooms, upsert, remove, profile = FALSE_NINE }: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [paste, setPaste] = useState('');
   const [intake, setIntake] = useState<Intake>({ stage: 'idle' });
@@ -171,6 +172,7 @@ export function DraftsView({ players, rooms, upsert, remove, profile = FALSE_NIN
         room={openRoom}
         rooms={rooms}
         players={players}
+        fixtures={fixtures}
         onChange={upsert}
         onClose={() => setOpenId(null)}
         profile={profile}
