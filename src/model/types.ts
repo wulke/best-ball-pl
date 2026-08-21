@@ -151,6 +151,21 @@ export type PlayerProjection = {
    *  the minutes/starts blend weight actually applied (0 = pure prior — a
    *  player yet to feature, or pre-season). */
   actualsBlend?: { played: number; minutes: number; weight: number };
+  /** Daily-slate start calls (#97). Omitted for season projections so the
+   * committed False Nine snapshot remains byte-identical. `factor` is the
+   * average per-fixture multiplier relative to the normal season-share
+   * minutes; each fixture retains the exact call behind that summary. */
+  startAwareMinutes?: {
+    source: 'override' | 'lineup' | 'model';
+    factor: number;
+    fixtures: Array<{
+      fixtureId: number | null;
+      status: 'starter' | 'bench' | 'unknown';
+      source: 'override' | 'lineup' | 'model';
+      factor: number;
+      minutes: number;
+    }>;
+  };
   /** Daily-slate score using market-shrunk rates. It is display-only: all
    * ranking fields above always remain based on `points`/tournamentScore. */
   oddsPoints?: number;

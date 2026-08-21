@@ -20,6 +20,7 @@ import {
 import { buildProjections } from '../model/project.js';
 import { aggregateSeasonActuals } from '../model/actuals.js';
 import type { OddsSlate } from '../etl/odds.js';
+import type { LineupSlate, StartOverrideMap } from '../model/lineups.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
 
 /** A committed placeholder is not a slate pull: it must leave the sheet
@@ -30,7 +31,7 @@ export function hasOddsCoverage(odds: OddsSlate | undefined): odds is OddsSlate 
 
 /** The player pool for a profile: window-projected and pool-restricted (players
  *  outside the contest sit at rank 0 from `buildProjections` and are dropped). */
-export function poolForProfile(snapshot: Snapshot, profile: ContestProfile, odds?: OddsSlate): SnapshotPlayer[] {
+export function poolForProfile(snapshot: Snapshot, profile: ContestProfile, odds?: OddsSlate, lineups?: LineupSlate, overrides?: StartOverrideMap): SnapshotPlayer[] {
   if (profile.id === FALSE_NINE.id) {
     return snapshot.players.filter((p) => p.projection);
   }
@@ -48,6 +49,8 @@ export function poolForProfile(snapshot: Snapshot, profile: ContestProfile, odds
       modelConfigFor(profile).actuals.startMinutesThreshold,
     ) ?? undefined,
     snapshot.strength,
+    lineups,
+    overrides,
   );
   return snapshot.players
     .map((p, i) => ({ ...p, projection: projections[i] }))

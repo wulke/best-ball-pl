@@ -61,6 +61,8 @@ Every projection is a sum over an **explicit fixture window** (`ProjectionWindow
 
 For a daily slate with `data/odds/<profile-id>.json`, the client also computes an **Odds Pts** value by conservatively blending listed player goal/assist props and fixture 1X2/total-goals markets into the relevant per-fixture rates. The Sheet shows that extra column only when the asset has a pull timestamp and at least one fixture; an unpulled `fetchedAt: null` placeholder behaves exactly like no odds asset. An `O` badge means at least one player or fixture term had odds coverage, while an unmarked row used FDR-only fallback. Opening a covered player's scoring breakdown shows its model, odds-implied, and blended rates per covered term plus the odds asset's `fetchedAt` stamp; missing terms remain model-only with no placeholder rows. It is a display-only companion to model Pts: `#`, position rank, tier, VORP, and tournament score always remain model-only. Missing fixture or player coverage silently retains the model term; False Nine never reads an odds asset.
 
+**Start-aware slate minutes (#97):** an optional static `data/lineups/<profile-id>.json` asset makes expected minutes per fixture responsive to confirmed starters and benches. The factor precedence is the manual UI override map (`localStorage` key `bbpl-start-overrides:<profile-id>`), then the lineup asset, then the unchanged model default of `1.0`. A confirmed starter uses the player's season-share minutes divided by start probability (capped at 90); a confirmed non-starter receives the configurable 18-minute cameo floor, never zero. The p10/p90 scenario machinery then widens around that called p50 base. A player's breakdown modal records the source, aggregate factor, and fixture calls. No asset (or `fetchedAt: null`) leaves current slate numbers unchanged; season/False Nine projections do not carry the new field and remain byte-identical. See [`data/lineups/README.md`](data/lineups/README.md) for the asset and override-map contracts.
+
 ## Project Structure
 
 ```
@@ -89,6 +91,7 @@ src/
     useDrafted.ts   #   Mark-drafted state persisted to localStorage
     useContestProfile.ts # Active contest profile (localStorage id → profiles registry)
     windowProjections.ts # Client-side pool projections for the active profile (#47)
+    startOverrides.ts #   Daily start-call override-map reader (#97)
     drafts/         # Draft-review slice (#20): rooms, intake, review lenses
       types.ts      #   Parsed-log + room-record contract (the #22 parser produces this)
       parse.ts      #   Recap paste-parser + name matcher (#22, built against the first real recap)

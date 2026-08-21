@@ -86,7 +86,7 @@ test('start-aware minutes audit shows source and factor', () => {
   assert.ok(player.projection);
   player.projection.startAwareMinutes = {
     source: 'override', factor: 0.2,
-    fixtures: [{ fixtureId: 1, status: 'bench', source: 'override', factor: 0.2 }],
+    fixtures: [{ fixtureId: 1, status: 'bench', source: 'override', factor: 0.2, minutes: 18 }],
   };
   const markup = renderModal(player);
   assert.match(markup, /Start call/);
