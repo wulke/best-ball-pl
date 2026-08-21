@@ -145,6 +145,12 @@ export type PlayerProjection = {
     gkWinRate: number;
     observed: boolean;
   };
+  /** In-season actuals blend (#43): present once any GW has completed —
+   *  `played` = the club's finished matches (the blend denominator),
+   *  `minutes` = the player's season-to-date observed minutes, `weight` =
+   *  the minutes/starts blend weight actually applied (0 = pure prior — a
+   *  player yet to feature, or pre-season). */
+  actualsBlend?: { played: number; minutes: number; weight: number };
   /** Daily-slate score using market-shrunk rates. It is display-only: all
    * ranking fields above always remain based on `points`/tournamentScore. */
   oddsPoints?: number;

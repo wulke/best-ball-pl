@@ -25,8 +25,9 @@ import {
 import { buildMatchIndexes, matchPlayer, norm, readOverrides, SQUAD_TO_FPL, type Overrides } from './match.js';
 import { applyPlEnrichment, fetchPlStats } from './pl-stats.js';
 import { fetchUnderstatStats, summarizeValidation, validatePlPassing } from './understat.js';
-import { DEFAULT_MODEL_CONFIG } from '../model/config.js';
+import { DEFAULT_MODEL_CONFIG, DEFAULT_REPLACEMENT } from '../model/config.js';
 import { buildProjections } from '../model/project.js';
+import { aggregateSeasonActuals } from '../model/actuals.js';
 import { FALSE_NINE, resolveContest } from '../contest/profiles.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
 
@@ -232,8 +233,22 @@ async function main() {
   }
 
   // Season window, explicit (#42): all committed fixtures, whole pool.
+  // In-season actuals (#43) re-apply on reproject, same as the main ETL.
   const season = resolveContest(FALSE_NINE, snapshot.fixtures);
-  const { projections } = buildProjections(snapshot.players, DEFAULT_MODEL_CONFIG, season);
+  const seasonActuals = aggregateSeasonActuals(
+    snapshot.players,
+    snapshot.fixtures,
+    snapshot.actuals,
+    DEFAULT_MODEL_CONFIG.actuals.startMinutesThreshold,
+  );
+  const { projections } = buildProjections(
+    snapshot.players,
+    DEFAULT_MODEL_CONFIG,
+    season,
+    DEFAULT_REPLACEMENT,
+    undefined,
+    seasonActuals ?? undefined,
+  );
   const players = snapshot.players.map((p, i) => ({ ...p, projection: projections[i] }));
   const out: Snapshot = { ...snapshot, players };
   fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(out, null, 2)}\n`);

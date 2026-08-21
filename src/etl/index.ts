@@ -26,6 +26,7 @@ import { readOverrides } from './match.js';
 import { applyPositionOverride } from './position-overrides.js';
 import { FALSE_NINE, modelConfigFor, replacementConfigFor, resolveContest } from '../contest/profiles.js';
 import { buildProjections } from '../model/project.js';
+import { aggregateSeasonActuals } from '../model/actuals.js';
 import { buildAsOf, decimalOrNull, finishedEventNumbers, toGwActuals } from './actuals.js';
 import type {
   Position,
@@ -194,11 +195,19 @@ async function main() {
   // unchanged while the profile becomes the model's single entry point (#39).
   // The season window is explicit (#42): all committed fixtures, whole pool.
   const season = resolveContest(FALSE_NINE, fixtures);
+  const seasonActuals = aggregateSeasonActuals(
+    players,
+    fixtures,
+    actuals,
+    modelConfigFor(FALSE_NINE).actuals.startMinutesThreshold,
+  );
   const { projections } = buildProjections(
     players,
     modelConfigFor(FALSE_NINE),
     season,
     replacementConfigFor(FALSE_NINE),
+    undefined,
+    seasonActuals ?? undefined,
   );
   const playersWithProjections = players.map((p, i) => ({ ...p, projection: projections[i] }));
 

@@ -188,8 +188,44 @@ export const DEFAULT_ODDS_BLEND: OddsBlendConfig = {
   team: 0.35,
 };
 
-/**
- * Percentile scenarios — parametric, deliberately simple and auditable (full
+/** In-season actuals blending (#43): how much weight completed-GW actuals
+ *  carry against each prior family, expressed as pseudo-count shrinkage —
+ *  weight = observed sample / (observed sample + k) — so every blend starts
+ *  at exactly 0 with zero data (pre-season parity is structural, not
+ *  guarded) and asymptotes to fully observed as the season plays out. All
+ *  blends are pure functions of the snapshot's `actuals` section — no clocks,
+ *  no randomness — so the scheduled refresh re-projects deterministically. */
+export type ActualsConfig = {
+  /** Team priors (CS/GC/win-rate): matches played vs this pseudo-count. */
+  teamK: number;
+  /** Outfield minutes: team matches played vs this pseudo-count. Observed
+   *  minutes per team-match are prorated over the club's calendar games to a
+   *  season rate, then blended against the prior season-minutes estimate. */
+  minutesK: number;
+  /** Per-90 attacking/GK-save rates: observed minutes vs this pseudo-count. */
+  ratesK: number;
+  /** GK starts: team matches played vs this pseudo-count (observed starts
+   *  prorated to the club's 38-start job, blended against the starts-claim
+   *  model, then re-normalized so the club's job stays conserved). */
+  gkK: number;
+  /** Start fraction (CS eligibility + durability): observed minutes vs this
+   *  pseudo-count. */
+  startK: number;
+  /** FPL's live feed has no started-flag; a GW row with at least this many
+   *  minutes counts as a start (subs rarely play 60+). */
+  startMinutesThreshold: number;
+};
+
+export const DEFAULT_ACTUALS: ActualsConfig = {
+  teamK: 6,
+  minutesK: 6,
+  ratesK: 900,
+  gkK: 5,
+  startK: 900,
+  startMinutesThreshold: 60,
+};
+
+/** Percentile scenarios — parametric, deliberately simple and auditable (full
  * Monte Carlo is out of scope per the map). "Burst" terms (goals, assists,
  * shots, chances) scale with role form; "stable" terms (passing/cross/tackle
  * volume) barely move; team terms (CS/GC) track matches × team form.
@@ -386,6 +422,7 @@ export type ModelConfig = {
   volume: VolumeConfig;
   minutes: MinutesConfig;
   rates: RateConfig;
+  actuals: ActualsConfig;
   odds: OddsBlendConfig;
   scenarios: ScenarioConfig;
   team: TeamRegression;
@@ -400,6 +437,7 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   volume: DEFAULT_VOLUME_CONFIG,
   minutes: DEFAULT_MINUTES,
   rates: DEFAULT_RATES,
+  actuals: DEFAULT_ACTUALS,
   odds: DEFAULT_ODDS_BLEND,
   scenarios: DEFAULT_SCENARIOS,
   team: DEFAULT_TEAM_REGRESSION,

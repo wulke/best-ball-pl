@@ -18,6 +18,7 @@ import {
   type ContestProfile,
 } from '../contest/profiles.js';
 import { buildProjections } from '../model/project.js';
+import { aggregateSeasonActuals } from '../model/actuals.js';
 import type { OddsSlate } from '../etl/odds.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
 
@@ -40,6 +41,12 @@ export function poolForProfile(snapshot: Snapshot, profile: ContestProfile, odds
     contest,
     replacementConfigFor(profile),
     hasOddsCoverage(odds) ? odds : undefined,
+    aggregateSeasonActuals(
+      snapshot.players,
+      snapshot.fixtures,
+      snapshot.actuals,
+      modelConfigFor(profile).actuals.startMinutesThreshold,
+    ) ?? undefined,
   );
   return snapshot.players
     .map((p, i) => ({ ...p, projection: projections[i] }))

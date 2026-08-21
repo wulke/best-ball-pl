@@ -28,6 +28,7 @@
 import type { PlayerStatus, Position, SnapshotPlayer } from '../etl/types.js';
 import type { OddsSlate } from '../etl/odds.js';
 import type { FixtureDifficultyConfig, ModelConfig, ReplacementConfig } from './config.js';
+import type { SeasonActuals } from './actuals.js';
 import { DEFAULT_REPLACEMENT } from './config.js';
 import { scoreStatline } from './scoring.js';
 import type {
@@ -62,7 +63,11 @@ export type ProjectionResult = {
 // Team defensive context
 // ---------------------------------------------------------------------------
 
-function buildTeamContexts(players: SnapshotPlayer[], cfg: ModelConfig): Map<string, TeamContext> {
+function buildTeamContexts(
+  players: SnapshotPlayer[],
+  cfg: ModelConfig,
+  actuals?: SeasonActuals,
+): Map<string, TeamContext> {
   const teams = new Set(players.map((p) => p.team));
   const ctxs = new Map<string, TeamContext>();
 
@@ -104,28 +109,53 @@ function buildTeamContexts(players: SnapshotPlayer[], cfg: ModelConfig): Map<str
   for (const team of teams) {
     const keeper = keeperByTeam.get(team);
     const last = keeper?.seasons.find((s) => s.season === LATEST_SEASON);
+    let ctx: TeamContext;
     if (!last || last.minutes < 900) {
       // Promoted team / split goalkeeping — pure league-mean prior.
-      ctxs.set(team, {
+      ctx = {
         cleanSheetRate: lgCs,
         goalsConcededPerMatch: lgGc,
-        gkWinRate: clampWinRate(cfg.team.winRate.intercept + cfg.team.winRate.slope * (lgGf - lgGc), cfg),
+        gkWinRate: clampWinRate(
+          cfg.team.winRate.intercept + cfg.team.winRate.slope * (lgGf - lgGc),
+          cfg,
+        ),
         observed: false,
-      });
-      continue;
+      };
+    } else {
+      const matches = last.minutes / 90;
+      const w = cfg.team.lastSeasonWeight;
+      const csRate = w * (last.cleanSheets / matches) + (1 - w) * lgCs;
+      const gcRate = w * (last.goalsConceded / matches) + (1 - w) * lgGc;
+      const gfRate = w * ((goalsFor.get(team) ?? 0) / 38) + (1 - w) * lgGf;
+
+      ctx = {
+        cleanSheetRate: csRate,
+        goalsConcededPerMatch: gcRate,
+        gkWinRate: clampWinRate(
+          cfg.team.winRate.intercept + cfg.team.winRate.slope * (gfRate - gcRate),
+          cfg,
+        ),
+        observed: true,
+      };
     }
-    const matches = last.minutes / 90;
-    const w = cfg.team.lastSeasonWeight;
-    const csRate = w * (last.cleanSheets / matches) + (1 - w) * lgCs;
-    const gcRate = w * (last.goalsConceded / matches) + (1 - w) * lgGc;
-    const gfRate = w * ((goalsFor.get(team) ?? 0) / 38) + (1 - w) * lgGf;
 
-    const winRate = clampWinRate(
-      cfg.team.winRate.intercept + cfg.team.winRate.slope * (gfRate - gcRate),
-      cfg,
-    );
-
-    ctxs.set(team, { cleanSheetRate: csRate, goalsConcededPerMatch: gcRate, gkWinRate: winRate, observed: true });
+    // In-season results (#43): blend observed match rates into the prior by
+    // pseudo-count shrinkage — played/(played + teamK) — so the blend is
+    // exactly 0 with no data (pre-season parity) and approaches fully
+    // observed as matches accumulate. A promoted team's league-mean prior
+    // starts picking up its own results immediately; `observed` flips true
+    // once it has any own-team evidence at all.
+    const ta = actuals?.teams.get(team);
+    if (ta && ta.played > 0) {
+      const w = ta.played / (ta.played + cfg.actuals.teamK);
+      ctx = {
+        cleanSheetRate: w * (ta.cleanSheets / ta.played) + (1 - w) * ctx.cleanSheetRate,
+        goalsConcededPerMatch: w * (ta.goalsAgainst / ta.played) + (1 - w) * ctx.goalsConcededPerMatch,
+        gkWinRate: clampWinRate(w * (ta.wins / ta.played) + (1 - w) * ctx.gkWinRate, cfg),
+        observed: true,
+      };
+    }
+    ctxs.set(team, ctx);
   }
   return ctxs;
 }
@@ -666,6 +696,7 @@ export function buildProjections(
   window?: ProjectionWindow,
   replacement: ReplacementConfig = DEFAULT_REPLACEMENT,
   oddsSlate?: OddsSlate,
+  actuals?: SeasonActuals,
 ): ProjectionResult {
   const odds = oddsContext(oddsSlate);
   const windowSpec = window ?? neutralWindowFor(players);
@@ -674,7 +705,7 @@ export function buildProjections(
     clubContexts.set(club, buildClubFixtureContext(club, windowSpec));
   }
 
-  const teams = buildTeamContexts(players, cfg);
+  const teams = buildTeamContexts(players, cfg, actuals);
   const leagueTeam = teams.get(players[0]?.team ?? '')!; // contexts exist for every team
   const fallbackTeam: TeamContext = leagueTeam ?? {
     cleanSheetRate: cfg.team.meanCleanSheetRate,
@@ -757,6 +788,29 @@ export function buildProjections(
     }
   });
 
+  // In-season outfield minutes (#43): observed minutes per team-match,
+  // prorated over the club's calendar to a season rate, blended against the
+  // prior estimate by pseudo-count shrinkage — played/(played + minutesK).
+  // The observed share carries today's status haircut too (a currently-
+  // injured player's banked minutes are not an argument against it); the
+  // prior share had it applied already. GKs are excluded — their minutes
+  // come from the starts-claim model below, which blends observed starts.
+  const minutesWeightByPlayer = new Array<number>(players.length).fill(0);
+  if (actuals) {
+    players.forEach((p, i) => {
+      if (p.position === 'G') return;
+      const pa = actuals.players.get(p.id);
+      const ta = actuals.teams.get(p.team);
+      if (!ta || ta.played === 0) return;
+      const calendarGames = clubContexts.get(p.team)!.calendarGames;
+      const prorated = Math.min((pa?.minutes ?? 0) / ta.played, 90) * calendarGames;
+      const w = ta.played / (ta.played + cfg.actuals.minutesK);
+      const statusFactor = STATUS_FACTORS[p.status] ?? 1;
+      minutesByPlayer[i] = w * prorated * statusFactor + (1 - w) * minutesByPlayer[i];
+      minutesWeightByPlayer[i] = w;
+    });
+  }
+
   // Goalkeepers: one club, 38 STARTS — and a share of the job is claimed by
   // recent starting evidence, not by minutes. Prior-season minutes follow the
   // keeper across transfers, so a proportional minute-split lets stale
@@ -797,7 +851,7 @@ export function buildProjections(
       .slice(0, w.length)
       .reduce((sum, s, k) => sum + s.starts * w[k], 0);
   };
-  for (const indices of gkIndicesByTeam.values()) {
+  for (const [gkTeam, indices] of gkIndicesByTeam.entries()) {
     const priors = indices.map((i) => startsPrior(players[i]));
     const isClaimant = indices.map(
       (i) => (players[i].seasons[0]?.starts ?? 0) >= cfg.minutes.gkCredibleStarts,
@@ -836,6 +890,29 @@ export function buildProjections(
       indices.forEach((_, k) => {
         starts[k] = (floorPriors[k] / total) * cfg.minutes.gkStartsPerSeason;
       });
+    }
+
+    // In-season starts (#43): observed starts prorated to the club's
+    // 38-start job, blended by played/(played + gkK), then re-normalized so
+    // the club's season of starts stays conserved after the blend. Whoever
+    // is actually starting moves the job-share toward reality regardless of
+    // what his prior seasons claimed (and vice versa).
+    const ta = actuals?.teams.get(gkTeam);
+    if (ta && ta.played > 0) {
+      const w = ta.played / (ta.played + cfg.actuals.gkK);
+      indices.forEach((i, k) => {
+        const pa = actuals!.players.get(players[i].id);
+        const observed = pa ? (pa.starts / ta!.played) * cfg.minutes.gkStartsPerSeason : 0;
+        starts[k] = w * observed + (1 - w) * starts[k];
+        minutesWeightByPlayer[i] = w; // audit: the starts blend's weight
+      });
+      const totalStarts = starts.reduce((sum, s) => sum + s, 0);
+      if (totalStarts > 0) {
+        const scale = cfg.minutes.gkStartsPerSeason / totalStarts;
+        indices.forEach((_, k) => {
+          starts[k] *= scale;
+        });
+      }
     }
 
     indices.forEach((i, k) => {
@@ -994,11 +1071,38 @@ export function buildProjections(
       assists: (k * aBlend + (1 - k) * mean.assists) * 90,
     };
 
+    // In-season rates (#43): observed per-90s (x-weighted like the priors)
+    // blended into the shrunk rates by observed minutes —
+    // minutes/(minutes + ratesK). A newcomer with only actuals behind him
+    // still gets his real rates here: the price prior carries the minutes,
+    // this carries what he does with them. Start fraction (CS eligibility +
+    // durability) and GK saves blend on their own shrinkage knobs.
+    const pa = actuals?.players.get(player.id);
+    let effRates = rates;
+    if (pa && pa.minutes > 0) {
+      const w = pa.minutes / (pa.minutes + cfg.actuals.ratesK);
+      const minutes90 = pa.minutes / 90;
+      const obsGoals = blend(pa.xg != null ? pa.xg / minutes90 : null, pa.goals / minutes90, xw);
+      const obsAssists = blend(pa.xa != null ? pa.xa / minutes90 : null, pa.assists / minutes90, xw);
+      attack.goals = w * (obsGoals * 90) + (1 - w) * attack.goals;
+      attack.assists = w * (obsAssists * 90) + (1 - w) * attack.assists;
+
+      const eff: RawRates = { ...rates };
+      const sw = pa.minutes / (pa.minutes + cfg.actuals.startK);
+      const obsStartFraction = Math.min(1, Math.max(0.3, pa.starts / minutes90));
+      eff.startFraction = sw * obsStartFraction + (1 - sw) * rates.startFraction;
+      if (player.position === 'G') {
+        const obsSaves = pa.saves / minutes90;
+        eff.savesPer90 = w * obsSaves + (1 - w) * (rates.savesPer90 ?? cfg.team.meanSavesPer90);
+      }
+      effRates = eff;
+    }
+
     const minutes = minutesByPlayer[i];
     const base = buildWindowStatline(
       minutes,
       player.position,
-      rates,
+      effRates,
       attack,
       team,
       cfg,
@@ -1009,7 +1113,7 @@ export function buildProjections(
 
     const oddsLine = odds
       ? buildWindowStatline(
-          minutes, player.position, rates, attack, team, cfg, volumeRates[i],
+          minutes, player.position, effRates, attack, team, cfg, volumeRates[i],
           clubContexts.get(player.team)!, player.team, player.id, odds,
         )
       : undefined;
@@ -1045,7 +1149,7 @@ export function buildProjections(
     const tCfg = cfg.tournament;
     const durabilityReasons = {
       thinMinutesShare: minutes / cfg.minutes.maxMinutes < tCfg.minutesShareRiskThreshold,
-      lowStartFraction: rates.startFraction < tCfg.startFractionRiskThreshold,
+      lowStartFraction: effRates.startFraction < tCfg.startFractionRiskThreshold,
       highUnusedSubs: (rates.unusedSubsPer90 ?? 0) > tCfg.unusedSubsRiskPer90,
     };
     const durabilityRisk =
@@ -1082,6 +1186,13 @@ export function buildProjections(
       congestionApplied: congestionApplied[i],
       teamContext: team,
     };
+    if (actuals) {
+      projection.actualsBlend = {
+        played: actuals.teams.get(player.team)?.played ?? 0,
+        minutes: pa?.minutes ?? 0,
+        weight: minutesWeightByPlayer[i],
+      };
+    }
     if (odds) {
       const fixtureOdds = clubContexts.get(player.team)!.windowFixtures
         .map((fixture) => fixture.id == null ? undefined : odds.fixtures.get(fixture.id))
@@ -1089,7 +1200,7 @@ export function buildProjections(
       const playerOdds = fixtureOdds?.player.get(player.id);
       const teamOdds = fixtureOdds?.teams.get(player.team);
       projection.oddsPoints = oddsPoints!;
-      const csEligible = player.position === 'G' ? 0.95 : player.position === 'D' ? 0.25 + 0.75 * rates.startFraction : 0;
+      const csEligible = player.position === 'G' ? 0.95 : player.position === 'D' ? 0.25 + 0.75 * effRates.startFraction : 0;
       const defensive = player.position === 'G' || player.position === 'D';
       const oddsCleanSheets = teamOdds?.cleanSheets;
       projection.odds = {
