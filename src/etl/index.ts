@@ -23,6 +23,7 @@ import { applyFbrefEnrichment } from './fbref-merge.js';
 import { readFbrefCache } from './fbref.js';
 import { applyPlEnrichment, readPlCache } from './pl-stats.js';
 import { readOverrides } from './match.js';
+import { applyPositionOverride } from './position-overrides.js';
 import { FALSE_NINE, modelConfigFor, replacementConfigFor, resolveContest } from '../contest/profiles.js';
 import { buildProjections } from '../model/project.js';
 import { buildAsOf, decimalOrNull, finishedEventNumbers, toGwActuals } from './actuals.js';
@@ -86,7 +87,9 @@ function toSnapshotPlayer(
     id: String(element.id),
     name: element.web_name,
     fullName: `${element.first_name} ${element.second_name}`.trim(),
-    position: toPosition(element.element_type),
+    // FPL is the default; checked-in exceptions correct confirmed Underdog
+    // eligibility differences only after the normal element_type mapping.
+    position: applyPositionOverride(String(element.id), toPosition(element.element_type)),
     team: teamShortName,
     price: element.now_cost / 10,
     status: element.status as SnapshotPlayer['status'],
