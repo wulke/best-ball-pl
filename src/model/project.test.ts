@@ -8,7 +8,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildProjections, replacementDepth } from './project.js';
-import { DEFAULT_MODEL_CONFIG, DEFAULT_REPLACEMENT, type ReplacementConfig } from './config.js';
+import { DEFAULT_MODEL_CONFIG, DEFAULT_REPLACEMENT, type ModelConfig, type ReplacementConfig } from './config.js';
+import type { PlayerProjection } from './types.js';
 import type { Position, PlayerStatus, SeasonStatLine, SnapshotPlayer } from '../etl/types.js';
 
 function season(overrides: Partial<SeasonStatLine> & { season: string; minutes: number }): SeasonStatLine {
@@ -329,4 +330,179 @@ test('a shallow position compresses toward replacement faster than a deep one', 
   const fPositive = fSorted.filter((p) => p.draftValue >= 0).length;
   assert.equal(gPositive, 1, 'only the #1 keeper is at or above his 1-deep replacement level');
   assert.equal(fPositive, 3, 'the top 3 forwards are at or above their 3-deep replacement level');
+});
+
+// ---------------------------------------------------------------------------
+// Team × position-group minute caps (#83)
+// ---------------------------------------------------------------------------
+
+/** A two-season player whose recency-weighted minutes prior is exactly
+ *  (0.55 + 0.30) × minutes = 0.85 × minutes. Two seasons keep the prior
+ *  deterministic (no newcomer blend, no single-season shrink), and the
+ *  congestion haircut is disabled by runCapped, so the prior is the final
+ *  pre-cap level. */
+function cappedPlayer(id: string, team: string, position: Position, minutes: number): SnapshotPlayer {
+  return player({
+    id,
+    team,
+    position,
+    seasons: [
+      season({ season: '2025/26', minutes, starts: Math.round(minutes / 90), goals: 2 }),
+      season({ season: '2024/25', minutes, starts: Math.round(minutes / 90), goals: 2 }),
+    ],
+  });
+}
+
+/** Run with the congestion haircut disabled (exact minute assertions need the
+ *  durability prior to be the final pre-cap level) and optionally an
+ *  overridden defenderSlots. */
+function runCapped(
+  extra: SnapshotPlayer[],
+  defenderSlots?: number,
+): { projections: PlayerProjection[]; byId: Map<string, PlayerProjection> } {
+  const cfg: ModelConfig = {
+    ...DEFAULT_MODEL_CONFIG,
+    minutes: {
+      ...DEFAULT_MODEL_CONFIG.minutes,
+      congestion: { topTeams: 0, factor: 0.95 },
+      ...(defenderSlots == null ? {} : { defenderSlots }),
+    },
+  };
+  const players = [...buildTeams(), ...extra];
+  const { projections } = buildProjections(players, cfg);
+  const byId = new Map(players.map((p, i) => [p.id, projections[i]]));
+  return { projections, byId };
+}
+
+const CAP_GK = cappedPlayer('CAP-GK', 'CAP', 'G', 3420);
+const PRIOR = 0.55 * 3000 + 0.3 * 3000; // 2550 — every cappedPlayer(…, 3000)
+
+// CAP roster pieces used across the cap tests: 6 defenders at 3000 (sum
+// 15,300 > 13,680, the 4-slot D cap) plus a lone MD and FW (combined
+// 5,100 ≤ 20,520 — untouched controls on the same team).
+function capRoster(): SnapshotPlayer[] {
+  return [
+    CAP_GK,
+    ...['1', '2', '3', '4', '5', '6'].map((k) => cappedPlayer(`CAP-D${k}`, 'CAP', 'D', 3000)),
+    cappedPlayer('CAP-MD1', 'CAP', 'MD', 3000),
+    cappedPlayer('CAP-FW1', 'CAP', 'FW', 3000),
+  ];
+}
+
+test('an over-cap D group scales every defender down proportionally; GK and other groups keep their priors', () => {
+  const { byId } = runCapped(capRoster());
+  const { byId: loose } = runCapped(capRoster(), 5); // D cap 17,100 — no scaling
+
+  const dSum = 6 * PRIOR; // 15,300
+  const factor = (4 * 3420) / dSum; // 13,680 / 15,300 = 0.8941…
+  for (const k of ['1', '2', '3', '4', '5', '6']) {
+    const proj = byId.get(`CAP-D${k}`)!;
+    assert.equal(proj.minutes, Math.round(PRIOR * factor), `CAP-D${k} scaled to the D group cap share`);
+    assert.ok(proj.minutes < loose.get(`CAP-D${k}`)!.minutes, `CAP-D${k} reduced below its prior`);
+  }
+
+  // Same team, other groups: the MD+FW group (5,100) is under its 20,520 cap
+  // and the keeper job is the starts model's — neither is touched by the cap.
+  assert.equal(byId.get('CAP-MD1')!.minutes, loose.get('CAP-MD1')!.minutes);
+  assert.equal(byId.get('CAP-FW1')!.minutes, loose.get('CAP-FW1')!.minutes);
+  assert.equal(byId.get('CAP-GK')!.minutes, loose.get('CAP-GK')!.minutes);
+});
+
+test('the cap changes the level, never the rate or the within-group ranking', () => {
+  // Same roster plus one standout defender with a heavier prior — under a
+  // proportional cap the standout keeps the top spot and every defender's
+  // per-90 stays identical to an uncapped run (defenderSlots 5 ⇒ cap 17,100
+  // ≥ 15,385, no scaling).
+  const roster = [
+    CAP_GK,
+    cappedPlayer('CAP-D1', 'CAP', 'D', 3100),
+    cappedPlayer('CAP-D2', 'CAP', 'D', 3000),
+    cappedPlayer('CAP-D3', 'CAP', 'D', 3000),
+    cappedPlayer('CAP-D4', 'CAP', 'D', 3000),
+    cappedPlayer('CAP-D5', 'CAP', 'D', 3000),
+    cappedPlayer('CAP-D6', 'CAP', 'D', 3000),
+    cappedPlayer('CAP-MD1', 'CAP', 'MD', 3000),
+    cappedPlayer('CAP-FW1', 'CAP', 'FW', 3000),
+  ];
+  const { byId } = runCapped(roster);
+  const { byId: loose } = runCapped(roster, 5);
+
+  const standoutPrior = 0.55 * 3100 + 0.3 * 3100; // 2635
+  const dSum = standoutPrior + 5 * PRIOR; // 15,385
+  const factor = (4 * 3420) / dSum;
+  assert.equal(byId.get('CAP-D1')!.minutes, Math.round(standoutPrior * factor));
+  for (const k of ['2', '3', '4', '5', '6']) {
+    assert.equal(byId.get(`CAP-D${k}`)!.minutes, Math.round(PRIOR * factor));
+  }
+
+  // Level drops, rate is invariant, ranking survives.
+  assert.ok(byId.get('CAP-D1')!.minutes < loose.get('CAP-D1')!.minutes, 'standout defender capped down');
+  for (const k of ['1', '2', '3', '4', '5', '6']) {
+    const id = `CAP-D${k}`;
+    assert.ok(Math.abs(byId.get(id)!.per90 - loose.get(id)!.per90) <= 0.02, `${id} per90 invariant under the cap`);
+  }
+  assert.ok(byId.get('CAP-D1')!.minutes > byId.get('CAP-D2')!.minutes, 'proportional scaling preserves the ranking');
+
+  // Control players on the same team are byte-identical under both caps.
+  assert.equal(byId.get('CAP-GK')!.minutes, loose.get('CAP-GK')!.minutes);
+  assert.equal(byId.get('CAP-MD1')!.minutes, loose.get('CAP-MD1')!.minutes);
+  assert.equal(byId.get('CAP-FW1')!.minutes, loose.get('CAP-FW1')!.minutes);
+});
+
+test('an over-cap MD+FW group scales proportionally as one formation-flexible group', () => {
+  // 5 MD + 4 FW at 2550 each: combined 22,950 > 20,520 (the 6 non-defender
+  // outfield slots). The mid/forward split is formation-flexible, so both
+  // positions share one cap and one factor.
+  const roster = [
+    CAP_GK,
+    ...['1', '2', '3', '4'].map((k) => cappedPlayer(`CAP-D${k}`, 'CAP', 'D', 3000)),
+    ...['1', '2', '3', '4', '5'].map((k) => cappedPlayer(`CAP-MD${k}`, 'CAP', 'MD', 3000)),
+    ...['1', '2', '3', '4'].map((k) => cappedPlayer(`CAP-FW${k}`, 'CAP', 'FW', 3000)),
+  ];
+  const { byId } = runCapped(roster);
+
+  const mdfwSum = 9 * PRIOR; // 22,950
+  const factor = (6 * 3420) / mdfwSum; // 20,520 / 22,950 = 0.8941…
+  for (const id of ['CAP-MD1', 'CAP-MD2', 'CAP-MD3', 'CAP-MD4', 'CAP-MD5', 'CAP-FW1', 'CAP-FW2', 'CAP-FW3', 'CAP-FW4']) {
+    assert.equal(byId.get(id)!.minutes, Math.round(PRIOR * factor), `${id} scaled to the MD+FW cap share`);
+  }
+  // The D group (4 × 2550 = 10,200 ≤ 13,680) is untouched.
+  for (const k of ['1', '2', '3', '4']) {
+    assert.equal(byId.get(`CAP-D${k}`)!.minutes, Math.round(PRIOR));
+  }
+});
+
+test('under-cap teams are never scaled up — the constraint is a ceiling, not a target', () => {
+  // 4 D + 2 MD + 2 FW at 2550: every group sum sits under its cap, so the
+  // priors pass through untouched (a thin snapshot must not invent minutes).
+  const roster = [
+    CAP_GK,
+    ...['1', '2', '3', '4'].map((k) => cappedPlayer(`CAP-D${k}`, 'CAP', 'D', 3000)),
+    cappedPlayer('CAP-MD1', 'CAP', 'MD', 3000),
+    cappedPlayer('CAP-MD2', 'CAP', 'MD', 3000),
+    cappedPlayer('CAP-FW1', 'CAP', 'FW', 3000),
+    cappedPlayer('CAP-FW2', 'CAP', 'FW', 3000),
+  ];
+  const { byId } = runCapped(roster);
+  for (const id of [
+    'CAP-D1', 'CAP-D2', 'CAP-D3', 'CAP-D4',
+    'CAP-MD1', 'CAP-MD2', 'CAP-FW1', 'CAP-FW2',
+  ]) {
+    assert.equal(byId.get(id)!.minutes, Math.round(PRIOR), `${id} untouched below the cap`);
+  }
+});
+
+test('an over-cap team respects the full-squad ceiling 11 × 90 × 38', () => {
+  // Worst case: over-cap D AND over-cap MD+FW simultaneously — the group
+  // caps sum to 37,620, so the squad total must sit at or under it even with
+  // a full club of starters.
+  const roster = [
+    CAP_GK,
+    ...['1', '2', '3', '4', '5', '6'].map((k) => cappedPlayer(`CAP-D${k}`, 'CAP', 'D', 3000)),
+    ...['1', '2', '3', '4', '5'].map((k) => cappedPlayer(`CAP-MD${k}`, 'CAP', 'MD', 3000)),
+    ...['1', '2', '3', '4'].map((k) => cappedPlayer(`CAP-FW${k}`, 'CAP', 'FW', 3000)),
+  ];
+  const { byId } = runCapped(roster);
+  const squadTotal = roster.reduce((sum, p) => sum + byId.get(p.id)!.minutes, 0);
+  assert.ok(squadTotal <= 11 * 3420, `squad total ${squadTotal} ≤ 37,620`);
 });

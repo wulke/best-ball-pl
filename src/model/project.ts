@@ -844,6 +844,42 @@ export function buildProjections(
     });
   }
 
+  // Team × position-group minute caps (#83): the per-player expectations
+  // above were estimated independently — each player's own durability
+  // history, no knowledge of who else holds their slot — but a club fields
+  // exactly 11 players, so its realized season total is exactly
+  // 11 × 90 × 38 minutes and Σ E[player minutes] = E[team total] must
+  // respect that ceiling. GK is already exact (the starts model above hands
+  // the club's job out exactly once). For outfield, cap each team's D group
+  // at defenderSlots × SEASON_MINUTES and the MD+FW group (combined — the
+  // mid/forward split is formation-flexible, only the 6 non-defender
+  // outfield slots are fixed) at the remaining 11 − 1 − defenderSlots
+  // slots. Players in an over-cap group scale down proportionally: the cap
+  // imposes the level the club can physically hand out, it does not
+  // re-rank who wins each slot — that stays the durability prior's job.
+  // Scale-down only, never up: under-cap teams (thin snapshots, youth
+  // minutes) keep their numbers, the constraint is a ceiling not a target.
+  // Caps apply to the season minutes, so every fixture window inherits the
+  // corrected level as its prorated 1/n share.
+  const teamGroupMinutes = new Map<string, { d: number; mdfw: number }>();
+  players.forEach((p, i) => {
+    if (p.position === 'G') return;
+    const g = teamGroupMinutes.get(p.team) ?? { d: 0, mdfw: 0 };
+    if (p.position === 'D') g.d += minutesByPlayer[i];
+    else g.mdfw += minutesByPlayer[i];
+    teamGroupMinutes.set(p.team, g);
+  });
+  const defenderCap = cfg.minutes.defenderSlots * SEASON_MINUTES;
+  const midFwdCap = (11 - 1 - cfg.minutes.defenderSlots) * SEASON_MINUTES;
+  players.forEach((p, i) => {
+    if (p.position === 'G') return;
+    const g = teamGroupMinutes.get(p.team)!; // every outfield player added above
+    const isDefender = p.position === 'D';
+    const sum = isDefender ? g.d : g.mdfw;
+    const cap = isDefender ? defenderCap : midFwdCap;
+    if (sum > cap) minutesByPlayer[i] *= cap / sum;
+  });
+
   // Position means from established players (≥900 recency-weighted minutes).
   const sums: Record<Position, { goals: number; assists: number; n: number }> = {
     G: { goals: 0, assists: 0, n: 0 },

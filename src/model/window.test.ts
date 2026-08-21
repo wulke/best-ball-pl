@@ -145,18 +145,46 @@ test('season window reproduces the committed snapshot projections bit-for-bit', 
   let compared = 0;
   snapshot.players.forEach((p, i) => {
     assert.ok(p.projection, `${p.name} carries a committed projection`);
-    // draftValue/overallRankByValue (VORP) postdate the committed snapshot —
-    // strip them from the fresh side until the next `npm run etl` backfills
-    // them, so this guard still catches drift in every other field.
-    const { draftValue: _dv, overallRankByValue: _orv, ...fresh } = projections[i];
     assert.deepStrictEqual(
-      fresh,
+      projections[i],
       p.projection,
       `${p.name}: window-parametric season projection must equal the committed projection`,
     );
     compared += 1;
   });
   assert.ok(compared > 500, `expected the full pool, compared ${compared}`);
+});
+
+test('committed projections respect the team × position-group minute caps (#83)', () => {
+  // The physical constraint: 11 players on the pitch × 90 min × 38 games =
+  // 37,620 minutes per club. The committed snapshot's per-player expectations
+  // must jointly respect it — D ≤ 4 slots, MD+FW ≤ 6 slots (formation-
+  // flexible split), GK already exact via the starts model — and the group
+  // caps sum to the full-squad ceiling.
+  const snapshot = loadSnapshot();
+  const sums = new Map<string, { g: number; d: number; mdfw: number }>();
+  snapshot.players.forEach((p) => {
+    assert.ok(p.projection, `${p.name} carries a committed projection`);
+    const row = sums.get(p.team) ?? { g: 0, d: 0, mdfw: 0 };
+    const m = p.projection!.minutes;
+    if (p.position === 'G') row.g += m;
+    else if (p.position === 'D') row.d += m;
+    else row.mdfw += m;
+    sums.set(p.team, row);
+  });
+  const dCap = 4 * 3420;
+  const mdfwCap = 6 * 3420;
+  // Per-player Math.round on the reported minutes can drift a team a couple
+  // of minutes over the exact unrounded cap — slack of 5 per group / 10 total
+  // absorbs that while still catching any real constraint violation.
+  const SLACK = { group: 5, total: 10 };
+  for (const [team, row] of sums) {
+    assert.ok(row.g <= 3420 + SLACK.group, `${team}: GK minutes ${row.g} ≤ one 38-game starting job`);
+    assert.ok(row.d <= dCap + SLACK.group, `${team}: D minutes ${row.d} ≤ ${dCap} (4 slots)`);
+    assert.ok(row.mdfw <= mdfwCap + SLACK.group, `${team}: MD+FW minutes ${row.mdfw} ≤ ${mdfwCap} (6 slots)`);
+    const total = row.g + row.d + row.mdfw;
+    assert.ok(total <= 11 * 3420 + SLACK.total, `${team}: squad total ${total} ≤ 37,620`);
+  }
 });
 
 test('a difficulty-varied calendar sums to the same season output as a flat one (factors average 1)', () => {

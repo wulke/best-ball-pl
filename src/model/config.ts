@@ -135,6 +135,17 @@ export type MinutesConfig = {
    *  status. floor/cap clamp the estimate; minSamples guards thin positions
    *  (falls back to noHistoryMinutes). */
   newcomer: { discount: number; floorMinutes: number; capMinutes: number; minSamples: number };
+  /** Outfield position-group minute caps (#83): a club fields exactly 11
+   *  players, so its realized season total is exactly 11 × 90 × 38 minutes
+   *  and the independently-estimated per-player expectations must be scaled
+   *  down when a group's sum would exceed the club's slots. Defenders on the
+   *  pitch per match (FPL classification — the back line; 4 for most teams,
+   *  with 3-ATB clubs whose wing-backs read as D running slightly over, a
+   *  league-constant approximation whose residual the total cap catches).
+   *  The MD+FW group takes the remaining 11 − 1 − defenderSlots slots: the
+   *  mid/forward split is formation-flexible, only the non-defender outfield
+   *  count is fixed. */
+  defenderSlots: number;
 };
 
 export const DEFAULT_MINUTES: MinutesConfig = {
@@ -144,6 +155,7 @@ export const DEFAULT_MINUTES: MinutesConfig = {
   statusFactors: { i: 0.5, d: 0.8 },
   maxMinutes: 3420,
   congestion: { topTeams: 6, factor: 0.95 },
+  defenderSlots: 4,
   gkStartsPerSeason: 38,
   gkCredibleStarts: 8,
   newcomer: { discount: 0.85, floorMinutes: 400, capMinutes: 3300, minSamples: 8 },
