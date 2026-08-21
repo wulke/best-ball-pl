@@ -15,7 +15,9 @@ const bulk = [{ id: 'event-1', commence_time: fixture.kickoff, home_team: 'Evert
 
 test('buildOddsSlate stores raw team and eligible-player quotes under FPL ids', () => {
   const details = new Map([['event-1', { ...bulk[0], bookmakers: [{ key: 'fanduel', title: 'FanDuel', markets: [
-    { key: 'player_goal_scorer_anytime', outcomes: [{ name: 'Mohamed Salah', price: 2.5 }, { name: 'Unknown Player', price: 4 }] },
+    // Real API shape: anytime-goalscorer outcomes carry the player in `description`
+    // with name "Yes" — matching on name alone would drop every quote (#82 regression).
+    { key: 'player_goal_scorer_anytime', outcomes: [{ name: 'Yes', description: 'Mohamed Salah', price: 2.5 }, { name: 'Yes', description: 'Unknown Player', price: 4 }, { name: 'Yes', price: 9 }] },
     { key: 'player_assists', outcomes: [{ name: 'Over', description: 'Mohamed Salah', point: 0.5, price: 2.2 }, { name: 'Under', description: 'Mohamed Salah', point: 0.5, price: 1.6 }] },
   ] }] }]]);
   const result = buildOddsSlate('daily', '2026-08-22', [fixture], players, bulk, details, '2026-08-20T00:00:00Z');

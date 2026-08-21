@@ -2,7 +2,9 @@
 import type { SnapshotFixture, SnapshotPlayer } from './types.js';
 
 export const ODDS_SCHEMA_VERSION = 1;
-/** `description` identifies the player on Odds API O/U player markets. */
+/** The player is carried in `description` on Odds API soccer prop markets —
+ * anytime-goalscorer outcomes are { name: "Yes", description: "<player>" } and
+ * assists O/U are { name: "Over"/"Under", description: "<player>" }. */
 export type OddsOutcome = { name: string; price: number; point?: number; description?: string };
 export type OddsMarket = { key: string; outcomes: OddsOutcome[] };
 export type OddsBookmaker = { key: string; title: string; markets: OddsMarket[] };
@@ -64,8 +66,11 @@ export function buildOddsSlate(profileId: string, slateDate: string, fixtures: S
     const props = new Map<string, OddsSlate['fixtures'][number]['playerProps'][number]>();
     for (const book of eventDetails.get(bulk.id)?.bookmakers ?? []) for (const market of book.markets) {
       if (market.key !== 'player_goal_scorer_anytime' && market.key !== 'player_assists') continue;
+      // Both prop markets name the player in `description` (assists: Over/Under
+      // in `name`; anytime goalscorer: "Yes" in `name`). Fall back to `name`
+      // defensively for any book that inlines the player name there instead.
       for (const outcome of market.outcomes) {
-        const player = playerByOddsName(players, market.key === 'player_assists' ? outcome.description ?? '' : outcome.name);
+        const player = playerByOddsName(players, outcome.description ?? outcome.name);
         if (!player || !finitePrice(outcome.price)) continue;
         const prop = props.get(player.id) ?? { playerId: player.id, anytimeGoalscorer: [], assists: [] };
         if (market.key === 'player_goal_scorer_anytime') prop.anytimeGoalscorer.push({ bookmaker: book.key, price: outcome.price });
