@@ -1,4 +1,7 @@
-/** CLI entry point for `npm run odds -- --profile <daily-profile-id>` (#61). */
+/** CLI entry point for `npm run odds -- --profile <daily-profile-id>` (#61).
+ * Loads `.env` from the repo root (gitignored) if present, so the manual
+ * weekly ritual works without exporting ODDS_API_KEY first. */
+import 'dotenv/config';
 import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
 import { profileById, resolveContest } from '../contest/profiles.js';
 import { buildOddsSlate, type OddsEvent } from './odds.js'; import type { Snapshot } from './types.js';
