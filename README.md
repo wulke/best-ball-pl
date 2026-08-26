@@ -40,7 +40,7 @@ npm run dev
 | `npm run dev` | Vite dev server for the cheat-sheet UI |
 | `npm run build` | Build the static UI bundle into `dist/ui/` (includes snapshot copy) |
 | `npm run preview` | Preview the built bundle locally |
-| `npm test` | Parser/matcher, headline-driver, window-projection pool, model, window, and contest-profile tests |
+| `npm test` | Data-as-of stamp, parser/matcher, headline-driver, window-projection pool, model, window, and contest-profile tests |
 | `npm run typecheck` | TypeScript check across the repo |
 
 ## Contest profiles (`src/contest/`)
@@ -63,7 +63,9 @@ Each Saturday's Free Kick slate is a new profile, hand-added from the contest pa
 
 A profile's `WindowSpec` (`season` | `slate` | `fixtures`) resolves via `resolveContest(profile, snapshot.fixtures)` to an explicit fixture list — never a bare GW label; any window is a sum over its fixtures. The **active** profile is the UI's choice, persisted as an id in localStorage (`bbpl-profile`, default False Nine) and resolved by `src/ui/useContestProfile.ts`.
 
-The Sheet tab's header carries a profile switcher (a `<select>` next to the theme toggle, shown once more than one profile is registered). Switching profiles re-ranks the board: False Nine reads the committed season projections as-is; any other profile is window-projected and pool-restricted **client-side** (`src/ui/windowProjections.ts`, same math as `npm run model -- --profile <id>`) — the committed snapshot itself is never touched. Off-board marks, my-roster, and the queue are namespaced per profile (`bbpl-drafted`/`bbpl-mine`/`bbpl-queue`, suffixed `:<profile-id>` for anything but False Nine) so switching to a slate contest never tramples the flagship's marks. Default stays False Nine until explicitly switched — today's pre-draft experience is unchanged.
+The Sheet tab's header carries a profile switcher (a `<select>` next to the theme toggle, shown once more than one profile is registered, grouped Season / Daily slates as the weekly cadence accumulates). Switching profiles re-ranks the board: False Nine reads the committed season projections as-is; any other profile is window-projected and pool-restricted **client-side** (`src/ui/windowProjections.ts`, same math as `npm run model -- --profile <id>`) — the committed snapshot itself is never touched. Off-board marks, my-roster, and the queue are namespaced per profile (`bbpl-drafted`/`bbpl-mine`/`bbpl-queue`, suffixed `:<profile-id>` for anything but False Nine) so switching to a slate contest never tramples the flagship's marks. Default stays False Nine until explicitly switched — today's pre-draft experience is unchanged.
+
+**Data-as-of stamp (#44):** the header's meta line reports the committed snapshot's freshness under the active profile (`src/ui/asOfStamp.ts`, fed by the snapshot's `asOf` block): the scheduled refresh's pull time (`fetchedAt`), which GW's actuals are folded in (`actualsThrough`), and either the next kickoff (season) or the slate's close time (daily — it leads the line, the entry-cutoff and lineup-pull clock). A finished slate reads `closed 22 Aug` dimly; a pull over 30h old (daily ~06:00 UTC cron plus one whole missed run) turns the whole line negative with a `stale` marker — the visible freshness cue the ETL-time guardrails (#41) can't give mid-draft.
 
 ## Window-parametric projections (#42)
 

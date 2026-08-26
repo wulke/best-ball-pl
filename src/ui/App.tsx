@@ -15,6 +15,7 @@ import { defaultCompetition } from './drafts/types.js';
 import { ScarcityView } from './ScarcityView.js';
 import { useContestProfile } from './useContestProfile.js';
 import { useProfilePool } from './useProfilePool.js';
+import { dataAsOfStamp } from './asOfStamp.js';
 import { useStartOverrides } from './useStartOverrides.js';
 import { hasOddsCoverage } from './windowProjections.js';
 import { FALSE_NINE, profileById, resolveContest } from '../contest/profiles.js';
@@ -187,6 +188,15 @@ export function App() {
   // pool's window-projected p50 goal sums, so the strip reflects the same
   // opponent-adjusted, start-aware, odds-blended math the board ranks on.
   // False Nine's 380-fixture window has no strip — the flagship stays pixel-identical.
+  /** The header's data-as-of stamp (#44): the committed snapshot's freshness
+   *  under the active profile — daily lines lead with the slate's close time
+   *  (entry cutoff + lineup-pull clock), season lines with the pull time;
+   *  >30h-old data renders negative with a `stale` marker. */
+  const asOf = useMemo(
+    () => (snapshot ? dataAsOfStamp({ profile, asOf: snapshot.asOf, playerCount: players.length }) : null),
+    [snapshot, profile, players.length],
+  );
+
   const matchups = useMemo(
     () => (windowFixtures.length > 0
       ? matchupContext(players, windowFixtures, hasOddsCoverage(odds) ? odds : undefined)
@@ -309,9 +319,14 @@ export function App() {
             </p>
             <h1 className="font-condensed text-2xl font-bold">
               {view === 'drafts' ? 'Draft Rooms' : view === 'exposure' ? 'Exposure' : 'Cheat Sheet'}
-              {view !== 'drafts' && view !== 'exposure' && snapshot && (
-                <span className="ml-2 align-middle font-condensed text-sm font-semibold text-muted tabular-nums">
-                  {snapshot.generated_at.slice(0, 10)} · {players.length} players
+              {view !== 'drafts' && view !== 'exposure' && asOf && (
+                <span
+                  title="Data-as-of — when the committed snapshot last pulled FPL (scheduled refresh ~daily 06:00 UTC). Red = the pull is over 30h old."
+                  className={`ml-2 align-middle font-condensed text-sm font-semibold tabular-nums ${
+                    asOf.stale ? 'text-negative' : 'text-muted'
+                  }`}
+                >
+                  {asOf.text}
                 </span>
               )}
             </h1>
@@ -343,11 +358,19 @@ export function App() {
                 title="Contest profile — rankings, roster shape, and marks are scoped to the active profile"
                 className="rounded border border-default bg-surface px-2 py-1 text-xs font-semibold text-secondary transition hover:border-strong hover:text-primary focus:border-strong focus:outline-none"
               >
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
+                {(['season', 'daily'] as const).map((kind) => {
+                  const group = profiles.filter((p) => p.kind === kind);
+                  if (group.length === 0) return null;
+                  return (
+                    <optgroup key={kind} label={kind === 'season' ? 'Season' : 'Daily slates'}>
+                      {group.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
             )}
             <div className="flex items-center gap-1 rounded border border-default p-0.5">
