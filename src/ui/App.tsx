@@ -15,10 +15,12 @@ import { defaultCompetition } from './drafts/types.js';
 import { ScarcityView } from './ScarcityView.js';
 import { useContestProfile } from './useContestProfile.js';
 import { hasOddsCoverage, poolForProfile } from './windowProjections.js';
-import { FALSE_NINE } from '../contest/profiles.js';
+import { FALSE_NINE, resolveContest } from '../contest/profiles.js';
 import type { OddsSlate } from '../etl/odds.js';
 import type { LineupSlate } from '../model/lineups.js';
 import { loadStartOverrides } from './startOverrides.js';
+import { matchupContext } from './matchupContext.js';
+import { MatchupStrip } from './MatchupStrip.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
@@ -49,6 +51,13 @@ export function App() {
   const [queueOnly, setQueueOnly] = useState(false);
   const [liveOpen, setLiveOpen] = useState(true);
   const [carryOpen, setCarryOpen] = useState(true);
+  const [matchupOpen, setMatchupOpen] = useState(() => {
+    try {
+      return localStorage.getItem('bbpl-matchup-strip') !== '0'; // default open
+    } catch {
+      return true;
+    }
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { profile, setProfile, profiles } = useContestProfile();
@@ -156,6 +165,28 @@ export function App() {
     () => (snapshot ? poolForProfile(snapshot, profile, odds, lineups, startOverrides) : []),
     [snapshot, profile, odds, lineups, startOverrides],
   );
+
+  // Per-fixture matchup context for daily profiles (#108): λs come from the
+  // pool's window-projected p50 goal sums, so the strip reflects the same
+  // opponent-adjusted, start-aware, odds-blended math the board ranks on.
+  // False Nine's 380-fixture window has no strip — the flagship stays pixel-identical.
+  const matchups = useMemo(
+    () => (snapshot && profile.kind === 'daily'
+      ? matchupContext(players, resolveContest(profile, snapshot.fixtures).fixtures, hasOddsCoverage(odds) ? odds : undefined)
+      : []),
+    [snapshot, profile, players, odds],
+  );
+
+  const toggleMatchupStrip = useCallback(() => {
+    setMatchupOpen((open) => {
+      try {
+        localStorage.setItem('bbpl-matchup-strip', open ? '0' : '1');
+      } catch {
+        // Storage unavailable — the toggle still works for this session.
+      }
+      return !open;
+    });
+  }, []);
 
   /** The carry-forward pin: the latest room's flags + note, read mid-draft. */
   const carryPin = useMemo(() => {
@@ -489,6 +520,12 @@ export function App() {
                 {visible.length} shown · {drafted.size} off board · {mine.size} mine · {queue.size} queued
               </span>
             </div>
+
+            {matchups.length > 0 && (
+              <div className="sticky top-11 z-10 bg-app print:hidden">
+                <MatchupStrip matchups={matchups} open={matchupOpen} onToggle={toggleMatchupStrip} />
+              </div>
+            )}
 
             <PlayerTable
               players={visible}
