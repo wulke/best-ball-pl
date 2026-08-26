@@ -8,8 +8,10 @@ import { LivePanel } from './LivePanel.js';
 import { DraftsView } from './drafts/DraftsView.js';
 import { ExposureView } from './drafts/ExposureView.js';
 import { CarryCard } from './drafts/CarryCard.js';
+import { computeExposure } from './drafts/exposure.js';
 import { reviewRoom } from './drafts/review.js';
 import { useRooms } from './drafts/store.js';
+import { defaultCompetition } from './drafts/types.js';
 import { ScarcityView } from './ScarcityView.js';
 import { useContestProfile } from './useContestProfile.js';
 import { hasOddsCoverage, poolForProfile } from './windowProjections.js';
@@ -57,6 +59,21 @@ export function App() {
   const { drafted, toggle, clear } = useDrafted(namespace);
   const { mine, queue, toggleMine, toggleQueue, clearAll, clearQueue } = useDraftSession(namespace);
   const { rooms, upsert, remove } = useRooms();
+
+  /** Exposure displayed on the sheet is deliberately scoped to the active
+   * profile's derived room label, even before a room for that profile exists. */
+  const exposureCompetition = defaultCompetition(profile);
+  const exposureByPlayer = useMemo(
+    () => new Map(
+      computeExposure(rooms)
+        .filter((entry) => entry.competition === exposureCompetition)
+        .map((entry) => [
+          entry.playerId,
+          { percent: entry.percent, pickedRooms: entry.pickedRooms, totalRooms: entry.totalRooms },
+        ]),
+    ),
+    [rooms, exposureCompetition],
+  );
 
   // Scarcity brings its own tall panel — collapse Live Draft to make room when switching to it.
   useEffect(() => {
@@ -484,6 +501,8 @@ export function App() {
               groupByTier={positionFilter !== 'ALL'}
               rankMode={rankMode}
               showOddsPoints={profile.window.kind === 'slate' && hasOddsCoverage(odds)}
+              exposureByPlayer={exposureByPlayer}
+              exposureCompetition={exposureCompetition}
             />
           </>
         )}
