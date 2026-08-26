@@ -179,8 +179,48 @@ export const FREE_KICK_GW1_SAT: ContestProfile = {
   },
 };
 
+/**
+ * Profile #3 — The Free Kick (Underdog FIFA Daily V2, real EPL fixtures),
+ * GW2 Saturday Main slate: the four 2026-08-29 fixtures kicking off after
+ * the 11:11Z close. Unlike GW1 there is no pre-close exclusion — every
+ * Saturday game this week is post-close, with NFO-LIV's 11:30Z kickoff
+ * drafted 19 minutes after the contest locks. Same ruleset family as GW1:
+ * roster 1 G / 1 D / 1 MD / 1 FW / 2 FLEX = 6 rounds, **no bench**, draft
+ * size 6, 30-second clock, pool = the slate's 8 clubs, scoring
+ * primary-confirmed identical to False Nine. Contest deltas vs GW1: a
+ * 3-entry max (GW1: 20) and a more top-heavy single prize ($300 of $2,000
+ * = 15% to first vs $1k of $10k = 10%) — same GPP direction, so the #46
+ * short-window calibration carries over unchanged (still one-slate
+ * provisional; retune once a few dailies have results). Odds and lineup
+ * assets key off this id: data/odds/free-kick-gw2-sat.json,
+ * data/lineups/free-kick-gw2-sat.json.
+ */
+export const FREE_KICK_GW2_SAT: ContestProfile = {
+  id: 'free-kick-gw2-sat',
+  name: 'The Free Kick — GW2 Saturday Main slate (Aug 29)',
+  kind: 'daily',
+  window: { kind: 'slate', date: '2026-08-29', notBefore: '11:11:00Z' },
+  scoring: DEFAULT_SCORING,
+  roster: {
+    starters: { G: 1, D: 1, MD: 1, FW: 1 },
+    flex: 2,
+    rosterSize: 6, // no bench — 6 drafted, 6 start
+    targets: { G: 1, D: 1, MD: 1, FW: 1 },
+  },
+  draft: { draftSize: 6, clockSeconds: 30 },
+  tournament: { ...DEFAULT_TOURNAMENT, ceilingWeight: 0.4 },
+  tiering: { ...DEFAULT_TIERING, minGap: 1.0, maxTiers: 4, maxTierSize: 8 },
+  scenarios: {
+    p10: { ...DEFAULT_SCENARIOS.p10, burstFactor: 0.65 },
+    p90: {
+      ...DEFAULT_SCENARIOS.p90,
+      burstByPosition: { G: 1.1, D: 1.45, MD: 1.8, FW: 2.0 },
+    },
+  },
+};
+
 /** The registry — the switcher's option list, in display order. */
-export const PROFILES: readonly ContestProfile[] = [FALSE_NINE, FREE_KICK_GW1_SAT];
+export const PROFILES: readonly ContestProfile[] = [FALSE_NINE, FREE_KICK_GW1_SAT, FREE_KICK_GW2_SAT];
 
 /** Look up a profile by id. Throws on unknown ids — fail loudly, never silently default. */
 export function profileById(id: string): ContestProfile {
