@@ -53,10 +53,10 @@ Every contest the tool supports is a **contest profile** (`src/contest/profiles.
 
 ### Adding a weekly slate profile (manual recipe, #52)
 
-Each Saturday's Free Kick slate is a new profile, hand-added from the contest page (automation undecided, #52):
+Each Saturday's Free Kick slate is a new profile, hand-added from the contest page (decided **manual** in #52 — the lobby API surfaces the close time but not the fixture list, so copy/paste from the Underdog modal is the process; assist/automation revisited in the map's fog):
 
 1. Capture from the Underdog contest page: close time (convert to UTC), game list, roster, scoring table, prize shape, entry max.
-2. Verify the game list against the FPL calendar (committed `snapshot.json` fixtures or `fixtures/?event=N` live): every game must match a fixture, and any same-day fixture kicking off **before** close is excluded from the slate (GW1's HUL-MUN) — if one appears, double-check the close-time conversion before excluding.
+2. Verify the game list against the FPL calendar (committed `snapshot.json` fixtures or `fixtures/?event=N` live): every game must match a fixture, and any same-day fixture kicking off **before** close is excluded from the slate (GW1's HUL-MUN) — if one appears, double-check the close-time conversion before excluding. **Count check**: the modal's game list must equal the calendar's post-close count for that date — if the calendar shows *more*, Underdog bundled a subset and the `slate` predicate would silently over-include: pin the exact ids (`{ kind: 'fixtures', ids: [...] }`) instead.
 3. Add the `ContestProfile` to `src/contest/profiles.ts` (id `free-kick-gw<N>-sat`, window `{ kind: 'slate', date, notBefore: '<close>Z' }`), carrying the previous slate's short-window knobs unless the prize structure moved materially.
 4. Extend `src/contest/profiles.test.ts` (resolved fixture ids + clubs, registry assertion) and this README's profile list.
 5. Later in the week, pull the per-slate assets: `npm run odds -- --profile <id>` (key from the shell or `.env`) and `npm run lineups -- --profile <id>` (no key — run ~30–60 min before the draft close so late-kickoff lists have maximum time to publish).
