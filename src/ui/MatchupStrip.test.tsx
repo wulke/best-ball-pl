@@ -49,8 +49,8 @@ test('open strip renders score, probabilities, CS/O2.5, and MKT for priced fixtu
   assert.ok(html.includes('bg-surface-raised'));
   assert.ok(html.includes('2.1–0.9'));
   // Side hues: home info-blue, away positive-green — teams, bar, and %s agree.
-  assert.ok(html.includes('<span class="text-info">LIV</span>'));
-  assert.ok(html.includes('<span class="text-positive">NFO</span>'));
+  assert.match(html, /<button[^>]*class="text-info[^>]*>LIV<\/button>/);
+  assert.match(html, /<button[^>]*class="text-positive[^>]*>NFO<\/button>/);
   assert.ok(html.includes('bg-info'));
   assert.ok(html.includes('bg-positive'));
   assert.ok(html.includes('<span class="text-info">62%</span>'));
@@ -94,7 +94,7 @@ test('team names are individually toggleable and show their excluded state', () 
     />,
   );
 
-  assert.match(html, /aria-label="Hide LIV players from the sheet"/);
+  assert.match(html, /aria-label="Show LIV players from the sheet"/);
   assert.match(html, /aria-pressed="true"/);
   assert.match(html, /line-through/);
   assert.match(html, /aria-label="Hide NFO players from the sheet"/);
