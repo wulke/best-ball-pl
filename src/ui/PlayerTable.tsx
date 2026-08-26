@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import type { PlayerStatus, SnapshotPlayer } from './types.js';
+import { useMemo, useState } from 'react';
+import type { PlayerStatus, SnapshotFixture, SnapshotPlayer } from './types.js';
 import { Tooltip } from './Tooltip.js';
 import { PlayerBreakdownModal } from './PlayerBreakdownModal.js';
+import { startCallForFixture, type LineupSlate, type StartOverrideMap } from '../model/lineups.js';
+import type { ManualStartCall } from './startOverrides.js';
 
 /**
  * The ranked tier table — the cheat sheet itself.
@@ -43,6 +45,22 @@ export type PlayerExposureBadge = {
   totalRooms: number;
 };
 
+/** The slate start-override surface (#98): everything a row's Min column needs
+ *  to show each player's start call and take a manual one. Present only on
+ *  daily profiles — the False Nine season view never mounts it. */
+export type StartSurface = {
+  /** The profile's resolved window fixtures (a date slate: one per club). */
+  fixtures: SnapshotFixture[];
+  /** The pulled lineup asset, placeholder included — the call contract treats
+   *  an unpulled asset (fetchedAt null) as no lineup signal. */
+  lineups?: LineupSlate;
+  /** Live manual calls (bbpl-start-overrides:<profile-id>). */
+  overrides: StartOverrideMap;
+  /** Chip click: cycle none → starter → bench → none, or apply an explicit
+   *  call (`null` clears back to lineup/model precedence). */
+  onSetOverride: (playerId: string, fixtureId: number, call?: ManualStartCall) => void;
+};
+
 type Row = {
   player: SnapshotPlayer;
   /** Rank shown: posRank in a position view, overall rank (by rankMode) otherwise. */
@@ -66,6 +84,8 @@ type Props = {
   rankMode: RankMode;
   /** A single-day slate can carry the optional odds-blended companion score. */
   showOddsPoints: boolean;
+  /** Slate start surface (#98): Min column + start chips + coverage markers. */
+  startSurface?: StartSurface;
   /** Exposure lookup scoped by App to the active profile's competition label. */
   exposureByPlayer: ReadonlyMap<string, PlayerExposureBadge>;
   exposureCompetition: string;
@@ -87,10 +107,17 @@ export function PlayerTable({
   groupByTier,
   rankMode,
   showOddsPoints,
+  startSurface,
   exposureByPlayer,
   exposureCompetition,
 }: Props) {
   const [breakdownPlayer, setBreakdownPlayer] = useState<SnapshotPlayer | null>(null);
+  // Fixture labels for the breakdown modal's start-call audit (e.g.
+  // "BRE-TOT 15:00Z") — built once from the window, keyed by fixture id.
+  const fixtureLabels = useMemo(
+    () => new Map((startSurface?.fixtures ?? []).map((f) => [f.id!, `${f.home}-${f.away} ${f.kickoff.slice(11, 16)}Z`])),
+    [startSurface],
+  );
   const rows: Row[] = players.map((player) => ({
     player,
     rank: groupByTier
@@ -104,6 +131,7 @@ export function PlayerTable({
   const body: React.ReactNode[] = [];
   let currentTier = -1;
   let tierStart = 0;
+  const colCount = (groupByTier ? 14 : 15) + (showOddsPoints ? 1 : 0) + (startSurface ? 1 : 0);
 
   const pushBand = (tier: number, from: number, toExclusive: number) => {
     const group = rows.slice(from, toExclusive);
@@ -111,7 +139,7 @@ export function PlayerTable({
     const lo = group[group.length - 1].player.projection?.tournamentScore ?? 0;
     body.push(
       <tr key={`band-${tier}`} className="border-y border-default bg-surface-raised print:static">
-        <td colSpan={(groupByTier ? 14 : 15) + (showOddsPoints ? 1 : 0)} className="px-2 py-1">
+        <td colSpan={colCount} className="px-2 py-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-accent">
               Tier {tier}
@@ -138,6 +166,7 @@ export function PlayerTable({
         row={row}
         showTierColumn={!groupByTier}
         showOddsPoints={showOddsPoints}
+        startSurface={startSurface}
         isDrafted={drafted.has(row.player.id)}
         onToggleDrafted={onToggleDrafted}
         isMine={mine.has(row.player.id)}
@@ -208,6 +237,14 @@ export function PlayerTable({
             >
               Pts
             </th>
+            {startSurface && (
+              <th
+                className={`${TH_BASE} w-[4.5rem] text-right`}
+                title="Expected minutes over the slate window — start-aware (confirmed XI, or your call when set). Click the chip: S starting → B benched → auto"
+              >
+                Min
+              </th>
+            )}
             {showOddsPoints && (
               <th
                 className={`${TH_BASE} w-16 text-right`}
@@ -250,7 +287,7 @@ export function PlayerTable({
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={(groupByTier ? 14 : 15) + (showOddsPoints ? 1 : 0)} className="px-2 py-6 text-center text-sm text-muted">
+              <td colSpan={colCount} className="px-2 py-6 text-center text-sm text-muted">
                 No players match the current filters.
               </td>
             </tr>
@@ -264,6 +301,7 @@ export function PlayerTable({
           position={breakdownPlayer.position}
           team={breakdownPlayer.team}
           projection={breakdownPlayer.projection}
+          fixtureLabels={fixtureLabels}
           onClose={() => setBreakdownPlayer(null)}
         />
       )}
@@ -275,6 +313,7 @@ function PlayerRow({
   row,
   showTierColumn,
   showOddsPoints,
+  startSurface,
   isDrafted,
   onToggleDrafted,
   isMine,
@@ -288,6 +327,7 @@ function PlayerRow({
   row: Row;
   showTierColumn: boolean;
   showOddsPoints: boolean;
+  startSurface?: StartSurface;
   isDrafted: boolean;
   onToggleDrafted: (id: string) => void;
   isMine: boolean;
@@ -457,6 +497,11 @@ function PlayerRow({
       <td className={`${TD_NUM} font-bold text-primary`}>
         {projection.points.p50.toFixed(1)}
       </td>
+      {startSurface && (
+        <td className={`${TD_NUM} w-[4.5rem]`}>
+          <StartCell player={player} projection={projection} surface={startSurface} />
+        </td>
+      )}
       {showOddsPoints && (
         <td className={`${TD_NUM} font-bold text-info`}>
           {(projection.oddsPoints ?? projection.points.p50).toFixed(1)}
@@ -474,6 +519,114 @@ function PlayerRow({
           : `${projection.draftValue > 0 ? '+' : ''}${projection.draftValue.toFixed(1)}`}
       </td>
     </tr>
+  );
+}
+
+/** The Min column cell on a slate (#98): start chip + expected minutes. The
+ *  minutes are the projection's window statline — already start-aware, so a
+ *  manual or lineup call re-ranks the board and this number follows it. */
+function StartCell({
+  player,
+  projection,
+  surface,
+}: {
+  player: SnapshotPlayer;
+  projection: NonNullable<SnapshotPlayer['projection']>;
+  surface: StartSurface;
+}) {
+  const fixture = surface.fixtures.find((f) => f.home === player.team || f.away === player.team);
+  if (!fixture || fixture.id == null) {
+    // A pool player with no window fixture (multi-club windows) still shows
+    // minutes — the model's own window sum — just no call to make.
+    return <span className="tabular-nums text-secondary">{Math.round(projection.statline.minutes)}′</span>;
+  }
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <StartChip playerId={player.id} playerName={player.name} fixtureId={fixture.id} surface={surface} />
+      <span className="tabular-nums text-secondary">{Math.round(projection.statline.minutes)}′</span>
+    </div>
+  );
+}
+
+/** The start chip (#98): S starting (green) / B benched (red) / ? unknown
+ *  (muted), dashed border when the call is manual. Click cycles
+ *  auto → starting → benched → auto — one thumb-sized target under the
+ *  30-second clock. ⊘ marks structurally-unknown late kickoffs (the XI
+ *  lands after close — mirror of the odds O badge). */
+function StartChip({
+  playerId,
+  playerName,
+  fixtureId,
+  surface,
+}: {
+  playerId: string;
+  playerName: string;
+  fixtureId: number;
+  surface: StartSurface;
+}) {
+  const call = startCallForFixture(playerId, fixtureId, surface.overrides, surface.lineups);
+  const manual = surface.overrides[playerId]?.[fixtureId];
+  const assetReal = surface.lineups?.fetchedAt != null;
+  const covered =
+    assetReal &&
+    surface.lineups!.fixtureCoverage.some((f) => f.fixtureId === fixtureId && f.covered);
+  const structurallyUnknown = call.status === 'unknown' && assetReal && !covered;
+
+  const statusText =
+    call.status === 'starter' ? 'starting' : call.status === 'bench' ? 'benched' : 'unknown';
+  const sourceText = call.source === 'override' ? 'your call' : call.source === 'lineup' ? 'confirmed XI' : 'model';
+
+  let title: string;
+  if (call.status === 'starter') {
+    title = call.source === 'override'
+      ? 'Starting — your call. Click: bench, then back to auto.'
+      : 'Starting — confirmed XI. Click to override.';
+  } else if (call.status === 'bench') {
+    title = call.source === 'override'
+      ? 'Benched — your call (cameo-floor minutes). Click to return to auto.'
+      : 'Benched — named substitute (cameo-floor minutes). Click to override.';
+  } else if (structurallyUnknown) {
+    title = 'Unknown at close — late kickoff. Click to call it: starting → benched → auto.';
+  } else if (covered) {
+    title = 'Unknown — not in the published XI or subs. Click to call it: starting → benched → auto.';
+  } else {
+    title = 'Unknown — no lineup signal yet (model share). Click to call it: starting → benched → auto.';
+  }
+
+  const glyph = call.status === 'starter' ? 'S' : call.status === 'bench' ? 'B' : '?';
+  const tone =
+    call.status === 'starter'
+      ? 'border-positive/30 bg-positive/10 text-positive'
+      : call.status === 'bench'
+        ? 'border-negative/30 bg-negative/10 text-negative'
+        : 'border-default text-muted hover:border-strong hover:text-secondary';
+
+  return (
+    <span className="flex items-center gap-0.5">
+      <Tooltip text={title} wide>
+        <button
+          type="button"
+          aria-pressed={manual != null}
+          aria-label={`Start call for ${playerName}: ${statusText} (${sourceText}). Click to change.`}
+          onClick={() => surface.onSetOverride(playerId, fixtureId)}
+          className={`flex h-4 w-4 items-center justify-center rounded border text-[0.65rem] font-semibold leading-none transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-accent ${tone} ${
+            manual != null ? 'border-dashed' : ''
+          }`}
+        >
+          {glyph}
+        </button>
+      </Tooltip>
+      {structurallyUnknown && (
+        <Tooltip
+          text="Structurally unknown at close — late kickoff; the official XI lands after this slate locks. Your call replaces the model share."
+          wide
+        >
+          <span className="rounded border border-info/30 bg-info/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info">
+            ⊘
+          </span>
+        </Tooltip>
+      )}
+    </span>
   );
 }
 

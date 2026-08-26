@@ -10,7 +10,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import type { OddsSlate } from '../etl/odds.js';
-import type { LineupSlate } from '../model/lineups.js';
+import type { LineupSlate, StartOverrideMap } from '../model/lineups.js';
 import type { ContestProfile } from '../contest/profiles.js';
 import { poolForProfile } from './windowProjections.js';
 import { loadStartOverrides } from './startOverrides.js';
@@ -19,6 +19,10 @@ import type { Snapshot, SnapshotPlayer } from './types.js';
 export function useProfilePool(
   snapshot: Snapshot | null,
   profile: ContestProfile,
+  /** Live manual start calls (#98): the sheet passes its in-session map so a
+   *  chip click re-projects immediately. Callers that don't edit (review,
+   *  carry pin) omit it and read the persisted map — the same #97 storage. */
+  overrides?: StartOverrideMap,
 ): { pool: SnapshotPlayer[]; odds?: OddsSlate; lineups?: LineupSlate } {
   const [odds, setOdds] = useState<OddsSlate | undefined>(undefined);
   const [lineups, setLineups] = useState<LineupSlate | undefined>(undefined);
@@ -45,7 +49,10 @@ export function useProfilePool(
     return () => { cancelled = true; };
   }, [snapshot, profile]);
 
-  const startOverrides = useMemo(() => loadStartOverrides(profile.id), [profile]);
+  const startOverrides = useMemo(
+    () => overrides ?? loadStartOverrides(profile.id),
+    [profile, overrides],
+  );
 
   const pool = useMemo(
     () => (snapshot ? poolForProfile(snapshot, profile, odds, lineups, startOverrides) : []),

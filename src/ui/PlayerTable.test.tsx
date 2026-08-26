@@ -7,6 +7,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { PlayerTable } from './PlayerTable.js';
 import type { Snapshot, SnapshotPlayer } from './types.js';
 import type { OddsSlate } from '../etl/odds.js';
+import type { LineupSlate } from '../model/lineups.js';
+import type { StartSurface } from './PlayerTable.js';
 import { hasOddsCoverage } from './windowProjections.js';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
@@ -20,6 +22,7 @@ function renderTable(
   players: SnapshotPlayer[],
   showOddsPoints: boolean,
   exposureByPlayer: ReadonlyMap<string, { percent: number; pickedRooms: number; totalRooms: number }> = new Map(),
+  startSurface?: StartSurface,
 ) {
   return renderToStaticMarkup(
     <PlayerTable
@@ -33,6 +36,7 @@ function renderTable(
       groupByTier={false}
       rankMode="points"
       showOddsPoints={showOddsPoints}
+      startSurface={startSurface}
       exposureByPlayer={exposureByPlayer}
       exposureCompetition="False Nine — season best ball"
     />,
@@ -79,6 +83,59 @@ test('Odds Pts and odds-coverage marker render only for a single-day slate', () 
   const season = renderTable([covered, fallback], false);
   assert.doesNotMatch(season, />Odds Pts<\/th>/);
   assert.doesNotMatch(season, />O<\/span>/);
+});
+
+test('slate start surface: Min column renders chips, override state, and the unknown-at-close marker', () => {
+  const fixture = structuredClone(
+    snapshot.fixtures.find((f) => f.home === 'BRE' && f.away === 'TOT' && f.kickoff.startsWith('2026-08-22'))!,
+  );
+  const bre = snapshot.players
+    .filter((p) => p.team === 'BRE' && p.projection)
+    .slice(0, 3)
+    .map((p) => structuredClone(p));
+  const [overridden, benched, unknown] = bre;
+  assert.ok(fixture.id != null && overridden && benched && unknown, 'expected three BRE players');
+  const lineups: LineupSlate = {
+    schemaVersion: 1,
+    profileId: 'free-kick-gw1-sat',
+    slateDate: '2026-08-22',
+    fetchedAt: '2026-08-22T12:00:00Z',
+    fixtureCoverage: [{ fixtureId: fixture.id, covered: true }],
+    players: [{ fixtureId: fixture.id, playerId: benched.id, status: 'bench' }],
+  };
+  const surface: StartSurface = {
+    fixtures: [fixture],
+    lineups,
+    overrides: { [overridden.id]: { [fixture.id]: 'starter' } },
+    onSetOverride: noOp,
+  };
+
+  const html = renderTable(bre, false, new Map(), surface);
+  assert.match(html, />Min<\/th>/, 'the slate renders the expected-minutes column');
+  assert.match(html, />S<\/button>/, 'override starter chip');
+  assert.match(html, /aria-pressed="true"/, 'a manual call is pressed');
+  assert.match(html, /border-dashed/, 'manual calls are dashed');
+  assert.match(html, />B<\/button>/, 'lineup bench chip');
+  assert.match(html, />\?<\/button>/, 'unknown chip for a player absent from the XI');
+  assert.doesNotMatch(html, /⊘/, 'a covered fixture is not structurally unknown');
+
+  // The same slate with the fixture uncovered (late kickoff / no lists yet):
+  // every unknown becomes structurally unknown at close and gets the ⊘ marker.
+  const uncovered: LineupSlate = { ...lineups, fixtureCoverage: [{ fixtureId: fixture.id, covered: false }], players: [] };
+  const lateHtml = renderTable(
+    bre,
+    false,
+    new Map(),
+    { ...surface, lineups: uncovered, overrides: {} },
+  );
+  assert.match(lateHtml, /⊘/, 'uncovered fixture rows get the unknown-at-close marker');
+  assert.match(lateHtml, /Unknown at close/);
+
+  // False Nine (no surface mounted) never renders the column or chips.
+  const season = renderTable(bre, false);
+  assert.doesNotMatch(season, />Min<\/th>/);
+  assert.doesNotMatch(season, />S<\/button>/);
+  assert.doesNotMatch(season, /Start call for /);
 });
 
 test('Odds Pts stays hidden for an unpulled slate placeholder', () => {
