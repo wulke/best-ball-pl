@@ -69,7 +69,8 @@ test('open strip renders score, probabilities, CS/O2.5, and MKT for priced fixtu
   assert.ok(html.includes('BOU'));
   assert.ok(html.includes('45%'));
   assert.ok(html.includes('28%'));
-  assert.equal(html.split('MKT').length - 1, 1); // exactly one MKT label
+  // One MKT label plus the chip's market-detail title.
+  assert.equal(html.split('MKT').length - 1, 2);
 });
 
 test('collapsed strip renders only the toggle (band persists)', () => {
@@ -80,4 +81,22 @@ test('collapsed strip renders only the toggle (band persists)', () => {
   assert.ok(html.includes('bg-accent/5')); // the band stays as the section marker
   assert.ok(!html.includes('2.1–0.9'));
   assert.ok(!html.includes('MKT'));
+});
+
+test('team names are individually toggleable and show their excluded state', () => {
+  const html = renderToStaticMarkup(
+    <MatchupStrip
+      open
+      onToggle={noOp}
+      onToggleTeam={noOp}
+      excludedTeams={new Set(['LIV'])}
+      matchups={[matchup({})]}
+    />,
+  );
+
+  assert.match(html, /aria-label="Hide LIV players from the sheet"/);
+  assert.match(html, /aria-pressed="true"/);
+  assert.match(html, /line-through/);
+  assert.match(html, /aria-label="Hide NFO players from the sheet"/);
+  assert.match(html, /aria-pressed="false"/);
 });
