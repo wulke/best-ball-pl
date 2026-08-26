@@ -83,7 +83,7 @@ export type RawFixture = {
  *  large `explain` array we ignore). */
 export type RawLiveElement = {
   /** FPL element id (joins bootstrap elements). */
-  element: number;
+  id: number;
   stats: {
     minutes: number;
     goals_scored: number;

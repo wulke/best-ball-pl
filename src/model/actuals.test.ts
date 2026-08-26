@@ -282,18 +282,19 @@ test('aggregation: player totals, inferred starts, xG/xA sums, non-pool rows ski
 const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const SNAPSHOT_PATH = path.join(repoRoot, 'data/snapshot.json');
 
-test('parity: pre-season aggregate is null, so the committed snapshot re-projects unchanged', () => {
+test('parity: an empty actuals section takes the pure prior path', () => {
   const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8')) as Snapshot;
+  const unplayedFixtures = snapshot.fixtures.map(({ homeScore: _homeScore, awayScore: _awayScore, ...fixture }) => fixture);
   const aggregated = aggregateSeasonActuals(
     snapshot.players,
-    snapshot.fixtures,
-    snapshot.actuals,
+    unplayedFixtures,
+    { gameweeks: [] },
     START_THRESHOLD,
   );
-  assert.equal(aggregated, null); // GW1 hasn't completed at commit time
+  assert.equal(aggregated, null);
 
-  const contest = resolveContest(FALSE_NINE, snapshot.fixtures);
-  const { projections } = buildProjections(
+  const contest = resolveContest(FALSE_NINE, unplayedFixtures);
+  const { projections: withoutActuals } = buildProjections(
     snapshot.players,
     modelConfigFor(FALSE_NINE),
     contest,
@@ -301,11 +302,17 @@ test('parity: pre-season aggregate is null, so the committed snapshot re-project
     undefined,
     aggregated ?? undefined,
   );
-  // Bit-for-bit against the committed flagship numbers (same guard style as
-  // window.test.ts) — and no actualsBlend field pre-season (byte parity).
+  const { projections: purePrior } = buildProjections(
+    snapshot.players,
+    modelConfigFor(FALSE_NINE),
+    contest,
+    DEFAULT_REPLACEMENT,
+  );
+  // No actuals must be bit-for-bit equivalent to omitting the optional blend
+  // input, with no audit field added.
   snapshot.players.forEach((p, i) => {
-    assert.deepEqual(projections[i], p.projection, `${p.name} projection unchanged`);
-    assert.equal('actualsBlend' in projections[i], false);
+    assert.deepEqual(withoutActuals[i], purePrior[i], `${p.name} pure-prior projection unchanged`);
+    assert.equal('actualsBlend' in withoutActuals[i], false);
   });
 });
 

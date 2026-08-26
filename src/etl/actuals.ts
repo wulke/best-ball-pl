@@ -61,12 +61,12 @@ function featured(stats: RawLiveElement['stats']): boolean {
 }
 
 function toGwPlayerActual(row: RawLiveElement): GwPlayerActual {
-  if (typeof row.element !== 'number' || row.stats == null) {
+  if (typeof row.id !== 'number' || row.stats == null) {
     throw new Error(`Malformed event-live row: ${JSON.stringify(row).slice(0, 120)}`);
   }
   const s = row.stats;
   return {
-    id: String(row.element),
+    id: String(row.id),
     minutes: s.minutes,
     goals: s.goals_scored,
     assists: s.assists,

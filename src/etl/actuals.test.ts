@@ -14,6 +14,29 @@ import assert from 'node:assert/strict';
 import { buildAsOf, decimalOrNull, finishedEventNumbers, toGwActuals } from './actuals.js';
 import type { RawEventLive, RawFixture, RawLiveElement } from './fpl.js';
 
+/**
+ * Captured from https://fantasy.premierleague.com/api/event/1/live/ on
+ * 2026-08-26. Deliberately retains the upstream row key (`id`) and selected
+ * ignored fields so an upstream payload-shape change fails before cron.
+ */
+const capturedEvent1LiveRow = {
+  id: 1,
+  stats: {
+    minutes: 90,
+    goals_scored: 0,
+    assists: 0,
+    clean_sheets: 1,
+    goals_conceded: 0,
+    saves: 1,
+    penalties_saved: 0,
+    total_points: 6,
+    expected_goals: '0.00',
+    expected_assists: '0.00',
+  },
+  explain: [{ fixture: 1, stats: [{ identifier: 'minutes', points: 2, value: 90, points_modification: 0 }] }],
+  modified: false,
+};
+
 function fixture(overrides: Partial<RawFixture>): RawFixture {
   return {
     id: 1,
@@ -33,7 +56,7 @@ function fixture(overrides: Partial<RawFixture>): RawFixture {
 
 function liveRow(overrides: Partial<RawLiveElement> = {}): RawLiveElement {
   return {
-    element: 411,
+    id: 411,
     stats: {
       minutes: 90,
       goals_scored: 2,
@@ -49,6 +72,27 @@ function liveRow(overrides: Partial<RawLiveElement> = {}): RawLiveElement {
     ...overrides,
   };
 }
+
+test('toGwActuals accepts the captured FPL event-live row shape', () => {
+  // This cast records the API contract before RawLiveElement is corrected.
+  const live = { elements: [capturedEvent1LiveRow] } as unknown as RawEventLive;
+  const gw = toGwActuals(1, live);
+  assert.deepEqual(gw.players, [
+    {
+      id: '1',
+      minutes: 90,
+      goals: 0,
+      assists: 0,
+      cleanSheets: 1,
+      goalsConceded: 0,
+      saves: 1,
+      penaltiesSaved: 0,
+      xg: 0,
+      xa: 0,
+      fplPoints: 6,
+    },
+  ]);
+});
 
 test('finishedEventNumbers: only all-finished GWs count, ascending', () => {
   const fixtures = [
@@ -79,9 +123,9 @@ test('toGwActuals maps fields (string xG/xA coerced) and keeps only featured pla
   const live: RawEventLive = {
     elements: [
       liveRow(), // played
-      liveRow({ element: 1, stats: { ...liveRow().stats, minutes: 90, goals_scored: 0, total_points: 0, expected_goals: undefined } }), // played, no output
-      liveRow({ element: 2, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, total_points: 0, expected_goals: '', expected_assists: '' } }), // DNP
-      liveRow({ element: 3, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, total_points: -3, saves: 0 } }), // 0 mins, red-card points
+      liveRow({ id: 1, stats: { ...liveRow().stats, minutes: 90, goals_scored: 0, total_points: 0, expected_goals: undefined } }), // played, no output
+      liveRow({ id: 2, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, total_points: 0, expected_goals: '', expected_assists: '' } }), // DNP
+      liveRow({ id: 3, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, total_points: -3, saves: 0 } }), // 0 mins, red-card points
     ],
   };
   const gw = toGwActuals(1, live);
@@ -98,7 +142,7 @@ test('toGwActuals maps fields (string xG/xA coerced) and keeps only featured pla
 test('toGwActuals: zero-minute rows with any non-zero stat are kept (featured)', () => {
   const live: RawEventLive = {
     elements: [
-      liveRow({ element: 5, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, goals_conceded: 2, total_points: -1 } }),
+      liveRow({ id: 5, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, goals_conceded: 2, total_points: -1 } }),
     ],
   };
   const gw = toGwActuals(1, live);
