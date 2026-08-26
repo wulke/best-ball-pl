@@ -10,12 +10,12 @@
  * - Accent-tinted band (bg-accent/5 + border-accent/30) + raised chips
  *   (bg-surface-raised + border-strong) so the strip stands out from the
  *   board as ONE context zone.
- * - Data coloring is monochrome/theme-neutral: accent-colored home
- *   bars/favorites collided with the theme's "active/selected" accent. Home
- *   vs away bar segments are neutral lightness steps (bg-secondary vs
- *   bg-muted — colorblind-safe, identical meaning in every theme), the
- *   favored club is text-primary vs the other's text-secondary, and the ONLY
- *   hue in the strip is MKT's text-info = "this number is the market's".
+ * - Side hues, one per meaning: home = info blue, away = positive green,
+ *   draw = muted gray — never the theme accent (which reads as
+ *   "active/selected" UI). The hue says SIDE; the bar length says FAVORITE.
+ *   The 1X2 percentages are colored to match their bar segments exactly
+ *   (blue/gray/green), so number and shape read as one datum.
+ * - MKT renders in the section's accent — distinct from every data hue.
  * - No kickoff timestamp (noise mid-draft; the slate defines the window).
  * - Every probability is explicitly suffixed with % (62%/21%/17%, CS 41%/28%,
  *   O2.5 57%) — bare slashes read as scores, not odds.
@@ -29,7 +29,6 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 function MatchupChip({ matchup }: { matchup: MatchupContext }) {
   const { fixture, market } = matchup;
-  const homeEdge = matchup.homeWin >= matchup.awayWin;
   return (
     <div
       className="min-w-44 rounded border border-strong bg-surface-raised px-2 py-1"
@@ -39,29 +38,31 @@ function MatchupChip({ matchup }: { matchup: MatchupContext }) {
     >
       <div className="whitespace-nowrap">
         <span className="font-condensed text-base font-bold leading-none tabular-nums">
-          <span className={homeEdge ? 'text-primary' : 'text-secondary'}>{fixture.home}</span>
-          <span className="mx-1 text-secondary">
+          <span className="text-info">{fixture.home}</span>
+          <span className="mx-1 font-semibold text-secondary">
             {matchup.homeXg.toFixed(1)}–{matchup.awayXg.toFixed(1)}
           </span>
-          <span className={!homeEdge ? 'text-primary' : 'text-secondary'}>{fixture.away}</span>
+          <span className="text-positive">{fixture.away}</span>
         </span>
       </div>
-      {/* 1X2 stacked bar: neutral lightness steps (theme-agnostic) — the
-          favorite is the longer segment, not a color. */}
+      {/* 1X2 stacked bar — segments share the % colors below: home blue /
+          draw gray / away green. Hue = side, length = favorite. */}
       <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded" aria-hidden="true">
-        <div className="bg-secondary" style={{ width: `${matchup.homeWin * 100}%` }} />
+        <div className="bg-info" style={{ width: `${matchup.homeWin * 100}%` }} />
         <div className="bg-muted/40" style={{ width: `${matchup.draw * 100}%` }} />
-        <div className="bg-muted" style={{ width: `${matchup.awayWin * 100}%` }} />
+        <div className="bg-positive" style={{ width: `${matchup.awayWin * 100}%` }} />
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-2 whitespace-nowrap text-[0.65rem] tabular-nums">
-        <span className="font-semibold text-secondary">
-          {pct(matchup.homeWin)}/{pct(matchup.draw)}/{pct(matchup.awayWin)}
+        <span className="font-semibold">
+          <span className="text-info">{pct(matchup.homeWin)}</span>
+          <span className="text-muted">/{pct(matchup.draw)}/</span>
+          <span className="text-positive">{pct(matchup.awayWin)}</span>
         </span>
         <span className="text-muted">
           CS {pct(matchup.homeCleanSheet)}/{pct(matchup.awayCleanSheet)} · O2.5 {pct(matchup.over25)}
         </span>
         {market && (
-          <span className="font-semibold text-info">
+          <span className="font-semibold text-accent">
             MKT {pct(market.homeWin)}/{pct(market.draw)}/{pct(market.awayWin)}
           </span>
         )}

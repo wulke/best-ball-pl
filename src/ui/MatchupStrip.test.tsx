@@ -48,17 +48,27 @@ test('open strip renders score, probabilities, CS/O2.5, and MKT for priced fixtu
   assert.ok(html.includes('border-accent/30'));
   assert.ok(html.includes('bg-surface-raised'));
   assert.ok(html.includes('2.1–0.9'));
-  assert.ok(html.includes('62%/21%/17%'));
+  // Side hues: home info-blue, away positive-green — teams, bar, and %s agree.
+  assert.ok(html.includes('<span class="text-info">LIV</span>'));
+  assert.ok(html.includes('<span class="text-positive">NFO</span>'));
+  assert.ok(html.includes('bg-info'));
+  assert.ok(html.includes('bg-positive'));
+  assert.ok(html.includes('<span class="text-info">62%</span>'));
+  assert.ok(html.includes('<span class="text-positive">17%</span>'));
   assert.ok(html.includes('CS 41%/28%'));
   assert.ok(html.includes('O2.5 57%'));
-  assert.ok(html.includes('MKT 55%/24%/21%'));
+  // MKT carries the section accent, distinct from every data hue.
+  assert.ok(html.includes('text-accent'));
+  assert.ok(html.includes('MKT '));
+  assert.ok(html.includes('55%'));
   // Readability (review feedback): no kickoff timestamp, % suffixed on every probability.
   assert.ok(!html.includes('11:30'));
   assert.ok(!html.includes('Sat '));
   assert.ok(!html.includes('62/21')); // bare-slash odds format is gone
   // Unpriced fixture: numbers render, no market line.
   assert.ok(html.includes('BOU'));
-  assert.ok(html.includes('45%/27%/28%'));
+  assert.ok(html.includes('45%'));
+  assert.ok(html.includes('28%'));
   assert.equal(html.split('MKT').length - 1, 1); // exactly one MKT label
 });
 
