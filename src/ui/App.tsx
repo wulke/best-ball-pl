@@ -14,11 +14,10 @@ import { useRooms } from './drafts/store.js';
 import { defaultCompetition } from './drafts/types.js';
 import { ScarcityView } from './ScarcityView.js';
 import { useContestProfile } from './useContestProfile.js';
-import { hasOddsCoverage, poolForProfile } from './windowProjections.js';
-import { FALSE_NINE, resolveContest } from '../contest/profiles.js';
+import { useProfilePool } from './useProfilePool.js';
+import { hasOddsCoverage } from './windowProjections.js';
+import { FALSE_NINE, profileById, resolveContest } from '../contest/profiles.js';
 import type { OddsSlate } from '../etl/odds.js';
-import type { LineupSlate } from '../model/lineups.js';
-import { loadStartOverrides } from './startOverrides.js';
 import { matchupContext } from './matchupContext.js';
 import { MatchupStrip } from './MatchupStrip.js';
 
@@ -39,8 +38,6 @@ function loadRankMode(): RankMode {
 
 export function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [odds, setOdds] = useState<OddsSlate | undefined>(undefined);
-  const [lineups, setLineups] = useState<LineupSlate | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [, setThemeTick] = useState(0);
   const [view, setView] = useState<View>('sheet');
@@ -154,30 +151,9 @@ export function App() {
   // Daily odds are an optional static companion asset. Missing, stale, or
   // malformed coverage never blocks the slate sheet: the projection layer
   // simply uses its model-only terms for those fixtures/players.
-  useEffect(() => {
-    if (profile.kind !== 'daily') {
-      setOdds(undefined);
-      return;
-    }
-    let cancelled = false;
-    fetch(`data/odds/${profile.id}.json`)
-      .then((res) => (res.ok ? res.json() as Promise<OddsSlate> : undefined))
-      .then((asset) => { if (!cancelled) setOdds(asset); })
-      .catch(() => { if (!cancelled) setOdds(undefined); });
-    return () => { cancelled = true; };
-  }, [profile]);
-
-  useEffect(() => {
-    if (profile.kind !== 'daily') { setLineups(undefined); return; }
-    let cancelled = false;
-    fetch(`data/lineups/${profile.id}.json`)
-      .then((res) => (res.ok ? res.json() as Promise<LineupSlate> : undefined))
-      .then((asset) => { if (!cancelled) setLineups(asset); })
-      .catch(() => { if (!cancelled) setLineups(undefined); });
-    return () => { cancelled = true; };
-  }, [profile]);
-
-  const startOverrides = useMemo(() => loadStartOverrides(profile.id), [profile]);
+  // (Fetched inside useProfilePool, which also serves the drafts intake, the
+  // room review, and the carry pin — each under its own contest profile.)
+  const { pool: players, odds } = useProfilePool(snapshot, profile);
 
   const theme =
     (typeof document !== 'undefined'
@@ -187,11 +163,7 @@ export function App() {
   /** Players carrying a projection under the active profile — everything the
    *  sheet can rank. False Nine reads the committed season projections
    *  as-is; any other profile is window-projected + pool-restricted client-
-   *  side (#47), the snapshot itself untouched. */
-  const players = useMemo(
-    () => (snapshot ? poolForProfile(snapshot, profile, odds, lineups, startOverrides) : []),
-    [snapshot, profile, odds, lineups, startOverrides],
-  );
+   *  side (#47), the snapshot itself untouched. (Computed in useProfilePool.) */
 
   // Per-fixture matchup context for daily profiles (#108): λs come from the
   // pool's window-projected p50 goal sums, so the strip reflects the same
@@ -215,15 +187,29 @@ export function App() {
     });
   }, []);
 
-  /** The carry-forward pin: the latest room's flags + note, read mid-draft. */
+  /** The carry-forward pin: the latest room of the ACTIVE competition, read
+   *  mid-draft (#45 — per-competition carry cards). Reviewed under the room's
+   *  own contest profile and its window-projected pool, so a Free Kick room
+   *  pins slate numbers even while False Nine is the active sheet profile.
+   *  Rooms without a profileId (legacy) review under the active profile. */
+  const carryRoom =
+    rooms.find(
+      (room) =>
+        room.competition === exposureCompetition && room.myTeam && room.picks.length > 0,
+    ) ?? null;
+  const carryProfile = useMemo(
+    () => (carryRoom?.profileId ? profileById(carryRoom.profileId) : profile),
+    [carryRoom, profile],
+  );
+  const { pool: carryPool } = useProfilePool(snapshot, carryProfile);
+
   const carryPin = useMemo(() => {
-    const latest = rooms.find((room) => room.myTeam && room.picks.length > 0);
-    if (!latest || !snapshot) return null;
-    const review = reviewRoom(snapshot.players, latest.picks, latest.myTeam, profile, snapshot.fixtures);
+    if (!carryRoom || !snapshot) return null;
+    const review = reviewRoom(carryPool, carryRoom.picks, carryRoom.myTeam, carryProfile, snapshot.fixtures);
     if (!review) return null;
-    if (review.flags.length === 0 && latest.carryNote.trim() === '') return null;
-    return { room: latest, flags: review.flags, note: latest.carryNote };
-  }, [rooms, snapshot, profile]);
+    if (review.flags.length === 0 && carryRoom.carryNote.trim() === '') return null;
+    return { room: carryRoom, flags: review.flags, note: carryRoom.carryNote };
+  }, [carryRoom, carryPool, carryProfile, snapshot]);
 
   /** Draft by me: one click sets mine + off board (the M button). */
   const draftMine = useCallback(
@@ -423,7 +409,7 @@ export function App() {
             <p className="text-sm text-muted">Loading snapshot…</p>
           </main>
         ) : view === 'drafts' ? (
-          <DraftsView players={snapshot.players} fixtures={snapshot.fixtures} rooms={rooms} upsert={upsert} remove={remove} profile={profile} />
+          <DraftsView snapshot={snapshot} rooms={rooms} upsert={upsert} remove={remove} profile={profile} />
         ) : view === 'exposure' ? (
           <ExposureView players={snapshot.players} rooms={rooms} />
         ) : players.length === 0 ? (

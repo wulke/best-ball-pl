@@ -53,6 +53,12 @@ export function ReviewPanel({ pool, fixtures, picks, myTeam, carryNote, onCarryN
       <section className={PANEL}>
         <div className="flex flex-wrap items-center gap-2 border-b border-default px-3 py-2">
           <span className={SECTION_TITLE}>Room review</span>
+          <span
+            className="rounded border border-default px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-secondary"
+            title="The lenses run under the room's own contest profile — window clubs, roster shape, and window projections — not the active sheet profile"
+          >
+            contest: {profile.name}
+          </span>
           <div className="ml-auto flex flex-wrap items-center gap-1 text-xs tabular-nums text-muted">
             <span>{review.pickCount} picks</span>
             <span>· {review.teamCount} teams</span>

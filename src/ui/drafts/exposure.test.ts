@@ -10,6 +10,7 @@ function room(overrides: Partial<RoomRecord>): RoomRecord {
     name: 'Room',
     entryCost: 3,
     competition: 'False Nine',
+    profileId: null,
     draftDate: '2026-08-20',
     rawPaste: '',
     picks: [],

@@ -4,7 +4,7 @@
  * for commit (the archival step); Import reads it back as the restore path.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { ROOM_RECORD_VERSION, type RoomRecord } from './types.js';
+import { ROOM_RECORD_VERSION, inferProfileId, type RoomRecord } from './types.js';
 
 const STORAGE_KEY = 'bbpl-rooms';
 
@@ -32,9 +32,16 @@ function isRoomRecord(value: unknown): value is RoomRecord {
   );
 }
 
-/** Additive v1 migration: old locally persisted rooms did not have competition. */
+/** Additive v1 migration: old locally persisted rooms did not have competition
+ *  (normalized to null) or profileId (back-filled from the competition label
+ *  when it resolves to a known contest — the legacy rooms created under a
+ *  slate profile keep reviewing under that slate, not whatever is active). */
 function normalizeRoomRecord(room: RoomRecord): RoomRecord {
-  return { ...room, competition: room.competition ?? null };
+  return {
+    ...room,
+    competition: room.competition ?? null,
+    profileId: room.profileId ?? inferProfileId(room.competition) ?? null,
+  };
 }
 
 export function newRoomId(): string {

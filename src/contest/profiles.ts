@@ -102,6 +102,12 @@ export type ContestProfile = {
    *  top p50s are single-digit, and a starter's single-fixture q90 is "scores
    *  once" (≈×2.5 on goal expectation), not "×1.25 of a good season". */
   scenarios?: ScenarioConfig;
+  /** Review headline baseline (#45): sheet-perfect % below this flags the
+   *  room on the carry card. Room-size-dependent by construction — a 6-drafter
+   *  no-bench slate draft gets far closer to the literal top of the sheet than
+   *  a 12×18 season room does (the sheet-perfect top-6 is nearly attainable;
+   *  the top-18 is not). Default 45 (the False Nine-tuned floor). */
+  sheetPerfectFlagPercent?: number;
 };
 
 /**
@@ -177,6 +183,9 @@ export const FREE_KICK_GW1_SAT: ContestProfile = {
       burstByPosition: { G: 1.1, D: 1.45, MD: 1.8, FW: 2.0 },
     },
   },
+  // 6-drafter no-bench: the sheet-perfect top-6 is nearly attainable, so a
+  // clear miss sits higher than False Nine's 45. First-pass — #46 retune fog.
+  sheetPerfectFlagPercent: 72,
 };
 
 /**
@@ -217,6 +226,8 @@ export const FREE_KICK_GW2_SAT: ContestProfile = {
       burstByPosition: { G: 1.1, D: 1.45, MD: 1.8, FW: 2.0 },
     },
   },
+  // Same GPP shape as GW1 — carry the window-scaled baseline (#45).
+  sheetPerfectFlagPercent: 72,
 };
 
 /** The registry — the switcher's option list, in display order. */

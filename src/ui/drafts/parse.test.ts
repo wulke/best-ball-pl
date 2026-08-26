@@ -27,6 +27,18 @@ const FIXTURE = new URL(
   '../../../data/drafts/fixtures/2026-08-18-wulke-first-draft.txt',
   import.meta.url,
 );
+/** The first real GW1 Saturday Free Kick daily recap (#45): a 6-drafter ×
+ *  6-round no-bench slate room, saved from the Drafts tab's exports. */
+const GW1_FIXTURES = {
+  roomA: new URL(
+    '../../../data/drafts/fixtures/2026-08-19-gw1-slate-draft.txt',
+    import.meta.url,
+  ),
+  roomB: new URL(
+    '../../../data/drafts/fixtures/2026-08-21-gw1-slate-draft.txt',
+    import.meta.url,
+  ),
+};
 const SNAPSHOT = new URL('../../../data/snapshot.json', import.meta.url);
 const RAW_MHTML = new URL('../../../data/udraft-raw/Completed.mhtml', import.meta.url);
 
@@ -295,6 +307,49 @@ test('plain .html saves and raw text pass through extractRecapText', () => {
     ['HOFF84', '1.1|1', 'E. Haaland', 'FW - MCI'].join('\n'),
   );
   assert.equal(extractRecapText('already pasted\ntext'), 'already pasted\ntext');
+});
+
+test('GW1 daily recaps parse to the full 36-pick × 6-drafter log (weekly format holds)', () => {
+  for (const url of [GW1_FIXTURES.roomA, GW1_FIXTURES.roomB]) {
+    const parsed = parseRecap(readFileSync(url, 'utf8'), pool);
+    assert.equal(parsed.status, 'ok', parsed.status === 'error' ? parsed.message : '');
+    if (parsed.status !== 'ok') continue;
+    assert.equal(parsed.picks.length, 36);
+    assert.equal(teamsInLog(parsed.picks).length, 6);
+    assert.deepEqual(
+      parsed.picks.map((p) => p.pick),
+      Array.from({ length: 36 }, (_, i) => i + 1),
+    );
+    // The whole room resolves — same name matcher as the 12×18 season room.
+    assert.equal(parsed.picks.filter((p) => p.playerId).length, 36);
+    // WULKE drafted at the 1-slot in room A and the 6-slot in room B — the
+    // snake shape renumbers exactly (6 teams → pickInRound cycles 1..6).
+    const mine = parsed.picks.filter((p) => p.team === 'WULKE');
+    assert.equal(mine.length, 6);
+  }
+});
+
+test('GW1 room A snake: WULKE at the 1-slot → 1.1, 2.6, 3.1, …', () => {
+  const parsed = parseRecap(readFileSync(GW1_FIXTURES.roomA, 'utf8'), pool);
+  assert.equal(parsed.status, 'ok');
+  if (parsed.status !== 'ok') return;
+  const mine = parsed.picks.filter((p) => p.team === 'WULKE');
+  assert.deepEqual(
+    mine.map((p) => `${p.round}.${p.pick - (p.round - 1) * 6}`),
+    ['1.1', '2.6', '3.1', '4.6', '5.1', '6.6'],
+  );
+  assert.equal(mine[0].rawName, 'M. Gibbs-White');
+});
+
+test('GW1 room B snake: WULKE at the 6-slot → 1.6, 2.1, 3.6, …', () => {
+  const parsed = parseRecap(readFileSync(GW1_FIXTURES.roomB, 'utf8'), pool);
+  assert.equal(parsed.status, 'ok');
+  if (parsed.status !== 'ok') return;
+  const mine = parsed.picks.filter((p) => p.team === 'WULKE');
+  assert.deepEqual(
+    mine.map((p) => `${p.round}.${p.pick - (p.round - 1) * 6}`),
+    ['1.6', '2.1', '3.6', '4.1', '5.6', '6.1'],
+  );
 });
 
 test(
