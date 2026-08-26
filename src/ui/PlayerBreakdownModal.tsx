@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type { Position } from './types.js';
 import type { PlayerProjection, ProjectedStatline } from '../model/types.js';
-import { DEFAULT_SCORING, FALSE_NINE_POINTS } from '../model/config.js';
+import { DEFAULT_MODEL_CONFIG, DEFAULT_SCORING, FALSE_NINE_POINTS } from '../model/config.js';
 import { headlineDrivers } from './headlineDrivers.js';
 
 type OddsTerm = Exclude<keyof NonNullable<PlayerProjection['odds']>, 'fetchedAt'>;
@@ -66,6 +66,7 @@ export function PlayerBreakdownModal({
   position,
   team,
   projection,
+  fixtureLabels,
   onClose,
 }: {
   name: string;
@@ -73,6 +74,9 @@ export function PlayerBreakdownModal({
   /** FPL short name (e.g. "MCI") — names the team in the why-this-projection lines. */
   team: string;
   projection: PlayerProjection;
+  /** Human fixture labels ("BRE-TOT 15:00Z") for the start-call audit —
+   *  supplied by the sheet when a start surface is mounted (#98). */
+  fixtureLabels?: ReadonlyMap<number, string>;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -240,9 +244,16 @@ export function PlayerBreakdownModal({
             </p>
             {projection.startAwareMinutes.fixtures.map((fixture, index) => (
               <p key={`${fixture.fixtureId}-${index}`} className="text-xs tabular-nums text-muted">
-                {fixture.fixtureId == null ? 'Fixture' : `Fixture ${fixture.fixtureId}`}: {fixture.status} · {fixture.minutes.toFixed(0)} min · {sourceLabel(fixture.source)} · {fixture.factor.toFixed(2)}×
+                {fixture.fixtureId == null ? 'Fixture' : fixtureLabels?.get(fixture.fixtureId) ?? `Fixture ${fixture.fixtureId}`}:{' '}
+                {fixture.status === 'starter' ? 'starting' : fixture.status === 'bench' ? 'benched' : 'unknown'} ·{' '}
+                P(start) {Math.round(fixture.pStart * 100)}% · {fixture.minutes.toFixed(0)}′
+                {fixture.status === 'bench' ? ' (cameo floor)' : ''} · {sourceLabel(fixture.source)}
               </p>
             ))}
+            <p className="mt-0.5 text-[0.7rem] text-muted">
+              A benched call floors minutes at the {DEFAULT_MODEL_CONFIG.minutes.cameoFloorMinutes}′ cameo, not zero; an
+              unknown call rides the model start share until the confirmed XI or your call replaces it.
+            </p>
           </section>
         )}
 
@@ -274,7 +285,7 @@ export function PlayerBreakdownModal({
 }
 
 function sourceLabel(source: 'override' | 'lineup' | 'model') {
-  return source === 'override' ? 'Override' : source === 'lineup' ? 'Lineup' : 'Model default';
+  return source === 'override' ? 'your call' : source === 'lineup' ? 'confirmed XI' : 'model default';
 }
 
 function RangeChart({ p10, p50, p90 }: { p10: number; p50: number; p90: number }) {

@@ -164,6 +164,10 @@ export type PlayerProjection = {
       source: 'override' | 'lineup' | 'model';
       factor: number;
       minutes: number;
+      /** P(starts this fixture): 1 for a called starter, 0 for a called bench,
+       *  and the model's regressed start share for an unknown — the number a
+       *  manual call replaces (#98 breakdown surface). */
+      pStart: number;
     }>;
   };
   /** Daily-slate score using market-shrunk rates. It is display-only: all

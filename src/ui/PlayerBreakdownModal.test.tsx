@@ -12,7 +12,7 @@ const snapshot = JSON.parse(
   fs.readFileSync(path.join(repoRoot, 'data/snapshot.json'), 'utf8'),
 ) as Snapshot;
 
-function renderModal(player: SnapshotPlayer) {
+function renderModal(player: SnapshotPlayer, fixtureLabels?: ReadonlyMap<number, string>) {
   assert.ok(player.projection, 'player needs a projection');
   return renderToStaticMarkup(
     <PlayerBreakdownModal
@@ -20,6 +20,7 @@ function renderModal(player: SnapshotPlayer) {
       position={player.position}
       team={player.team}
       projection={player.projection}
+      fixtureLabels={fixtureLabels}
       onClose={() => {}}
     />,
   );
@@ -81,16 +82,26 @@ test('model-only projections leave the existing modal without odds detail', () =
   assert.doesNotMatch(markup, />Model<\/th>/);
 });
 
-test('start-aware minutes audit shows source and factor', () => {
+test('start-aware minutes audit shows source, P(start), cameo floor, and fixture labels', () => {
   const player = structuredClone(snapshot.players.find((candidate) => candidate.projection)!);
   assert.ok(player.projection);
   player.projection.startAwareMinutes = {
-    source: 'override', factor: 0.2,
-    fixtures: [{ fixtureId: 1, status: 'bench', source: 'override', factor: 0.2, minutes: 18 }],
+    source: 'override',
+    factor: 0.2,
+    fixtures: [
+      { fixtureId: 1, status: 'bench', source: 'override', factor: 0.2, minutes: 18, pStart: 0 },
+      { fixtureId: 2, status: 'starter', source: 'lineup', factor: 1.1, minutes: 84, pStart: 1 },
+    ],
   };
-  const markup = renderModal(player);
+  const markup = renderModal(player, new Map([[1, 'BRE-TOT 16:30Z'], [2, 'IPS-EVE 15:00Z']]));
   assert.match(markup, /Start call/);
-  assert.match(markup, /Override/);
-  assert.match(markup, /bench/);
-  assert.match(markup, /0.20×/);
+  assert.match(markup, /your call/);
+  assert.match(markup, /BRE-TOT 16:30Z/);
+  assert.match(markup, /benched/);
+  assert.match(markup, /P\(start\) 0%/);
+  assert.match(markup, /18′ \(cameo floor\)/);
+  assert.match(markup, /IPS-EVE 15:00Z/);
+  assert.match(markup, /starting · P\(start\) 100%/);
+  assert.match(markup, /confirmed XI/);
+  assert.match(markup, /cameo, not zero/);
 });

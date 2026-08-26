@@ -15,6 +15,7 @@ import { defaultCompetition } from './drafts/types.js';
 import { ScarcityView } from './ScarcityView.js';
 import { useContestProfile } from './useContestProfile.js';
 import { useProfilePool } from './useProfilePool.js';
+import { useStartOverrides } from './useStartOverrides.js';
 import { hasOddsCoverage } from './windowProjections.js';
 import { FALSE_NINE, profileById, resolveContest } from '../contest/profiles.js';
 import type { OddsSlate } from '../etl/odds.js';
@@ -78,6 +79,11 @@ export function App() {
     }
   }, []);
   const { profile, setProfile, profiles } = useContestProfile();
+  // Manual start calls (#98): daily-only surface, but the hook is mounted
+  // unconditionally so the sheet's pool always has one override source; it
+  // only ever writes when a slate chip is clicked, and its key is per
+  // profile — False Nine's storage is untouched.
+  const { overrides: startOverrides, setCall: setStartCall } = useStartOverrides(profile.id);
   // False Nine keeps the original (unsuffixed) storage keys — untouched by
   // profile switching; any other profile's marks/roster/queue live under
   // their own namespace so a slate draft never tramples the flagship's.
@@ -153,7 +159,11 @@ export function App() {
   // simply uses its model-only terms for those fixtures/players.
   // (Fetched inside useProfilePool, which also serves the drafts intake, the
   // room review, and the carry pin — each under its own contest profile.)
-  const { pool: players, odds } = useProfilePool(snapshot, profile);
+  const { pool: players, odds, lineups } = useProfilePool(
+    snapshot,
+    profile,
+    profile.kind === 'daily' ? startOverrides : undefined,
+  );
 
   const theme =
     (typeof document !== 'undefined'
@@ -165,15 +175,23 @@ export function App() {
    *  as-is; any other profile is window-projected + pool-restricted client-
    *  side (#47), the snapshot itself untouched. (Computed in useProfilePool.) */
 
+  // The active profile's resolved window — the slate's explicit fixture
+  // list. Feeds the matchup strip and the #98 start surface (chips key their
+  // calls by fixture id); empty for False Nine (no strip, no surface).
+  const windowFixtures = useMemo(
+    () => (snapshot && profile.kind === 'daily' ? resolveContest(profile, snapshot.fixtures).fixtures : []),
+    [snapshot, profile],
+  );
+
   // Per-fixture matchup context for daily profiles (#108): λs come from the
   // pool's window-projected p50 goal sums, so the strip reflects the same
   // opponent-adjusted, start-aware, odds-blended math the board ranks on.
   // False Nine's 380-fixture window has no strip — the flagship stays pixel-identical.
   const matchups = useMemo(
-    () => (snapshot && profile.kind === 'daily'
-      ? matchupContext(players, resolveContest(profile, snapshot.fixtures).fixtures, hasOddsCoverage(odds) ? odds : undefined)
+    () => (windowFixtures.length > 0
+      ? matchupContext(players, windowFixtures, hasOddsCoverage(odds) ? odds : undefined)
       : []),
-    [snapshot, profile, players, odds],
+    [windowFixtures, players, odds],
   );
 
   const toggleMatchupStrip = useCallback(() => {
@@ -565,6 +583,16 @@ export function App() {
               groupByTier={positionFilter !== 'ALL'}
               rankMode={rankMode}
               showOddsPoints={profile.window.kind === 'slate' && hasOddsCoverage(odds)}
+              startSurface={
+                profile.kind === 'daily' && windowFixtures.length > 0
+                  ? {
+                      fixtures: windowFixtures,
+                      lineups,
+                      overrides: startOverrides,
+                      onSetOverride: setStartCall,
+                    }
+                  : undefined
+              }
               exposureByPlayer={exposureByPlayer}
               exposureCompetition={exposureCompetition}
             />

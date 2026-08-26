@@ -1140,7 +1140,10 @@ export function buildProjections(
       // A zero-prior backup cannot express a multiplicative uplift; retain a
       // finite audit factor and its exact called minutes instead of NaN/∞.
       const factor = basePerFixtureMinutes > 0 ? calledMinutes / basePerFixtureMinutes : 0;
-      return { fixtureId: fixture.id ?? null, ...call, factor, minutes: calledMinutes };
+      // P(starts this fixture) — 1/0 for called starters/benches, the model's
+      // regressed start share while unknown (the #98 breakdown surface).
+      const pStart = call.status === 'starter' ? 1 : call.status === 'bench' ? 0 : effRates.startFraction;
+      return { fixtureId: fixture.id ?? null, ...call, factor, minutes: calledMinutes, pStart };
     });
     const fixtureMinutes = lineupSlate || startOverrides ? startCalls.map((call) => call.minutes) : undefined;
     const base = buildWindowStatline(
@@ -1251,8 +1254,9 @@ export function buildProjections(
       projection.startAwareMinutes = {
         source,
         factor: round2(startCalls.reduce((sum, call) => sum + call.factor, 0) / Math.max(1, startCalls.length)),
-        fixtures: startCalls.map(({ fixtureId, status, source: fixtureSource, factor, minutes: fixtureMinutes }) => ({
+        fixtures: startCalls.map(({ fixtureId, status, source: fixtureSource, factor, minutes: fixtureMinutes, pStart }) => ({
           fixtureId, status, source: fixtureSource, factor: round2(factor), minutes: round2(fixtureMinutes),
+          pStart: round2(pStart),
         })),
       };
     }

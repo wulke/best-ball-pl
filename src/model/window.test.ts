@@ -190,11 +190,20 @@ test('slate minutes are start-aware: override > lineup > model, with bench cameo
   const untouched = byId.get('B-GK')!;
   assert.equal(fw.startAwareMinutes?.source, 'override');
   assert.equal(fw.startAwareMinutes?.fixtures[0].status, 'bench');
+  assert.equal(fw.startAwareMinutes?.fixtures[0].pStart, 0, 'a called bench carries P(start) 0');
   assert.ok(fw.statline.minutes < plainById.get('A-FW')!.statline.minutes, 'override bench call lowers minutes');
   assert.equal(gk.startAwareMinutes?.source, 'lineup');
+  assert.equal(gk.startAwareMinutes?.fixtures[0].pStart, 0, 'a lineup bench call carries P(start) 0');
+  const lineupOnly = buildProjections(players, DEFAULT_MODEL_CONFIG, window, undefined, undefined, undefined, undefined, lineups);
+  const lineupFw = lineupOnly.projections[players.findIndex((p) => p.id === 'A-FW')];
+  assert.equal(lineupFw.startAwareMinutes?.fixtures[0].pStart, 1, 'a lineup starter carries P(start) 1');
   assert.equal(gk.statline.minutes, DEFAULT_MODEL_CONFIG.minutes.cameoFloorMinutes, 'known bench gets the cameo floor, not zero');
   assert.equal(untouched.startAwareMinutes?.source, 'model');
   assert.equal(untouched.startAwareMinutes?.factor, 1);
+  assert.ok(
+    untouched.startAwareMinutes!.fixtures[0].pStart > 0 && untouched.startAwareMinutes!.fixtures[0].pStart < 1,
+    'an unknown call carries the model start share as P(start)',
+  );
   assert.equal(untouched.statline.minutes, plainById.get('B-GK')!.statline.minutes, 'unknown remains model-default');
   assert.ok(fw.points.p10 < fw.points.p50 && fw.points.p50 < fw.points.p90, 'scenario minutes remain widened around the called base');
 });
