@@ -16,7 +16,11 @@ const snapshot = JSON.parse(
 
 const noOp = () => {};
 
-function renderTable(players: SnapshotPlayer[], showOddsPoints: boolean) {
+function renderTable(
+  players: SnapshotPlayer[],
+  showOddsPoints: boolean,
+  exposureByPlayer: Record<string, { percent: number; pickedRooms: number; totalRooms: number }> = {},
+) {
   return renderToStaticMarkup(
     <PlayerTable
       players={players}
@@ -29,6 +33,7 @@ function renderTable(players: SnapshotPlayer[], showOddsPoints: boolean) {
       groupByTier={false}
       rankMode="points"
       showOddsPoints={showOddsPoints}
+      exposureByPlayer={exposureByPlayer}
     />,
   );
 }
@@ -80,4 +85,17 @@ test('Odds Pts stays hidden for an unpulled slate placeholder', () => {
   const markup = renderTable([player], hasOddsCoverage(placeholder));
   assert.doesNotMatch(markup, />Odds Pts<\/th>/);
   assert.doesNotMatch(markup, />O<\/span>/);
+});
+
+test('exposure badge renders rounded active-competition exposure with its raw scoped detail', () => {
+  const [picked, unpicked] = snapshot.players.filter((player) => player.projection).slice(0, 2);
+  const markup = renderTable(
+    [picked, unpicked],
+    false,
+    { [picked.id]: { percent: 2 / 3, pickedRooms: 2, totalRooms: 3 } },
+  );
+
+  assert.match(markup, />67%<\/span>/, 'rounds the percent with no decimals');
+  assert.match(markup, /Exposure: 2\/3 rooms in False Nine — season best ball/);
+  assert.equal((markup.match(/>67%<\/span>/g) ?? []).length, 1, 'only picked players get a badge');
 });
