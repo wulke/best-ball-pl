@@ -39,6 +39,15 @@ function renderTable(
   );
 }
 
+test('thead sticky top tracks the config stack height via CSS var (44px fallback)', () => {
+  // #109 review: a hardcoded top-11 only worked when the sticky block above
+  // was exactly the 44px filter bar; with the matchup strip stacked on it the
+  // thead must follow the measured height (App publishes --bbpl-sticky-top).
+  const html = renderTable([], false);
+  assert.ok(html.includes('var(--bbpl-sticky-top, 2.75rem)'));
+  assert.ok(!html.includes('top-11'));
+});
+
 test('Odds Pts and odds-coverage marker render only for a single-day slate', () => {
   const covered = structuredClone(snapshot.players.find((player) => player.projection)!);
   const fallback = structuredClone(snapshot.players.find((player) => player.projection && player.id !== covered.id)!);
