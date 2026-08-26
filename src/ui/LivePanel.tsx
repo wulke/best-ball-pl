@@ -6,7 +6,7 @@
 import type { Position, SnapshotPlayer } from './types.js';
 import type { LiveRecs, Rec, TargetState } from './recommend.js';
 import { Tooltip } from './Tooltip.js';
-import type { ContestProfile } from '../contest/profiles.js';
+import { benchSize, type ContestProfile } from '../contest/profiles.js';
 
 const POS_BADGE: Record<string, string> = {
   G: 'border-pos-g/30 bg-pos-g/10 text-pos-g',
@@ -61,12 +61,19 @@ export function LivePanel({
         </button>
         <span className="text-xs tabular-nums text-muted">
           {recs.picksLeft} picks left · {roster.length}/{profile.roster.rosterSize} on roster
+          {benchSize(profile) === 0 && ' · no bench — all start'}
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-1">
           {recs.shape.map((s) => (
             <Tooltip
               key={s.pos}
-              text={`Starters need ${s.starter} ${s.pos} — roster has ${s.count}; balanced-shape target ${s.target}`}
+              text={
+                s.pos === 'FLEX'
+                  ? `${s.starter} FLEX starters — any position fills them; roster has ${s.count} drafted beyond the exact starters${
+                      benchSize(profile) > 0 ? '; further overflow sits on the bench' : ''
+                    }`
+                  : `Starters need ${s.starter} ${s.pos} — roster has ${s.count}; balanced-shape target ${s.target}`
+              }
             >
               <span
                 className={`rounded border px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tabular-nums tracking-wide ${STATE_STYLE[s.state]}`}
