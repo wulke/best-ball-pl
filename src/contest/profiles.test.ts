@@ -7,6 +7,9 @@
  * - The Free Kick GW1 Saturday slate must resolve, against the committed
  *   snapshot, to exactly the four post-close 2026-08-22 fixtures and the 8
  *   slate clubs (HUL-MUN's 11:30Z kickoff excluded — pre-close).
+ * - The Free Kick GW2 Saturday Main slate must resolve to exactly the four
+ *   post-close 2026-08-29 fixtures (no pre-close exclusion that week) and
+ *   match GW1's ruleset knobs — same family, contest-page-confirmed.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -23,6 +26,7 @@ import {
 import {
   FALSE_NINE,
   FREE_KICK_GW1_SAT,
+  FREE_KICK_GW2_SAT,
   PROFILES,
   benchSize,
   fullLogFloor,
@@ -90,11 +94,31 @@ test('Free Kick scoring is primary-confirmed identical to False Nine', () => {
   assert.deepEqual(FREE_KICK_GW1_SAT.scoring, DEFAULT_SCORING);
 });
 
+test('Free Kick GW2 Saturday Main resolves to exactly the 4 post-close fixtures', () => {
+  const resolved = resolveContest(FREE_KICK_GW2_SAT, fixtures);
+  const ids = resolved.fixtures.map((f) => f.id).sort((a, b) => a - b);
+  assert.deepEqual(ids, [12, 13, 14, 15]); // LIV-NFO @11:30, BOU-EVE + COV-HUL @14:00, TOT-NEW @16:30
+  assert.ok(
+    resolved.fixtures.every((f) => f.kickoff.startsWith('2026-08-29') && f.kickoff >= '2026-08-29T11:11:00Z'),
+  );
+  assert.deepEqual(resolved.clubs, ['BOU', 'COV', 'EVE', 'HUL', 'LIV', 'NEW', 'NFO', 'TOT']);
+});
+
+test('Free Kick GW2 is ruleset-identical to GW1 (roster, room, scoring, model knobs)', () => {
+  assert.deepEqual(FREE_KICK_GW2_SAT.roster, FREE_KICK_GW1_SAT.roster);
+  assert.deepEqual(FREE_KICK_GW2_SAT.draft, FREE_KICK_GW1_SAT.draft);
+  assert.deepEqual(FREE_KICK_GW2_SAT.scoring, DEFAULT_SCORING);
+  assert.deepEqual(FREE_KICK_GW2_SAT.tournament, FREE_KICK_GW1_SAT.tournament);
+  assert.deepEqual(FREE_KICK_GW2_SAT.tiering, FREE_KICK_GW1_SAT.tiering);
+  assert.deepEqual(FREE_KICK_GW2_SAT.scenarios, FREE_KICK_GW1_SAT.scenarios);
+});
+
 test('profileById resolves registry ids and throws on unknown ids', () => {
   assert.equal(profileById('false-nine'), FALSE_NINE);
   assert.equal(profileById('free-kick-gw1-sat'), FREE_KICK_GW1_SAT);
+  assert.equal(profileById('free-kick-gw2-sat'), FREE_KICK_GW2_SAT);
   assert.throws(() => profileById('nope'), /Unknown contest profile/);
-  assert.deepEqual(PROFILES.map((p) => p.id), ['false-nine', 'free-kick-gw1-sat']);
+  assert.deepEqual(PROFILES.map((p) => p.id), ['false-nine', 'free-kick-gw1-sat', 'free-kick-gw2-sat']);
 });
 
 test('a slate that matches no fixtures fails loudly', () => {

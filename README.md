@@ -48,6 +48,17 @@ Every contest the tool supports is a **contest profile** (`src/contest/profiles.
 
 - **`false-nine`** (profile #1) — the season best-ball contest: today's behavior, preserved bit-for-bit (guarded by tests; ETL/model CLI run under it).
 - **`free-kick-gw1-sat`** (profile #2) — Underdog's The Free Kick GW1 Saturday slate: the four 2026-08-22 fixtures kicking off after the 13:41Z close (HUL-MUN excluded — pre-close), roster 1/1/1/1 + 2 FLEX = 6 rounds, **no bench**, draft size 6, pool = the 8 slate clubs, scoring identical to False Nine. Its knobs are **short-window calibrated** (#46): `ceilingWeight` 0.4 (GPP-shaped — top-heavy payouts, 6/6 starters), tiering on window scale (`minGap` 1.0 ≈ one SoT, `maxTiers` 4, `maxTierSize` 8 — a 6-round room reads 3–4 tiers), and a `scenarios` override widening attacker p90 bursts to single-fixture q90/expectation ratios (FW ×2.0 / MD ×1.8 / D ×1.45 / G ×1.1 — a starter's single-fixture q90 is "scores once", not "×1.25 of a good season"; p10 burst 0.65 for the floor). One-slate provisional — retune once a few dailies have results.
+- **`free-kick-gw2-sat`** (profile #3) — The Free Kick GW2 Saturday Main slate ($3, 3-entry max): the four 2026-08-29 fixtures kicking off after the 11:11Z close (NFO-LIV 11:30Z, EVE-BOU and HUL-COV 14:00Z, NEW-TOT 16:30Z — no pre-close exclusion that week), same roster/room/scoring as GW1. Prize shape is more top-heavy than GW1 ($300 of $2,000 = 15% to first vs 10%) — same GPP direction, so the #46 knobs carry over unchanged pending the retune. Odds/lineup pulls key off the profile id (`data/odds/free-kick-gw2-sat.json`, `data/lineups/free-kick-gw2-sat.json`).
+
+### Adding a weekly slate profile (manual recipe, #52)
+
+Each Saturday's Free Kick slate is a new profile, hand-added from the contest page (automation undecided, #52):
+
+1. Capture from the Underdog contest page: close time (convert to UTC), game list, roster, scoring table, prize shape, entry max.
+2. Verify the game list against the FPL calendar (committed `snapshot.json` fixtures or `fixtures/?event=N` live): every game must match a fixture, and any same-day fixture kicking off **before** close is excluded from the slate (GW1's HUL-MUN) — if one appears, double-check the close-time conversion before excluding.
+3. Add the `ContestProfile` to `src/contest/profiles.ts` (id `free-kick-gw<N>-sat`, window `{ kind: 'slate', date, notBefore: '<close>Z' }`), carrying the previous slate's short-window knobs unless the prize structure moved materially.
+4. Extend `src/contest/profiles.test.ts` (resolved fixture ids + clubs, registry assertion) and this README's profile list.
+5. Later in the week, pull the per-slate assets: `ODDS_API_KEY=… npm run odds -- --profile <id>` and, once #99 lands, `npm run lineups -- --profile <id>`.
 
 A profile's `WindowSpec` (`season` | `slate` | `fixtures`) resolves via `resolveContest(profile, snapshot.fixtures)` to an explicit fixture list — never a bare GW label; any window is a sum over its fixtures. The **active** profile is the UI's choice, persisted as an id in localStorage (`bbpl-profile`, default False Nine) and resolved by `src/ui/useContestProfile.ts`.
 
@@ -68,7 +79,7 @@ For a daily slate with `data/odds/<profile-id>.json`, the client also computes a
 ```
 src/
   etl/        # Data pipeline → data/snapshot.json
-    fpl.ts    #   FPL API client: disk cache (.etl-cache/), retry/backoff, concurrency cap
+    fpl.ts    #   FPL API client: disk cache (.etl-cache/), retry/backoff, concurrency cap; event-live rows join bootstrap players by FPL `id`
     actuals.ts #   Per-GW actuals pipeline: GW completeness, featured filter, asOf stamp (#40)
     fbref.ts  #   FBref parser: manually-saved league pages → per-player volume stats
     fbref-merge.ts #  FBref↔FPL matching + snapshot enrichment (npm run fbref)
