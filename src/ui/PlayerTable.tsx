@@ -159,7 +159,10 @@ export function PlayerTable({
           rendered over the first rows). The page is the scroller; on narrow
           viewports the table overflows to a body-level horizontal scrollbar. */}
       <table className="player-table w-full min-w-max border-collapse">
-        <thead className="sticky top-11 z-10 bg-surface print:static">
+        <thead
+          className="sticky z-10 bg-surface print:static"
+          style={{ top: 'var(--bbpl-sticky-top, 2.75rem)' }}
+        >
           <tr className="border-b border-strong">
             <th className={`${TH_BASE} w-6`}>
               <Tooltip text="Off board — drafted by anyone in the room (not just you)" wide>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Position, Snapshot } from './types.js';
 import { PlayerTable, type RankMode } from './PlayerTable.js';
 import { useDrafted } from './useDrafted.js';
@@ -15,10 +15,12 @@ import { defaultCompetition } from './drafts/types.js';
 import { ScarcityView } from './ScarcityView.js';
 import { useContestProfile } from './useContestProfile.js';
 import { hasOddsCoverage, poolForProfile } from './windowProjections.js';
-import { FALSE_NINE } from '../contest/profiles.js';
+import { FALSE_NINE, resolveContest } from '../contest/profiles.js';
 import type { OddsSlate } from '../etl/odds.js';
 import type { LineupSlate } from '../model/lineups.js';
 import { loadStartOverrides } from './startOverrides.js';
+import { matchupContext } from './matchupContext.js';
+import { MatchupStrip } from './MatchupStrip.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
@@ -49,8 +51,35 @@ export function App() {
   const [queueOnly, setQueueOnly] = useState(false);
   const [liveOpen, setLiveOpen] = useState(true);
   const [carryOpen, setCarryOpen] = useState(true);
+  const [matchupOpen, setMatchupOpen] = useState(() => {
+    try {
+      return localStorage.getItem('bbpl-matchup-strip') !== '0'; // default open
+    } catch {
+      return true;
+    }
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  /** The sticky strip+filter stack's measured height — published as the
+   *  `--bbpl-sticky-top` custom property so PlayerTable's <thead> sticks
+   *  directly beneath it (the height varies with the matchup strip's
+   *  open/collapsed state and chip wrap). null → 44px fallback in the var(). */
+  const [stickyStackHeight, setStickyStackHeight] = useState<number | null>(null);
+  /** Callback ref: (re)attaches a ResizeObserver every time the sheet view
+   *  mounts the sticky stack — an effect with [] deps would orphan the first
+   *  observer on view switches that unmount/remount the element. */
+  const roRef = useRef<ResizeObserver | null>(null);
+  const stickyStackRef = useCallback((el: HTMLDivElement | null) => {
+    roRef.current?.disconnect();
+    roRef.current = null;
+    if (el && typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => setStickyStackHeight(el.offsetHeight));
+      ro.observe(el);
+      roRef.current = ro;
+    } else {
+      setStickyStackHeight(null); // stack unmounted — fall back to the 44px default
+    }
+  }, []);
   const { profile, setProfile, profiles } = useContestProfile();
   // False Nine keeps the original (unsuffixed) storage keys — untouched by
   // profile switching; any other profile's marks/roster/queue live under
@@ -115,6 +144,13 @@ export function App() {
       .catch((err: Error) => setError(err.message));
   }, []);
 
+  // Publish the sticky stack's height as a CSS custom property on the App's
+  // root so PlayerTable's <thead> can stick to `var(--bbpl-sticky-top)`.
+  // Attachment lives in the stickyStackRef callback above (not an effect) so
+  // view switches that unmount/remount the stack re-observe correctly;
+  // ResizeObserver catches the strip toggle and chip wrap at narrow widths.
+  // SSR/tests never run ref callbacks against a real DOM, so the var() fallback
+  // in PlayerTable keeps standalone renders identical to the old top-11.
   // Daily odds are an optional static companion asset. Missing, stale, or
   // malformed coverage never blocks the slate sheet: the projection layer
   // simply uses its model-only terms for those fixtures/players.
@@ -156,6 +192,28 @@ export function App() {
     () => (snapshot ? poolForProfile(snapshot, profile, odds, lineups, startOverrides) : []),
     [snapshot, profile, odds, lineups, startOverrides],
   );
+
+  // Per-fixture matchup context for daily profiles (#108): λs come from the
+  // pool's window-projected p50 goal sums, so the strip reflects the same
+  // opponent-adjusted, start-aware, odds-blended math the board ranks on.
+  // False Nine's 380-fixture window has no strip — the flagship stays pixel-identical.
+  const matchups = useMemo(
+    () => (snapshot && profile.kind === 'daily'
+      ? matchupContext(players, resolveContest(profile, snapshot.fixtures).fixtures, hasOddsCoverage(odds) ? odds : undefined)
+      : []),
+    [snapshot, profile, players, odds],
+  );
+
+  const toggleMatchupStrip = useCallback(() => {
+    setMatchupOpen((open) => {
+      try {
+        localStorage.setItem('bbpl-matchup-strip', open ? '0' : '1');
+      } catch {
+        // Storage unavailable — the toggle still works for this session.
+      }
+      return !open;
+    });
+  }, []);
 
   /** The carry-forward pin: the latest room's flags + note, read mid-draft. */
   const carryPin = useMemo(() => {
@@ -232,7 +290,14 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-app px-4 py-6">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3">
+      <div
+        className="mx-auto flex max-w-7xl flex-col gap-3"
+        style={
+          stickyStackHeight != null
+            ? ({ '--bbpl-sticky-top': `${stickyStackHeight}px` } as CSSProperties)
+            : undefined
+        }
+      >
         <header className="flex items-center justify-between gap-2 print:hidden">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-accent">
@@ -402,7 +467,19 @@ export function App() {
                 page — the board (filters + table) below stays mounted underneath it. */}
             {view === 'scarcity' && <ScarcityView players={players} drafted={drafted} />}
 
-            <div className="sticky top-0 z-20 flex h-11 flex-nowrap items-center gap-2 overflow-x-auto bg-app py-2 print:hidden">
+            {/* Sticky config stack (#108): matchup strip ABOVE the table's
+                filter bar, both inside one sticky wrapper so they pin together
+                and the strip's collapsed↔open height change can never overlap
+                the filters mid-scroll. Its measured height is published as the
+                `--bbpl-sticky-top` custom property (see stickyStack effect) so
+                PlayerTable's <thead> sticks directly beneath it — a hardcoded
+                top-11 only worked when the stack was exactly the 44px bar. */}
+            <div ref={stickyStackRef} className="sticky top-0 z-20 bg-app print:hidden">
+              {matchups.length > 0 && (
+                <MatchupStrip matchups={matchups} open={matchupOpen} onToggle={toggleMatchupStrip} />
+              )}
+
+              <div className="flex h-11 flex-nowrap items-center gap-2 overflow-x-auto py-2">
               <div className="flex items-center gap-0.5 rounded border border-default p-0.5">
                 {POSITION_FILTERS.map((position) => (
                   <button
@@ -488,6 +565,7 @@ export function App() {
               <span className="ml-auto text-xs tabular-nums text-muted">
                 {visible.length} shown · {drafted.size} off board · {mine.size} mine · {queue.size} queued
               </span>
+              </div>
             </div>
 
             <PlayerTable
