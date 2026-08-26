@@ -7,6 +7,7 @@
  */
 import type { Position, SnapshotPlayer } from './types.js';
 import { FALSE_NINE, POSITIONS, type ContestProfile } from '../contest/profiles.js';
+import { matchSameClubRules, type Rule } from '../stacking/rules.js';
 
 export type TargetState = 'need' | 'ok' | 'full';
 
@@ -20,7 +21,7 @@ export type LiveRecs = {
   picksLeft: number;
   shape: ShapeEntry[];
   /** Clubs on my roster worth flagging for correlation. */
-  clubChips: { club: string; count: number; attackers: number; csBlock: boolean }[];
+  clubChips: { club: string; count: number; attackers: number; matchedRules: Rule[] }[];
   /** My queue ∩ board, best first (the drafting pool). */
   queued: Rec[];
   /** Best players on the board, whatever the position. */
@@ -105,12 +106,15 @@ export function buildRecommendations(
   }
 
   // Club clusters on my roster — the correlation watch.
-  const clubMap = new Map<string, { count: number; attackers: number; csBlock: number }>();
+  const clubMap = new Map<
+    string,
+    { count: number; attackers: number; positions: Partial<Record<Position, number>> }
+  >();
   for (const p of roster) {
-    const entry = clubMap.get(p.team) ?? { count: 0, attackers: 0, csBlock: 0 };
+    const entry = clubMap.get(p.team) ?? { count: 0, attackers: 0, positions: {} };
     entry.count += 1;
     if (p.position === 'MD' || p.position === 'FW') entry.attackers += 1;
-    if (p.position === 'G' || p.position === 'D') entry.csBlock += 1;
+    entry.positions[p.position] = (entry.positions[p.position] ?? 0) + 1;
     clubMap.set(p.team, entry);
   }
   const clubChips = [...clubMap.entries()]
@@ -119,7 +123,7 @@ export function buildRecommendations(
       club,
       count: e.count,
       attackers: e.attackers,
-      csBlock: e.csBlock >= 2, // G+D from one club: clean-sheet points move together
+      matchedRules: matchSameClubRules(e.positions),
     }))
     .sort((a, b) => b.count - a.count);
 
@@ -136,13 +140,9 @@ export function buildRecommendations(
     const myClub = clubMap.get(player.team);
     if (myClub && myClub.count >= 1) {
       tags.push(`${ordinal(myClub.count + 1)} ${player.team}`);
-      if (
-        (player.position === 'G' || player.position === 'D') &&
-        myClub.csBlock >= 1 &&
-        myClub.csBlock + 1 >= 2
-      ) {
-        tags.push('CS corr'); // same-club GK/DEF clean sheets are the same event
-      }
+      // Would this pick complete a same-club stack rule for this club?
+      const withPick = { ...myClub.positions, [player.position]: (myClub.positions[player.position] ?? 0) + 1 };
+      for (const rule of matchSameClubRules(withPick)) tags.push(rule.label);
     }
     if (player.projection) {
       const left = tierLeft.get(`${player.position}:${player.projection.tier}`) ?? 0;

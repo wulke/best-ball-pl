@@ -7,6 +7,7 @@ import type { Position, SnapshotPlayer } from './types.js';
 import type { LiveRecs, Rec, TargetState } from './recommend.js';
 import { Tooltip } from './Tooltip.js';
 import { benchSize, type ContestProfile } from '../contest/profiles.js';
+import { ruleTooltip } from '../stacking/rules.js';
 
 const POS_BADGE: Record<string, string> = {
   G: 'border-pos-g/30 bg-pos-g/10 text-pos-g',
@@ -109,20 +110,20 @@ export function LivePanel({
                 <Tooltip
                   key={chip.club}
                   text={
-                    chip.csBlock
-                      ? `G + D from ${chip.club}: their clean-sheet points are the same event`
+                    chip.matchedRules.length > 0
+                      ? chip.matchedRules.map((rule) => ruleTooltip(rule, chip.club)).join(' ')
                       : `${chip.count} players from ${chip.club} — correlated outcomes`
                   }
                 >
                   <span
                     className={`rounded border px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tabular-nums tracking-wide ${
-                      chip.csBlock || chip.count >= 3 || chip.attackers >= 2
+                      chip.matchedRules.length > 0 || chip.count >= 3 || chip.attackers >= 2
                         ? 'border-negative/50 text-negative'
                         : 'border-default text-muted'
                     }`}
                   >
                     {chip.club} ×{chip.count}
-                    {chip.csBlock ? ' CS-corr' : ''}
+                    {chip.matchedRules.map((rule) => ` ${rule.label}`).join('')}
                   </span>
                 </Tooltip>
               ))}
