@@ -14,6 +14,29 @@ import assert from 'node:assert/strict';
 import { buildAsOf, decimalOrNull, finishedEventNumbers, toGwActuals } from './actuals.js';
 import type { RawEventLive, RawFixture, RawLiveElement } from './fpl.js';
 
+/**
+ * Captured from https://fantasy.premierleague.com/api/event/1/live/ on
+ * 2026-08-26. Deliberately retains the upstream row key (`id`) and selected
+ * ignored fields so an upstream payload-shape change fails before cron.
+ */
+const capturedEvent1LiveRow = {
+  id: 1,
+  stats: {
+    minutes: 90,
+    goals_scored: 0,
+    assists: 0,
+    clean_sheets: 1,
+    goals_conceded: 0,
+    saves: 1,
+    penalties_saved: 0,
+    total_points: 6,
+    expected_goals: '0.00',
+    expected_assists: '0.00',
+  },
+  explain: [{ fixture: 1, stats: [{ identifier: 'minutes', points: 2, value: 90, points_modification: 0 }] }],
+  modified: false,
+};
+
 function fixture(overrides: Partial<RawFixture>): RawFixture {
   return {
     id: 1,
@@ -49,6 +72,27 @@ function liveRow(overrides: Partial<RawLiveElement> = {}): RawLiveElement {
     ...overrides,
   };
 }
+
+test('toGwActuals accepts the captured FPL event-live row shape', () => {
+  // This cast records the API contract before RawLiveElement is corrected.
+  const live = { elements: [capturedEvent1LiveRow] } as unknown as RawEventLive;
+  const gw = toGwActuals(1, live);
+  assert.deepEqual(gw.players, [
+    {
+      id: '1',
+      minutes: 90,
+      goals: 0,
+      assists: 0,
+      cleanSheets: 1,
+      goalsConceded: 0,
+      saves: 1,
+      penaltiesSaved: 0,
+      xg: 0,
+      xa: 0,
+      fplPoints: 6,
+    },
+  ]);
+});
 
 test('finishedEventNumbers: only all-finished GWs count, ascending', () => {
   const fixtures = [
