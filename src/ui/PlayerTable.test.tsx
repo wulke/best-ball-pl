@@ -19,7 +19,7 @@ const noOp = () => {};
 function renderTable(
   players: SnapshotPlayer[],
   showOddsPoints: boolean,
-  exposureByPlayer: Record<string, { percent: number; pickedRooms: number; totalRooms: number }> = {},
+  exposureByPlayer: ReadonlyMap<string, { percent: number; pickedRooms: number; totalRooms: number }> = new Map(),
 ) {
   return renderToStaticMarkup(
     <PlayerTable
@@ -34,6 +34,7 @@ function renderTable(
       rankMode="points"
       showOddsPoints={showOddsPoints}
       exposureByPlayer={exposureByPlayer}
+      exposureCompetition="False Nine — season best ball"
     />,
   );
 }
@@ -92,10 +93,14 @@ test('exposure badge renders rounded active-competition exposure with its raw sc
   const markup = renderTable(
     [picked, unpicked],
     false,
-    { [picked.id]: { percent: 2 / 3, pickedRooms: 2, totalRooms: 3 } },
+    new Map([
+      [picked.id, { percent: 2 / 3, pickedRooms: 2, totalRooms: 3 }],
+      [unpicked.id, { percent: 0, pickedRooms: 0, totalRooms: 3 }],
+    ]),
   );
 
   assert.match(markup, />67%<\/span>/, 'rounds the percent with no decimals');
   assert.match(markup, /Exposure: 2\/3 rooms in False Nine — season best ball/);
   assert.equal((markup.match(/>67%<\/span>/g) ?? []).length, 1, 'only picked players get a badge');
+  assert.doesNotMatch(markup, />0%<\/span>/, 'zero exposure remains visually unchanged');
 });

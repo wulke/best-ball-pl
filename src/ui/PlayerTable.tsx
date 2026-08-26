@@ -36,6 +36,13 @@ const POS_BADGE: Record<string, string> = {
  *  constant) — this only changes the overall, cross-position ordering. */
 export type RankMode = 'points' | 'vorp';
 
+/** A player's locally logged exposure in the active competition only. */
+export type PlayerExposureBadge = {
+  percent: number;
+  pickedRooms: number;
+  totalRooms: number;
+};
+
 type Row = {
   player: SnapshotPlayer;
   /** Rank shown: posRank in a position view, overall rank (by rankMode) otherwise. */
@@ -59,6 +66,9 @@ type Props = {
   rankMode: RankMode;
   /** A single-day slate can carry the optional odds-blended companion score. */
   showOddsPoints: boolean;
+  /** Exposure lookup scoped by App to the active profile's competition label. */
+  exposureByPlayer: ReadonlyMap<string, PlayerExposureBadge>;
+  exposureCompetition: string;
 };
 
 const TH_BASE =
@@ -77,6 +87,8 @@ export function PlayerTable({
   groupByTier,
   rankMode,
   showOddsPoints,
+  exposureByPlayer,
+  exposureCompetition,
 }: Props) {
   const [breakdownPlayer, setBreakdownPlayer] = useState<SnapshotPlayer | null>(null);
   const rows: Row[] = players.map((player) => ({
@@ -133,6 +145,8 @@ export function PlayerTable({
         isQueued={queued.has(row.player.id)}
         onToggleQueued={onToggleQueued}
         onShowBreakdown={setBreakdownPlayer}
+        exposure={exposureByPlayer.get(row.player.id)}
+        exposureCompetition={exposureCompetition}
       />,
     );
   });
@@ -265,6 +279,8 @@ function PlayerRow({
   isQueued,
   onToggleQueued,
   onShowBreakdown,
+  exposure,
+  exposureCompetition,
 }: {
   row: Row;
   showTierColumn: boolean;
@@ -276,6 +292,8 @@ function PlayerRow({
   isQueued: boolean;
   onToggleQueued: (id: string) => void;
   onShowBreakdown: (player: SnapshotPlayer) => void;
+  exposure: PlayerExposureBadge | undefined;
+  exposureCompetition: string;
 }) {
   const { player } = row;
   const projection = player.projection!; // upstream filters projection-less players
@@ -407,6 +425,16 @@ function PlayerRow({
             <Tooltip text="Odds coverage: at least one player or fixture term informed Odds Pts" wide>
               <span className="rounded border border-info/30 bg-info/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info">
                 O
+              </span>
+            </Tooltip>
+          )}
+          {exposure && exposure.pickedRooms > 0 && (
+            <Tooltip
+              text={`Exposure: ${exposure.pickedRooms}/${exposure.totalRooms} rooms in ${exposureCompetition}`}
+              wide
+            >
+              <span className="rounded border border-info/30 bg-info/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-info">
+                {Math.round(exposure.percent * 100)}%
               </span>
             </Tooltip>
           )}
