@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "profileId": "free-kick-gw2-sat",
+  "slateDate": "2026-08-29",
+  "fetchedAt": "2026-08-26T16:32:38.387Z",
+  "fixtureCoverage": [
+    {
+      "fixtureId": 14,
+      "covered": false
+    },
+    {
+      "fixtureId": 12,
+      "covered": false
+    },
+    {
+      "fixtureId": 13,
+      "covered": false
+    },
+    {
+      "fixtureId": 15,
+      "covered": false
+    }
+  ],
+  "players": []
+}

@@ -6,13 +6,14 @@
   "scripts": {
     "etl": "node --import tsx src/etl/index.ts",
     "odds": "node --import tsx src/etl/odds-cli.ts",
+ "lineups": "node --import tsx src/etl/lineups-cli.ts",
     "etl:sanity-check": "node --import tsx src/etl/sanity-check.ts",
     "fbref": "node --import tsx src/etl/fbref-merge.ts",
     "model": "node --import tsx src/model/cli.ts",
     "dev": "vite --config src/ui/vite.config.ts",
     "build": "vite build --config src/ui/vite.config.ts",
     "preview": "vite preview --config src/ui/vite.config.ts",
-    "test": "node --import tsx --test src/ui/PlayerTable.test.tsx src/ui/PlayerBreakdownModal.test.tsx src/ui/drafts/parse.test.ts src/ui/drafts/store.test.ts src/ui/drafts/exposure.test.ts src/ui/drafts/ExposureView.test.tsx src/ui/drafts/RoomEditor.test.tsx src/ui/drafts/DraftsView.test.ts src/ui/drafts/review.test.ts src/ui/headlineDrivers.test.ts src/ui/windowProjections.test.ts src/model/project.test.ts src/model/window.test.ts src/model/lineups.test.ts src/model/actuals.test.ts src/model/strength.test.ts src/contest/profiles.test.ts src/etl/actuals.test.ts src/etl/odds.test.ts src/etl/position-overrides.test.ts src/etl/strength.test.ts",
+    "test": "node --import tsx --test src/ui/PlayerTable.test.tsx src/ui/PlayerBreakdownModal.test.tsx src/ui/drafts/parse.test.ts src/ui/drafts/store.test.ts src/ui/drafts/exposure.test.ts src/ui/drafts/ExposureView.test.tsx src/ui/drafts/RoomEditor.test.tsx src/ui/drafts/DraftsView.test.ts src/ui/drafts/review.test.ts src/ui/headlineDrivers.test.ts src/ui/windowProjections.test.ts src/model/project.test.ts src/model/window.test.ts src/model/lineups.test.ts src/model/actuals.test.ts src/model/strength.test.ts src/contest/profiles.test.ts src/etl/actuals.test.ts src/etl/odds.test.ts src/etl/position-overrides.test.ts src/etl/strength.test.ts src/etl/lineups.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
