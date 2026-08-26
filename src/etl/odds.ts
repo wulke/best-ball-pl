@@ -38,7 +38,10 @@ const finitePrice = (value: unknown): value is number => typeof value === 'numbe
 function eventForFixture(fixture: SnapshotFixture, events: OddsEvent[]) {
   return events.find((event) => clubForOddsName(event.home_team) === fixture.home && clubForOddsName(event.away_team) === fixture.away);
 }
-function playerByOddsName(players: SnapshotPlayer[], name: string, clubs: Set<string>) {
+/** Shared club-scoped name matcher for third-party sources that lack an FPL
+ *  key (Odds API prop markets, pulselive lineup payloads): normalized full-name
+ *  match first, unique short-name/token match second, ambiguity → undefined. */
+export function matchPlayerByName(players: SnapshotPlayer[], name: string, clubs: Set<string>) {
   const target = normalizeOddsName(name);
   // Tokenize the raw name before normalization so word boundaries survive
   // ("Dominic Solanke" -> [dominic, solanke]).
@@ -92,7 +95,7 @@ export function buildOddsSlate(profileId: string, slateDate: string, fixtures: S
       // in `name`; anytime goalscorer: "Yes" in `name`). Fall back to `name`
       // defensively for any book that inlines the player name there instead.
       for (const outcome of market.outcomes) {
-        const player = playerByOddsName(players, outcome.description ?? outcome.name, fixtureClubs);
+        const player = matchPlayerByName(players, outcome.description ?? outcome.name, fixtureClubs);
         if (!player || !finitePrice(outcome.price)) continue;
         const prop = props.get(player.id) ?? { playerId: player.id, anytimeGoalscorer: [], assists: [] };
         if (market.key === 'player_goal_scorer_anytime') prop.anytimeGoalscorer.push({ bookmaker: book.key, price: outcome.price });
