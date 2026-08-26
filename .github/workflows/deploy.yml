@@ -1,8 +1,13 @@
 name: Deploy cheat sheet to Pages
 
+# Manual dispatch: the deploy only otherwise fires on push-to-main, and
+# this afternoon's Actions infra degradation (startup_failure + dropped
+# events, 2026-08-26) left two merged PRs undeployed with no sanctioned way
+# to re-trigger. Mirrors ci.yml's #41 recovery pattern.
 on:
   push:
     branches: [main]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
