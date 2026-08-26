@@ -18,7 +18,7 @@ export type Rec = {
 
 export type LiveRecs = {
   picksLeft: number;
-  shape: { pos: Position; count: number; starter: number; target: number; state: TargetState }[];
+  shape: ShapeEntry[];
   /** Clubs on my roster worth flagging for correlation. */
   clubChips: { club: string; count: number; attackers: number; csBlock: boolean }[];
   /** My queue ∩ board, best first (the drafting pool). */
@@ -35,6 +35,17 @@ export type LiveRecs = {
     floor: Rec | null;
     ceiling: Rec | null;
   }[];
+};
+
+/** One roster-shape chip: drafted count vs starting slots for a position
+ *  (or the shared FLEX pool — every spot that will start, not just the
+ *  exact-position slots). */
+export type ShapeEntry = {
+  pos: Position | 'FLEX';
+  count: number;
+  starter: number;
+  target: number;
+  state: TargetState;
 };
 
 function ordinal(n: number): string {
@@ -61,7 +72,7 @@ export function buildRecommendations(
   // Roster shape vs starter minimums + balanced targets.
   const counts: Record<Position, number> = { G: 0, D: 0, MD: 0, FW: 0 };
   for (const p of roster) counts[p.position] += 1;
-  const shape = POSITIONS.map((pos) => ({
+  const shape: ShapeEntry[] = POSITIONS.map((pos) => ({
     pos,
     count: counts[pos],
     starter: STARTER_NEEDS[pos],
@@ -72,6 +83,26 @@ export function buildRecommendations(
         ? 'ok'
         : 'full') as TargetState,
   }));
+  // FLEX starter slots: players drafted beyond a position's exact-starter
+  // minimum are the flex fillers (the same best-lineup semantics as
+  // computeStarters in drafts/review.ts); overflow past the flex count is
+  // bench. Daily no-bench slates therefore count every pick — all roster
+  // spots start.
+  const flexSlots = profile.roster.flex;
+  if (flexSlots > 0) {
+    const overflow = POSITIONS.reduce(
+      (sum, pos) => sum + Math.max(0, counts[pos] - STARTER_NEEDS[pos]),
+      0,
+    );
+    const flexCount = Math.min(flexSlots, overflow);
+    shape.push({
+      pos: 'FLEX',
+      count: flexCount,
+      starter: flexSlots,
+      target: flexSlots,
+      state: flexCount < flexSlots ? 'need' : 'full',
+    });
+  }
 
   // Club clusters on my roster — the correlation watch.
   const clubMap = new Map<string, { count: number; attackers: number; csBlock: number }>();
