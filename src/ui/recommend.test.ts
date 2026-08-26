@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Position, SnapshotPlayer } from './types.js';
 import { buildRecommendations } from './recommend.js';
+import { GK_DEF_CS_STACK } from '../stacking/rules.js';
 import { FALSE_NINE, FREE_KICK_GW1_SAT } from '../contest/profiles.js';
 
 function player(id: string, position: Position, team = 'MCI'): SnapshotPlayer {
@@ -85,4 +86,29 @@ test('False Nine FLEX caps at 2 — overflow beyond it is bench, not more starte
   assert.equal(flex.count, 2);
   assert.equal(flex.starter, 2);
   assert.equal(flex.state, 'full');
+});
+
+test('clubChips flags the GK+DEF CS stack rule for a real G+D pair', () => {
+  const pool = [player('1', 'G', 'MCI'), player('2', 'D', 'MCI')];
+  const chips = buildRecommendations(pool, new Set(), new Set(['1', '2']), new Set()).clubChips;
+  const mci = chips.find((c) => c.club === 'MCI')!;
+  assert.deepEqual(
+    mci.matchedRules.map((r) => r.id),
+    [GK_DEF_CS_STACK.id],
+  );
+});
+
+test('clubChips does not flag 2 DEF from the same club with no GK', () => {
+  const pool = [player('1', 'D', 'MCI'), player('2', 'D', 'MCI')];
+  const chips = buildRecommendations(pool, new Set(), new Set(['1', '2']), new Set()).clubChips;
+  const mci = chips.find((c) => c.club === 'MCI')!;
+  assert.deepEqual(mci.matchedRules, []);
+});
+
+test('tagsFor tags a DEF pick that would complete the GK+DEF stack with an already-rostered GK', () => {
+  const board = { ...player('2', 'D', 'MCI'), projection: { tournamentScore: 1, tier: 1 } } as unknown as SnapshotPlayer;
+  const pool = [player('1', 'G', 'MCI'), board];
+  const bpa = buildRecommendations(pool, new Set(), new Set(['1']), new Set()).bpa;
+  const candidate = bpa.find((r) => r.player.id === '2')!;
+  assert.ok(candidate.tags.includes(GK_DEF_CS_STACK.label));
 });
