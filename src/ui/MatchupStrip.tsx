@@ -6,6 +6,14 @@
  * when the slate has an odds pull) for daily profiles. False Nine (a
  * 380-fixture window) never renders it.
  *
+ * Styling (review feedback: must stand out from the board): an accent-tinted
+ * band (bg-accent/5 + border-accent/30 — the same highlight treatment the
+ * position badges use, so it's on-system in every theme) wraps the whole
+ * strip so it reads as ONE context zone, not another table row; chips raise
+ * above the tint (bg-surface-raised + border-strong); the probability bar is
+ * taller (h-1.5) for at-a-glance shape; and market lines (MKT) render in
+ * text-info to separate bookmaker consensus from model output instantly.
+ *
  * Pure presentation — every number comes from `matchupContext()` (matchupContext.ts).
  */
 import type { MatchupContext } from './matchupContext.js';
@@ -25,13 +33,13 @@ function MatchupChip({ matchup }: { matchup: MatchupContext }) {
   const homeEdge = matchup.homeWin >= matchup.awayWin;
   return (
     <div
-      className="min-w-44 rounded border border-default bg-surface px-2 py-1"
+      className="min-w-44 rounded border border-strong bg-surface-raised px-2 py-1"
       title={`${fixture.home} λ ${matchup.homeXg.toFixed(2)} · ${fixture.away} λ ${matchup.awayXg.toFixed(2)}${
         market ? ` · MKT avg of ${market.books} book${market.books === 1 ? '' : 's'}` : ' · no market quotes'
       }`}
     >
       <div className="flex items-baseline justify-between gap-2 whitespace-nowrap">
-        <span className="font-condensed text-sm font-semibold tabular-nums">
+        <span className="font-condensed text-base font-bold leading-none tabular-nums">
           <span className={homeEdge ? 'text-accent' : 'text-primary'}>{fixture.home}</span>
           <span className="mx-1 text-secondary">
             {matchup.homeXg.toFixed(1)}–{matchup.awayXg.toFixed(1)}
@@ -40,21 +48,21 @@ function MatchupChip({ matchup }: { matchup: MatchupContext }) {
         </span>
         <span className="text-[0.65rem] tabular-nums text-muted">{kickoffLabel(fixture.kickoff)}</span>
       </div>
-      {/* 1X2 stacked bar: model home / draw / away */}
-      <div className="mt-1 flex h-1 w-full overflow-hidden rounded" aria-hidden="true">
+      {/* 1X2 stacked bar: model home / draw / away — the at-a-glance shape */}
+      <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded" aria-hidden="true">
         <div className="bg-accent" style={{ width: `${matchup.homeWin * 100}%` }} />
-        <div className="bg-muted" style={{ width: `${matchup.draw * 100}%` }} />
+        <div className="bg-muted/60" style={{ width: `${matchup.draw * 100}%` }} />
         <div className="bg-info" style={{ width: `${matchup.awayWin * 100}%` }} />
       </div>
-      <div className="mt-1 flex items-center justify-between gap-2 whitespace-nowrap text-[0.65rem] tabular-nums">
-        <span className="text-secondary">
+      <div className="mt-1.5 flex items-center justify-between gap-2 whitespace-nowrap text-[0.65rem] tabular-nums">
+        <span className="font-semibold text-secondary">
           {pct(matchup.homeWin)}/{pct(matchup.draw)}/{pct(matchup.awayWin)}
         </span>
         <span className="text-muted">
           CS {pct(matchup.homeCleanSheet)}/{pct(matchup.awayCleanSheet)} · O2.5 {pct(matchup.over25)}%
         </span>
         {market && (
-          <span className="text-secondary">
+          <span className="font-semibold text-info">
             MKT {pct(market.homeWin)}/{pct(market.draw)}/{pct(market.awayWin)}
           </span>
         )}
@@ -73,17 +81,22 @@ export function MatchupStrip({
   onToggle: () => void;
 }) {
   return (
-    <div className="print:hidden">
+    <div className="rounded-md border border-accent/30 bg-accent/5 px-2 py-1.5">
       <button
         type="button"
         onClick={onToggle}
-        className="text-xs font-semibold uppercase tracking-widest text-accent"
+        className="flex w-full items-center justify-between gap-2 text-left"
         title="Per-fixture matchup context: model predicted score, 1X2 / clean-sheet / over-2.5 probabilities, and the bookmaker line when an odds pull exists"
       >
-        {open ? '▾' : '▸'} Matchups ({matchups.length})
+        <span className="text-xs font-semibold uppercase tracking-widest text-accent">
+          Matchups ({matchups.length})
+        </span>
+        <span className="text-xs text-muted" aria-hidden="true">
+          {open ? '▾' : '▸'}
+        </span>
       </button>
       {open && (
-        <div className="mt-1 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-1.5 flex gap-2 overflow-x-auto pb-0.5">
           {matchups.map((m) => (
             <MatchupChip key={m.fixture.id} matchup={m} />
           ))}

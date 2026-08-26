@@ -43,6 +43,10 @@ test('open strip renders score, probabilities, CS/O2.5, and MKT for priced fixtu
     />,
   );
   assert.ok(html.includes('Matchups (2)'));
+  // The standout treatment (review feedback): accent-tinted band + raised chips.
+  assert.ok(html.includes('bg-accent/5'));
+  assert.ok(html.includes('border-accent/30'));
+  assert.ok(html.includes('bg-surface-raised'));
   assert.ok(html.includes('2.1–0.9'));
   assert.ok(html.includes('62/21/17'));
   assert.ok(html.includes('CS 41/28'));
@@ -55,11 +59,12 @@ test('open strip renders score, probabilities, CS/O2.5, and MKT for priced fixtu
   assert.equal(html.split('MKT').length - 1, 1); // exactly one MKT label
 });
 
-test('collapsed strip renders only the toggle', () => {
+test('collapsed strip renders only the toggle (band persists)', () => {
   const html = renderToStaticMarkup(
     <MatchupStrip open={false} onToggle={noOp} matchups={[matchup({})]} />,
   );
   assert.ok(html.includes('Matchups (1)'));
+  assert.ok(html.includes('bg-accent/5')); // the band stays as the section marker
   assert.ok(!html.includes('2.1–0.9'));
   assert.ok(!html.includes('MKT'));
 });
