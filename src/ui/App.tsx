@@ -433,7 +433,16 @@ export function App() {
                 page — the board (filters + table) below stays mounted underneath it. */}
             {view === 'scarcity' && <ScarcityView players={players} drafted={drafted} />}
 
-            <div className="sticky top-0 z-20 flex h-11 flex-nowrap items-center gap-2 overflow-x-auto bg-app py-2 print:hidden">
+            {/* Sticky config stack (#108): matchup strip ABOVE the table's
+                filter bar, both inside one sticky wrapper so they pin together
+                and the strip's collapsed↔open height change can never overlap
+                the filters mid-scroll. */}
+            <div className="sticky top-0 z-20 bg-app print:hidden">
+              {matchups.length > 0 && (
+                <MatchupStrip matchups={matchups} open={matchupOpen} onToggle={toggleMatchupStrip} />
+              )}
+
+              <div className="flex h-11 flex-nowrap items-center gap-2 overflow-x-auto py-2">
               <div className="flex items-center gap-0.5 rounded border border-default p-0.5">
                 {POSITION_FILTERS.map((position) => (
                   <button
@@ -519,13 +528,8 @@ export function App() {
               <span className="ml-auto text-xs tabular-nums text-muted">
                 {visible.length} shown · {drafted.size} off board · {mine.size} mine · {queue.size} queued
               </span>
-            </div>
-
-            {matchups.length > 0 && (
-              <div className="sticky top-11 z-10 bg-app print:hidden">
-                <MatchupStrip matchups={matchups} open={matchupOpen} onToggle={toggleMatchupStrip} />
               </div>
-            )}
+            </div>
 
             <PlayerTable
               players={visible}

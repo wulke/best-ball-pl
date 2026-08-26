@@ -1,6 +1,7 @@
 /**
  * Matchup context strip (#108): a thin, collapsible row of per-fixture chips
- * docked under the sheet's sticky filter bar — the "betting site" context
+ * docked ABOVE the sheet's sticky filter bar (both pin together in one
+ * sticky wrapper — see App.tsx) — the "betting site" context
  * (predicted score, 1X2, clean sheets, over 2.5, and the real market line
  * when the slate has an odds pull) for daily profiles. False Nine (a
  * 380-fixture window) never renders it.
