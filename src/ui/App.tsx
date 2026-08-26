@@ -312,26 +312,26 @@ export function App() {
             : undefined
         }
       >
-        <header className="flex items-center justify-between gap-2 print:hidden">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-accent">
+        <header className="flex flex-wrap items-start justify-between gap-x-2 gap-y-2 print:hidden">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold uppercase tracking-widest text-accent">
               {profile.id === FALSE_NINE.id ? 'The False Nine · EPL Best Ball' : profile.name}
             </p>
             <h1 className="font-condensed text-2xl font-bold">
               {view === 'drafts' ? 'Draft Rooms' : view === 'exposure' ? 'Exposure' : 'Cheat Sheet'}
-              {view !== 'drafts' && view !== 'exposure' && asOf && (
-                <span
-                  title="Data-as-of — when the committed snapshot last pulled FPL (scheduled refresh ~daily 06:00 UTC). Red = the pull is over 30h old."
-                  className={`ml-2 align-middle font-condensed text-sm font-semibold tabular-nums ${
-                    asOf.stale ? 'text-negative' : 'text-muted'
-                  }`}
-                >
-                  {asOf.text}
-                </span>
-              )}
             </h1>
+            {view !== 'drafts' && view !== 'exposure' && asOf && (
+              <p
+                title="Data-as-of — when the committed snapshot last pulled FPL (scheduled refresh ~daily 06:00 UTC). Red = the pull is over 30h old."
+                className={`font-condensed text-sm font-semibold tabular-nums ${
+                  asOf.stale ? 'text-negative' : 'text-muted'
+                }`}
+              >
+                {asOf.text}
+              </p>
+            )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-0.5 rounded border border-default p-0.5">
               {(
                 [
