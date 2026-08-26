@@ -56,7 +56,7 @@ function fixture(overrides: Partial<RawFixture>): RawFixture {
 
 function liveRow(overrides: Partial<RawLiveElement> = {}): RawLiveElement {
   return {
-    element: 411,
+    id: 411,
     stats: {
       minutes: 90,
       goals_scored: 2,
@@ -123,9 +123,9 @@ test('toGwActuals maps fields (string xG/xA coerced) and keeps only featured pla
   const live: RawEventLive = {
     elements: [
       liveRow(), // played
-      liveRow({ element: 1, stats: { ...liveRow().stats, minutes: 90, goals_scored: 0, total_points: 0, expected_goals: undefined } }), // played, no output
-      liveRow({ element: 2, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, total_points: 0, expected_goals: '', expected_assists: '' } }), // DNP
-      liveRow({ element: 3, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, total_points: -3, saves: 0 } }), // 0 mins, red-card points
+      liveRow({ id: 1, stats: { ...liveRow().stats, minutes: 90, goals_scored: 0, total_points: 0, expected_goals: undefined } }), // played, no output
+      liveRow({ id: 2, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, total_points: 0, expected_goals: '', expected_assists: '' } }), // DNP
+      liveRow({ id: 3, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, total_points: -3, saves: 0 } }), // 0 mins, red-card points
     ],
   };
   const gw = toGwActuals(1, live);
@@ -142,7 +142,7 @@ test('toGwActuals maps fields (string xG/xA coerced) and keeps only featured pla
 test('toGwActuals: zero-minute rows with any non-zero stat are kept (featured)', () => {
   const live: RawEventLive = {
     elements: [
-      liveRow({ element: 5, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, goals_conceded: 2, total_points: -1 } }),
+      liveRow({ id: 5, stats: { ...liveRow().stats, minutes: 0, goals_scored: 0, goals_conceded: 2, total_points: -1 } }),
     ],
   };
   const gw = toGwActuals(1, live);

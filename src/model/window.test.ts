@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildProjections } from './project.js';
+import { aggregateSeasonActuals } from './actuals.js';
 import { DEFAULT_MODEL_CONFIG } from './config.js';
 import {
   FALSE_NINE,
@@ -201,7 +202,21 @@ test('slate minutes are start-aware: override > lineup > model, with bench cameo
 test('season window reproduces the committed snapshot projections bit-for-bit', () => {
   const snapshot = loadSnapshot();
   const contest = resolveContest(FALSE_NINE, snapshot.fixtures);
-  const { projections } = buildProjections(snapshot.players, modelConfigFor(FALSE_NINE), contest);
+  const actuals = aggregateSeasonActuals(
+    snapshot.players,
+    snapshot.fixtures,
+    snapshot.actuals,
+    modelConfigFor(FALSE_NINE).actuals.startMinutesThreshold,
+  );
+  const { projections } = buildProjections(
+    snapshot.players,
+    modelConfigFor(FALSE_NINE),
+    contest,
+    undefined,
+    undefined,
+    actuals ?? undefined,
+    snapshot.strength,
+  );
 
   let compared = 0;
   snapshot.players.forEach((p, i) => {
