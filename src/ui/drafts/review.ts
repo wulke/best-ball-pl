@@ -399,9 +399,13 @@ function buildFlags(
       text: `Cannot field a legal ${starterSlots(profile).length}: short ${starters.missing.join('/')}.`,
     });
   }
-  // 12-team rooms sit ~50–55% of the naive sheet-perfect baseline by construction
-  // (top-18 is unattainable) — flag only clearly-below-room-average outcomes.
-  if (headline.percent < 45) {
+  // Room-size-dependent by construction: 12-team rooms sit ~50–55% of the
+  // naive sheet-perfect baseline (top-18 is unattainable), while a 6-drafter
+  // no-bench slate sits far higher (top-6 is nearly attainable). The floor is
+  // a per-profile knob (#45) so the flag only fires on clearly below-room-
+  // average outcomes for the room's own contest shape.
+  const headlineFloor = profile.sheetPerfectFlagPercent ?? 45;
+  if (headline.percent < headlineFloor) {
     amber.push({
       severity: 'amber',
       text: `Roster at ${headline.percent.toFixed(0)}% of sheet-perfect (tournament score).`,

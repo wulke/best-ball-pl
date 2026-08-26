@@ -4,6 +4,7 @@
  * is the contract it must produce and the review UI consumes.
  */
 import type { ContestProfile } from '../../contest/profiles.js';
+import { PROFILES } from '../../contest/profiles.js';
 
 /** One pick in a parsed draft-recap log. Persisted in the room record. */
 export type PickLogEntry = {
@@ -42,6 +43,27 @@ function shortDate(iso: string): string {
   });
 }
 
+/**
+ * Best-effort back-fill of a room's profileId from its editable competition
+ * label (#45) — legacy rooms (created before the structured link existed)
+ * carry no profileId, but their label was defaulted from the profile name
+ * (plus the slate date), so an exact or prefix match usually resolves. A
+ * hand-edited label ("GW2 practice") still matches when it keeps the
+ * profile-name prefix; a fully rewritten label stays null, and the room
+ * then reviews under whatever profile is active — the same fallback as a
+ * genuinely unknown contest.
+ */
+export function inferProfileId(competition: string | null | undefined): string | null {
+  if (!competition) return null;
+  const hit = PROFILES.find(
+    (profile) =>
+      competition === profile.name ||
+      competition.startsWith(`${profile.name} —`) ||
+      competition.startsWith(`${profile.name} `),
+  );
+  return hit?.id ?? null;
+}
+
 /** Editable initial grouping only; rooms do not retain a profile-object link. */
 export function defaultCompetition(profile: ContestProfile): string {
   const { window } = profile;
@@ -71,6 +93,13 @@ export type RoomRecord = {
   entryCost: number | null;
   /** Editable contest grouping; null means Uncategorized. */
   competition: string | null;
+  /** Contest profile the room was drafted under — the registry id from
+   *  src/contest/profiles.ts. The review lenses always run under the room's
+   *  own profile (window clubs, roster shape, and the window-projected pool)
+   *  regardless of which profile is active in the sheet switcher. Null on
+   *  legacy rooms: the review falls back to the active profile, and
+   *  inferProfileId() back-fills the field from the competition label. */
+  profileId: string | null;
   /** Draft date, yyyy-mm-dd. */
   draftDate: string;
   /** The recap paste, stored verbatim — re-parse and debug source of truth. */

@@ -5,6 +5,11 @@
  * say — a need reach, an early-GK reach, a club-concentration block, one
  * unmatched transfer-insurance pick, and one ambiguous surname for the
  * confirm queue. DEV-only affordance; #22 replaces all of this with reality.
+ *
+ * The slate variant (buildSlateFixturePreview, #45) simulates a 6-drafter ×
+ * 6-round no-bench daily room over the same window pool the sheet ranks —
+ * the weekly review loop's equivalent shape. DEV-only; real dailies replace
+ * it as recaps come in.
  */
 import type { SnapshotPlayer } from '../types.js';
 import type { PreviewPick } from './types.js';
@@ -232,6 +237,203 @@ export function buildFixturePreview(
     picks,
     rawPaste,
     suggestedName: 'Dev Fixture Room (sim)',
+    myTeam: MY_TEAM,
+  };
+}
+
+const SLATE_TEAMS = [
+  'sheethead',
+  'bpa_bruiser',
+  'ceiling_seeker',
+  'value_village',
+  'the_grinder',
+  'matchup_nerd',
+];
+
+/**
+ * Slate-room dev fixture (#45): a 6-drafter × 6-round snake over the given
+ * window pool (the profile's own window-projected, pool-restricted players —
+ * 8 clubs for a Free Kick slate). Engineered so the short-draft lenses have
+ * material: a round-2 reach, an early keeper, a 4-of-6 club concentration,
+ * one unmatched transfer-insurance pick, and an ambiguous surname late in
+ * the draft. DEV-only; real daily recaps replace it as they come in.
+ */
+export function buildSlateFixturePreview(
+  pool: SnapshotPlayer[],
+  profile: ContestProfile,
+): FixturePreview {
+  if (profile.kind !== 'daily') {
+    throw new Error('buildSlateFixturePreview simulates daily slate profiles only');
+  }
+  const ROOM_SIZE = profile.draft.draftSize;
+  const ROUNDS = profile.roster.rosterSize;
+  const STARTER_NEEDS = profile.roster.starters;
+  const rand = mulberry32(0xfa17ba11);
+  const sheet = pool
+    .filter((p) => p.projection)
+    .sort((a, b) => a.projection!.overallRank - b.projection!.overallRank);
+  if (sheet.length < ROOM_SIZE * ROUNDS) {
+    throw new Error('window pool too small for the slate dev fixture');
+  }
+
+  const order = [...SLATE_TEAMS];
+  for (let i = order.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  const params = new Map(
+    order.map((team) => [
+      team,
+      team === MY_TEAM
+        ? { needProb: 0.5, reachProb: 0.12 }
+        : { needProb: 0.55 + rand() * 0.35, reachProb: rand() * 0.3 },
+    ]),
+  );
+
+  const taken = new Set<string>();
+  const roster = new Map<string, SnapshotPlayer[]>();
+  const best = (position?: string): SnapshotPlayer => {
+    const hit = sheet.find((p) => !taken.has(p.id) && (!position || p.position === position));
+    return hit ?? sheet.find((p) => !taken.has(p.id))!;
+  };
+  const counts = (team: string): Record<string, number> => {
+    const out: Record<string, number> = { G: 0, D: 0, MD: 0, FW: 0 };
+    for (const p of roster.get(team) ?? []) out[p.position] += 1;
+    return out;
+  };
+
+  const log: SimEntry[] = [];
+  for (let i = 0; i < ROOM_SIZE * ROUNDS; i += 1) {
+    const round = Math.floor(i / ROOM_SIZE);
+    const slot = i % ROOM_SIZE;
+    const team = order[round % 2 === 0 ? slot : ROOM_SIZE - 1 - slot];
+    const { needProb, reachProb } = params.get(team)!;
+    const mine = counts(team);
+    const unmet = (['G', 'D', 'MD', 'FW'] as const).filter((pos) => mine[pos] < STARTER_NEEDS[pos]);
+    const r = rand();
+
+    let choice: SnapshotPlayer;
+    if (unmet.length > 0 && (r < needProb || round >= 5)) {
+      const maxGap = Math.max(...unmet.map((pos) => STARTER_NEEDS[pos] - mine[pos]));
+      const tied = unmet.filter((pos) => STARTER_NEEDS[pos] - mine[pos] === maxGap);
+      choice = best(tied[Math.floor(rand() * tied.length)]);
+    } else if (r > 1 - reachProb) {
+      const window = sheet.filter((p) => !taken.has(p.id)).slice(0, 8);
+      choice = window[Math.floor(rand() * window.length)];
+    } else {
+      choice = best();
+    }
+    taken.add(choice.id);
+    roster.set(team, [...(roster.get(team) ?? []), choice]);
+    log.push({ team, player: choice, rawName: choice.name });
+  }
+
+  // ── Engineering: give the short-draft lenses real material ──────────────
+  const myIndices = log.map((e, i) => (e.team === MY_TEAM ? i : -1)).filter((i) => i >= 0);
+  const swapPlayers = (i: number, j: number) => {
+    const a = log[i].player!;
+    const b = log[j].player!;
+    log[i] = { ...log[i], player: b, rawName: b.name };
+    log[j] = { ...log[j], player: a, rawName: a.name };
+  };
+  const roundOf = (i: number) => Math.floor(i / ROOM_SIZE) + 1;
+
+  // 1. Round-2 need reach: pull one of my mid-draft MD picks up to pick 2.
+  const r2 = myIndices[1];
+  const reachTarget = myIndices.find(
+    (i) => roundOf(i) >= 4 && roundOf(i) <= 6 && log[i].player?.position === 'MD',
+  );
+  if (reachTarget !== undefined && reachTarget !== r2) swapPlayers(r2, reachTarget);
+
+  // 2. Early keeper: move my GK pick up to round 3 (a 6-round room's GK
+  //    usually lands 4-6 — round 3 is a real reach against the sheet).
+  const r3 = myIndices[2];
+  const gkIndex = myIndices.find((i) => log[i].player?.position === 'G');
+  if (gkIndex !== undefined && gkIndex !== r3 && gkIndex !== r2) swapPlayers(r3, gkIndex);
+
+  // 3. Club concentration: engineer 4 of my 6 picks from one club.
+  const myRoster = () => (roster.get(MY_TEAM) ?? []).map((p) => p.team);
+  const tally = (clubs: string[]): Map<string, number> => {
+    const out = new Map<string, number>();
+    for (const club of clubs) out.set(club, (out.get(club) ?? 0) + 1);
+    return out;
+  };
+  const clubCounts = tally(myRoster());
+  const targetClub = [...clubCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const protectedIndices = new Set([r2, r3, reachTarget, gkIndex].filter((x) => x !== undefined));
+  let guard = 0;
+  while ((clubCounts.get(targetClub) ?? 0) < 4 && guard < 4) {
+    guard += 1;
+    const mine = myIndices.find(
+      (i) => !protectedIndices.has(i) && log[i].player?.team !== targetClub,
+    );
+    if (mine === undefined) break;
+    const partner = log.findIndex(
+      (e, i) =>
+        e.team !== MY_TEAM &&
+        !protectedIndices.has(i) &&
+        e.player?.team === targetClub &&
+        e.player?.position === log[mine].player?.position,
+    );
+    if (partner === -1) break;
+    swapPlayers(mine, partner);
+    clubCounts.set(targetClub, (clubCounts.get(targetClub) ?? 0) + 1);
+  }
+
+  // 4. Transfer insurance: my last pick is a non-EPL name — unmatched by design.
+  const last = [...myIndices].reverse().find((i) => !protectedIndices.has(i));
+  if (last !== undefined) {
+    log[last] = { team: MY_TEAM, player: null, rawName: 'Vinícius Júnior' };
+  }
+
+  // 5. One ambiguous surname late in the draft → the confirm queue.
+  const bySurname = new Map<string, SnapshotPlayer[]>();
+  for (const p of sheet) {
+    const key = surname(p);
+    bySurname.set(key, [...(bySurname.get(key) ?? []), p]);
+  }
+  const ambiguousSlot = log.findIndex(
+    (e, i) =>
+      e.team !== MY_TEAM &&
+      i >= 5 * ROOM_SIZE &&
+      e.player !== null &&
+      (bySurname.get(surname(e.player)) ?? []).length >= 2,
+  );
+  let ambiguousCandidates: { playerId: string; label: string }[] | undefined;
+  if (ambiguousSlot >= 0) {
+    const group = bySurname.get(surname(log[ambiguousSlot].player!))!;
+    ambiguousCandidates = group.slice(0, 3).map((p) => ({
+      playerId: p.id,
+      label: `${p.fullName} — ${p.team} (${p.position})`,
+    }));
+    log[ambiguousSlot] = {
+      ...log[ambiguousSlot],
+      player: null,
+      rawName: group[0].name.split(' ').pop()!,
+    };
+  }
+
+  const picks: PreviewPick[] = log.map((entry, index) => ({
+    pick: index + 1,
+    round: Math.floor(index / ROOM_SIZE) + 1,
+    team: entry.team,
+    rawName: entry.rawName,
+    playerId: entry.player?.id ?? null,
+    unmatched: entry.player === null && index !== ambiguousSlot,
+    ...(index === ambiguousSlot ? { candidates: ambiguousCandidates } : {}),
+  }));
+
+  const rawPaste = picks
+    .map(
+      (p) =>
+        `${String(p.round).padStart(2, '0')}.${String((p.pick - 1) % ROOM_SIZE + 1).padStart(2, '0')} ${p.team} — ${p.rawName}`,
+    )
+    .join('\n');
+
+  return {
+    picks,
+    rawPaste,
+    suggestedName: `Dev Slate Room (${profile.name})`,
     myTeam: MY_TEAM,
   };
 }

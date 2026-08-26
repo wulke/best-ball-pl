@@ -2,16 +2,23 @@
  * Room editor: the room facts (name/date/cost/URL/raw paste + re-parse), the
  * editable pick log, and the review panel. Every change autosaves to the
  * working store.
+ *
+ * Weekly contests (#45): the review always runs under the room's OWN contest
+ * profile — the profileId persisted at creation, or the active profile as a
+ * legacy fallback — with that contest's window-projected pool. Opening a Free
+ * Kick room while False Nine is active still reviews against the slate's
+ * clubs, roster shape, and projections.
  */
 import { useMemo, useState } from 'react';
-import type { SnapshotFixture, SnapshotPlayer } from '../types.js';
+import type { Snapshot } from '../types.js';
 import type { RoomRecord } from './types.js';
-import { competitionsInRooms, teamsInLog } from './types.js';
+import { competitionsInRooms, defaultCompetition, teamsInLog } from './types.js';
 import { parseRecap, preserveMatches } from './parse.js';
 import { exportRoomFile } from './store.js';
 import { PickTable } from './PickTable.js';
 import { ReviewPanel } from './ReviewPanel.js';
-import { FALSE_NINE, type ContestProfile } from '../../contest/profiles.js';
+import { FALSE_NINE, profileById, type ContestProfile } from '../../contest/profiles.js';
+import { useProfilePool } from '../useProfilePool.js';
 
 type Tab = 'room' | 'log' | 'review';
 
@@ -19,11 +26,10 @@ type Props = {
   room: RoomRecord;
   /** Current local rooms provide reusable competition labels. */
   rooms: RoomRecord[];
-  players: SnapshotPlayer[];
-  fixtures: SnapshotFixture[];
+  snapshot: Snapshot;
   onChange: (room: RoomRecord) => void;
   onClose: () => void;
-  /** Contest profile the room drafted under (roster shape drives the review). */
+  /** Active contest profile — the fallback for legacy rooms (no profileId). */
   profile?: ContestProfile;
 };
 
@@ -31,25 +37,36 @@ const FIELD_LABEL = 'text-xs font-semibold uppercase tracking-wider text-muted';
 const INPUT =
   'rounded border border-default bg-surface px-2 py-1 text-sm text-primary placeholder:text-muted focus:border-strong focus:outline-none';
 
-export function RoomEditor({ room, rooms, players, fixtures, onChange, onClose, profile = FALSE_NINE }: Props) {
+export function RoomEditor({ room, rooms, snapshot, onChange, onClose, profile }: Props) {
   const [tab, setTab] = useState<Tab>('room');
   const [reparseNote, setReparseNote] = useState<string | null>(null);
 
   const patch = (changes: Partial<RoomRecord>) =>
     onChange({ ...room, ...changes, updatedAt: new Date().toISOString() });
 
+  /** The contest this room was drafted under — its own profileId, or the
+   *  active profile for legacy rooms (created before #45 carried the link). */
+  const roomProfile = useMemo(
+    () => (room.profileId ? profileById(room.profileId) : profile ?? FALSE_NINE),
+    [room.profileId, profile],
+  );
+
+  /** The review's pool — the room's own contest's window-projected, pool-
+   *  restricted players. Never the active profile's board. */
+  const { pool: roomPool } = useProfilePool(snapshot, roomProfile);
+
   const teams = useMemo(() => teamsInLog(room.picks), [room.picks]);
   const competitions = useMemo(() => competitionsInRooms(rooms), [rooms]);
 
   const reparse = () => {
-    const result = parseRecap(room.rawPaste, players);
+    const result = parseRecap(room.rawPaste, roomPool);
     if (result.status === 'error') {
       setReparseNote(`Parse failed: ${result.message}`);
       return;
     }
     setReparseNote(null);
     patch({
-      picks: preserveMatches(room.picks, result.picks, new Set(players.map((p) => p.id))),
+      picks: preserveMatches(room.picks, result.picks, new Set(roomPool.map((p) => p.id))),
       ...(result.suggestedName && room.name === '' ? { name: result.suggestedName } : {}),
       ...(result.suggestedUrl && !room.draftUrl ? { draftUrl: result.suggestedUrl } : {}),
     });
@@ -66,6 +83,12 @@ export function RoomEditor({ room, rooms, players, fixtures, onChange, onClose, 
           ← Rooms
         </button>
         <h2 className="font-condensed text-xl font-bold text-primary">{room.name || 'Untitled room'}</h2>
+        <span
+          className="rounded border border-default px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-secondary"
+          title="Contest this room was drafted under — the review runs under this, not the active sheet profile"
+        >
+          {roomProfile.kind === 'daily' ? 'DAILY' : 'SEASON'}
+        </span>
         <span className="text-xs tabular-nums text-muted">
           {room.draftDate || 'no date'} · {room.entryCost !== null ? `$${room.entryCost}` : '—'} ·{' '}
           {room.picks.length} picks
@@ -114,13 +137,13 @@ export function RoomEditor({ room, rooms, players, fixtures, onChange, onClose, 
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className={FIELD_LABEL}>Competition</span>
+              <span className={FIELD_LABEL}>Competition (editable tag)</span>
               <input
                 type="text"
                 list="room-competition-options"
                 value={room.competition ?? ''}
                 onChange={(event) => patch({ competition: event.target.value || null })}
-                placeholder="Uncategorized"
+                placeholder={defaultCompetition(roomProfile)}
                 className={INPUT}
               />
               <datalist id="room-competition-options">
@@ -128,6 +151,9 @@ export function RoomEditor({ room, rooms, players, fixtures, onChange, onClose, 
                   <option key={competition} value={competition} />
                 ))}
               </datalist>
+              <span className="text-[0.65rem] text-muted">
+                defaults to “{defaultCompetition(roomProfile)}” — Exposure and the carry card group on it
+              </span>
             </label>
             <div className="flex flex-col gap-1">
               <span className={FIELD_LABEL}>Entry cost</span>
@@ -225,7 +251,7 @@ export function RoomEditor({ room, rooms, players, fixtures, onChange, onClose, 
 
       {tab === 'log' && (
         <PickTable
-          players={players}
+          players={roomPool}
           picks={room.picks}
           myTeam={room.myTeam}
           editable
@@ -236,13 +262,13 @@ export function RoomEditor({ room, rooms, players, fixtures, onChange, onClose, 
       {tab === 'review' &&
         (room.myTeam ? (
           <ReviewPanel
-            pool={players}
-            fixtures={fixtures}
+            pool={roomPool}
+            fixtures={snapshot.fixtures}
             picks={room.picks}
             myTeam={room.myTeam}
             carryNote={room.carryNote}
             onCarryNoteChange={(carryNote) => patch({ carryNote })}
-            profile={profile}
+            profile={roomProfile}
           />
         ) : (
           <section className="rounded-md border border-default bg-surface px-3 py-6 text-center text-sm text-muted">
