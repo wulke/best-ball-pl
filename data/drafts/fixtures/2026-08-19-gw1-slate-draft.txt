@@ -1,0 +1,310 @@
+Completed
+ChampionsDraftsLiveResultsRankingsNews feed
+$23.20
+WULKE
+1.1|1
+M. Gibbs-White
+MD - NFO
+TALLDARKSTRANGER
+1.2|2
+A. Stach
+MD - LEE
+YBNJORGE1
+1.3|3
+I. Thiago
+FW - BRE
+DOOF27
+1.4|4
+K. Dewsbury-Hall
+MD - EVE
+HOODFAV32
+1.5|5
+N. Williams
+D - NFO
+GEHRITO
+1.6|6
+M. Tel
+FW - TOT
+GEHRITO
+2.1|7
+E. Le Fee
+MD - SUN
+HOODFAV32
+2.2|8
+D. Ouattara
+FW - BRE
+DOOF27
+2.3|9
+I. Ndiaye
+FW - EVE
+YBNJORGE1
+2.4|10
+P. Porro
+D - TOT
+TALLDARKSTRANGER
+2.5|11
+H. Wilson
+FW - LEE
+WULKE
+2.6|12
+J. Pickford
+G - EVE
+WULKE
+3.1|13
+J. Mateta
+FW - CRY
+TALLDARKSTRANGER
+3.2|14
+M. Jensen
+MD - BRE
+YBNJORGE1
+3.3|15
+D. Calvert-Lewin
+FW - LEE
+DOOF27
+3.4|16
+Richarlison
+FW - TOT
+HOODFAV32
+3.5|17
+L. Davis
+D - IPS
+GEHRITO
+3.6|18
+I. Sarr
+FW - CRY
+GEHRITO
+4.1|19
+T. Hume
+D - SUN
+HOODFAV32
+4.2|20
+O. Mingueza
+D - CRY
+DOOF27
+4.3|21
+B. Brobbey
+FW - SUN
+YBNJORGE1
+4.4|22
+Igor Jesus
+FW - NFO
+TALLDARKSTRANGER
+4.5|23
+C. Kelleher
+G - BRE
+WULKE
+4.6|24
+G. Xhaka
+MD - SUN
+WULKE
+5.1|25
+C. Hudson-Odoi
+FW - NFO
+TALLDARKSTRANGER
+5.2|26
+K. Schade
+FW - BRE
+YBNJORGE1
+5.3|27
+R. Roefs
+G - SUN
+DOOF27
+5.4|28
+J. Trafford
+G - LEE
+HOODFAV32
+5.5|29
+M. Sels
+G - NFO
+GEHRITO
+5.6|30
+S. Tonali
+MD - TOT
+GEHRITO
+6.1|31
+A. Kinsky
+G - TOT
+HOODFAV32
+6.2|32
+V. Janelt
+MD - BRE
+DOOF27
+6.3|33
+J. Bogle
+D - LEE
+YBNJORGE1
+6.4|34
+D. Maeda
+MD - IPS
+TALLDARKSTRANGER
+6.5|35
+M. Kayode
+D - BRE
+WULKE
+6.6|36
+V. Mykolenko
+D - EVE
+Players
+FW
+MD
+D
+G
+My rank
+ADP
+Proj
+Ethan Ampadu
+D10
+LEE @ NFO
+34
+35.3
+1.6
+Tyrick Mitchell
+D17
+CRY @ EVE
+45
+35.8
+2.3
+Daniel Munoz
+D12
+CRY @ EVE
+60
+35.3
+0.0
+Andy Robertson
+D6
+TOT @ BRE
+-
+31.7
+2.3
+James Tarkowski
+D7
+EVE vs CRY
+-
+33.7
+2.3
+Ola Aina
+D9
+NFO vs LEE
+-
+35.0
+2.0
+Jan-Paul van Hecke
+D11
+TOT @ BRE
+-
+35.3
+2.4
+Reinildo
+D13
+SUN @ IPS
+-
+35.4
+1.7
+Daniel Ballard
+D15
+SUN @ IPS
+-
+35.6
+0.0
+James Justin
+D16
+LEE @ NFO
+-
+35.6
+2.3
+Issa Diop
+D19
+IPS vs SUN
+-
+35.9
+1.3
+Micky van de Ven
+D20
+TOT @ BRE
+-
+35.9
+0.0
+Chadi Riad
+D
+CRY @ EVE
+-
+-
+2.4
+Queue
+Use the star button in the player list to add a player to your queue.
+Queued players will appear here.
+Completed
+Autopilot
+WULKE
+1
+Pick position
+14.90
+Projected
+FW
+2
+MD
+2
+D
+1
+G
+1
+FW
+Jean-Philippe Mateta
+CRY @ EVE
+36.0
+ADP
+13
+Pick
+Callum Hudson-Odoi
+NFO vs LEE
+36.0
+ADP
+25
+Pick
+MD
+Morgan Gibbs-White
+NFO vs LEE
+1.1
+ADP
+1
+Pick
+Granit Xhaka
+SUN @ IPS
+23.5
+ADP
+24
+Pick
+D
+Vitaliy Mykolenko
+EVE vs CRY
+34.2
+ADP
+36
+Pick
+G
+Jordan Pickford
+EVE vs CRY
+16.0
+ADP
+12
+Pick
+Mobile web is coming soon
+We're working to bring you a great mobile web experience on Underdog. Until then we suggest you download the native app for iOS or Android.
+If you're drafting on a desktop, we suggest adjusting the browser size to be wider and to better accommodate the drafting experience.
+.avatarFallbackAthleteBasketballWomen__primary{fill:var(--svg-fill-primary)}
+.avatarFallbackAthleteDartsMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackAthleteEsportsMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackAthleteFootballMen__primary{fill:var(--svg-fill-primary)}
+.avatarFallbackAthleteGolfMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackAthleteHockeyMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackSportBaseball__primary{fill:var(--svg-fill-primary)}
+@keyframes spinner_zKoa{to{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,to{stroke-dasharray:42 150;stroke-dashoffset:-59}}
+Your Privacy
+English
+English
+We value your privacy. We use cookies and similar technologies to enable services and functionality on our site and to understand your interaction with our service. We may collect information about your browsing behavior to personalize content and targeted advertisements across devices. By clicking OK, or turning on option on in your preferences, you agree to this as outlined in our Privacy Policy. To update preferences, please use the preferences button below.
+Privacy Policy
+Accept All
+Essential Only
+Update Preferences

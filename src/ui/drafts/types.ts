@@ -4,7 +4,8 @@
  * is the contract it must produce and the review UI consumes.
  */
 import type { ContestProfile } from '../../contest/profiles.js';
-import { PROFILES } from '../../contest/profiles.js';
+import { PROFILES, resolveContest } from '../../contest/profiles.js';
+import type { SnapshotFixture, SnapshotPlayer } from '../types.js';
 
 /** One pick in a parsed draft-recap log. Persisted in the room record. */
 export type PickLogEntry = {
@@ -62,6 +63,43 @@ export function inferProfileId(competition: string | null | undefined): string |
       competition.startsWith(`${profile.name} `),
   );
   return hit?.id ?? null;
+}
+
+/**
+ * Infer a daily profile from a legacy pick log's clubs (#45) — for rooms
+ * created before the profileId link existed that ALSO carry no competition
+ * label (nothing for inferProfileId to match). The distinct clubs appearing
+ * in the room's matched picks must be a subset of exactly one profile's
+ * window clubs, and the room's team count must equal that profile's draft
+ * size. Returns null when nothing resolves cleanly (season rooms, unknown
+ * contests, windows whose calendar moved).
+ */
+export function inferProfileFromPicks(
+  picks: PickLogEntry[],
+  pool: SnapshotPlayer[],
+  fixtures: SnapshotFixture[],
+): string | null {
+  const teamCount = teamsInLog(picks).length;
+  if (teamCount === 0) return null;
+  const byId = new Map(pool.map((p) => [p.id, p]));
+  const clubs = new Set<string>();
+  for (const pick of picks) {
+    const team = pick.playerId ? byId.get(pick.playerId)?.team : undefined;
+    if (team) clubs.add(team);
+  }
+  if (clubs.size === 0) return null;
+  const hits = PROFILES.filter((profile) => {
+    if (profile.kind !== 'daily') return false;
+    if (profile.draft.draftSize !== teamCount) return false;
+    let windowClubs: string[];
+    try {
+      windowClubs = resolveContest(profile, fixtures).clubs ?? [];
+    } catch {
+      return false; // window unresolved (calendar moved) — can't vouch for it
+    }
+    return [...clubs].every((club) => windowClubs.includes(club));
+  });
+  return hits.length === 1 ? hits[0].id : null;
 }
 
 /** Editable initial grouping only; rooms do not retain a profile-object link. */

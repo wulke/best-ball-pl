@@ -1,0 +1,291 @@
+Completed
+ChampionsDraftsLiveResultsRankingsNews feed
+$11.20
+DAHAA1223
+1.1|1
+M. Gibbs-White
+MD - NFO
+DADOGGINONE
+1.2|2
+A. Stach
+MD - LEE
+MICHAELWINFREY12
+1.3|3
+K. Dewsbury-Hall
+MD - EVE
+ASH010
+1.4|4
+I. Thiago
+FW - BRE
+JPA214
+1.5|5
+T. Hume
+D - SUN
+WULKE
+1.6|6
+E. Le Fee
+MD - SUN
+WULKE
+2.1|7
+J. Pickford
+G - EVE
+JPA214
+2.2|8
+N. Williams
+D - NFO
+ASH010
+2.3|9
+I. Ndiaye
+FW - EVE
+MICHAELWINFREY12
+2.4|10
+D. Calvert-Lewin
+FW - LEE
+DADOGGINONE
+2.5|11
+M. Tel
+FW - TOT
+DAHAA1223
+2.6|12
+D. Ouattara
+FW - BRE
+DAHAA1223
+3.1|13
+Richarlison
+FW - TOT
+DADOGGINONE
+3.2|14
+B. Brobbey
+FW - SUN
+MICHAELWINFREY12
+3.3|15
+L. Davis
+D - IPS
+ASH010
+3.4|16
+R. Roefs
+G - SUN
+JPA214
+3.5|17
+H. Wilson
+FW - LEE
+WULKE
+3.6|18
+G. Xhaka
+MD - SUN
+WULKE
+4.1|19
+Igor Jesus
+FW - NFO
+JPA214
+4.2|20
+I. Sarr
+FW - CRY
+ASH010
+4.3|21
+A. Robertson
+D - TOT
+MICHAELWINFREY12
+4.4|22
+C. Kelleher
+G - BRE
+DADOGGINONE
+4.5|23
+O. Mingueza
+D - CRY
+DAHAA1223
+4.6|24
+M. Jensen
+MD - BRE
+DAHAA1223
+5.1|25
+M. Sels
+G - NFO
+DADOGGINONE
+5.2|26
+H. Hackney
+MD - EVE
+MICHAELWINFREY12
+5.3|27
+D. Ndoye
+FW - NFO
+ASH010
+5.4|28
+M. Fernandes
+MD - TOT
+JPA214
+5.5|29
+A. Kinsky
+G - TOT
+WULKE
+5.6|30
+V. Mykolenko
+D - EVE
+WULKE
+6.1|31
+J. Maddison
+MD - TOT
+JPA214
+6.2|32
+D. Maeda
+MD - IPS
+ASH010
+6.3|33
+S. Tonali
+MD - TOT
+MICHAELWINFREY12
+6.4|34
+C. Talbi
+MD - SUN
+DADOGGINONE
+6.5|35
+J. Trafford
+G - LEE
+DAHAA1223
+6.6|36
+T. Meunier
+D - SUN
+Players
+FW
+MD
+D
+G
+My rank
+ADP
+Proj
+Jean-Philippe Mateta
+FW16
+CRY @ EVE
+7
+35.3
+0.0
+Christian Walton
+G10
+IPS vs SUN
+11
+-
+0.0
+Callum Hudson-Odoi
+FW20
+NFO vs LEE
+14
+-
+0.0
+Dean Henderson
+G7
+CRY @ EVE
+15
+34.5
+5.0
+Mikkel Damsgaard
+FW21
+BRE vs TOT
+17
+-
+0.0
+Noah Sadiki
+MD
+SUN @ IPS
+22
+-
+0.9
+Kevin Schade
+FW11
+BRE vs TOT
+25
+29.7
+3.2
+Pedro Porro
+D5
+TOT @ BRE
+O
+26
+-
+0.0
+Yeremy Pino
+FW24
+CRY @ EVE
+28
+-
+0.0
+Adam Wharton
+MD10
+CRY @ EVE
+29
+32.7
+1.8
+Queue
+Use the star button in the player list to add a player to your queue.
+Queued players will appear here.
+Completed
+Autopilot
+WULKE
+6
+Pick position
+17.00
+Projected
+FW
+1
+MD
+3
+D
+1
+G
+1
+FW
+Igor Jesus
+NFO vs LEE
+24.2
+ADP
+19
+Pick
+MD
+Enzo Le Fee
+SUN @ IPS
+7.0
+ADP
+6
+Pick
+Granit Xhaka
+SUN @ IPS
+26.1
+ADP
+18
+Pick
+James Maddison
+TOT @ BRE
+31
+Pick
+D
+Vitaliy Mykolenko
+EVE vs CRY
+33.7
+ADP
+30
+Pick
+G
+Jordan Pickford
+EVE vs CRY
+14.9
+ADP
+7
+Pick
+Mobile web is coming soon
+We're working to bring you a great mobile web experience on Underdog. Until then we suggest you download the native app for iOS or Android.
+If you're drafting on a desktop, we suggest adjusting the browser size to be wider and to better accommodate the drafting experience.
+.avatarFallbackAthleteBasketballWomen__primary{fill:var(--svg-fill-primary)}
+.avatarFallbackAthleteDartsMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackAthleteEsportsMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackAthleteFootballMen__primary{fill:var(--svg-fill-primary)}
+.avatarFallbackAthleteGolfMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackAthleteHockeyMen__secondary{fill:var(--svg-fill-secondary)}
+.avatarFallbackSportBaseball__primary{fill:var(--svg-fill-primary)}
+@keyframes spinner_zKoa{to{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,to{stroke-dasharray:42 150;stroke-dashoffset:-59}}
+Your Privacy
+English
+English
+We value your privacy. We use cookies and similar technologies to enable services and functionality on our site and to understand your interaction with our service. We may collect information about your browsing behavior to personalize content and targeted advertisements across devices. By clicking OK, or turning on option on in your preferences, you agree to this as outlined in our Privacy Policy. To update preferences, please use the preferences button below.
+Privacy Policy
+Accept All
+Essential Only
+Update Preferences

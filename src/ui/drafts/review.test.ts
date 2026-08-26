@@ -1,8 +1,17 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { FALSE_NINE, FREE_KICK_GW1_SAT } from '../../contest/profiles.js';
-import type { SnapshotFixture, SnapshotPlayer } from '../types.js';
+import type { Snapshot, SnapshotFixture, SnapshotPlayer } from '../types.js';
 import { reviewRoom } from './review.js';
+import { poolForProfile } from '../windowProjections.js';
+
+const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../../..');
+const snapshot = JSON.parse(
+  fs.readFileSync(path.join(repoRoot, 'data/snapshot.json'), 'utf8'),
+) as Snapshot;
 
 function player(
   id: string,
@@ -146,4 +155,35 @@ test('headline sheet-perfect flag uses the profile room-size baseline (#45)', ()
   const strongSlate = reviewRoom(pool, log(['g1', 'd1', 'm1', 'f1', 'g2', 'd2']), 'Me', FREE_KICK_GW1_SAT, fixtures);
   assert.ok(strongSlate);
   assert.ok(!sheetPerfectFlag(strongSlate), '100% of sheet-perfect must NOT flag under the 72 slate floor');
+});
+
+test('real GW1 Saturday rooms review under the slate profile, window pool only', () => {
+  const slatePool = poolForProfile(snapshot, FREE_KICK_GW1_SAT);
+  const slateClubs = new Set(slatePool.map((p) => p.team));
+  for (const file of [
+    'data/drafts/2026-08-19-room-2026-08-19.json',
+    'data/drafts/2026-08-21-room-2026-08-21.json',
+  ]) {
+    const room = JSON.parse(
+      fs.readFileSync(path.join(repoRoot, file), 'utf8'),
+    ) as { picks: Parameters<typeof reviewRoom>[1]; myTeam: string };
+    const review = reviewRoom(slatePool, room.picks, room.myTeam, FREE_KICK_GW1_SAT, snapshot.fixtures);
+    assert.ok(review, `${file} must review`);
+    assert.equal(review.teamCount, 6, `${file}: 6 drafters`);
+    assert.equal(review.pickCount, 36, `${file}: 36 picks`);
+    assert.equal(review.matchedCount, 36, `${file}: everything matched`);
+    assert.equal(review.partialLog, false, `${file}: 36 ≥ the 30-pick slate floor`);
+    // Every BPA / same-pos alternative is an in-slate player — never a club
+    // the drafter couldn't have picked.
+    for (const row of review.deviations) {
+      assert.ok(slateClubs.has(row.bpa.team), `${file} pick ${row.pick}: BPA ${row.bpa.name} in-slate`);
+      if (row.posBpa) assert.ok(slateClubs.has(row.posBpa.team), `${file} pick ${row.pick}: same-pos alternative in-slate`);
+    }
+    // 6-drafter no-bench rooms sit near sheet-perfect (top-6 nearly attainable) —
+    // both real rooms land ~90%, far above the 72 flag floor.
+    assert.ok(review.headline.percent > 72, `${file}: ${review.headline.percent.toFixed(1)}% > 72 floor`);
+    assert.ok(review.headline.percent <= 100);
+    // No out-of-slate club ever appears in the club grid.
+    assert.ok(review.clubGrid.rows.every((row) => slateClubs.has(row.club)));
+  }
 });

@@ -9,10 +9,10 @@
  * Kick room while False Nine is active still reviews against the slate's
  * clubs, roster shape, and projections.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Snapshot } from '../types.js';
 import type { RoomRecord } from './types.js';
-import { competitionsInRooms, defaultCompetition, teamsInLog } from './types.js';
+import { competitionsInRooms, defaultCompetition, inferProfileFromPicks, teamsInLog } from './types.js';
 import { parseRecap, preserveMatches } from './parse.js';
 import { exportRoomFile } from './store.js';
 import { PickTable } from './PickTable.js';
@@ -50,6 +50,28 @@ export function RoomEditor({ room, rooms, snapshot, onChange, onClose, profile }
     () => (room.profileId ? profileById(room.profileId) : profile ?? FALSE_NINE),
     [room.profileId, profile],
   );
+
+  /** Legacy rooms with no profileId AND no competition label can still be
+   *  identified from their pick clubs (36 picks across 6 teams from one
+   *  slate's clubs → that slate's profile). Auto-tagged once on open so a
+   *  pre-#45 daily room never reviews against the wrong contest. */
+  const inferredProfileId = useMemo(
+    () =>
+      room.profileId
+        ? null
+        : inferProfileFromPicks(room.picks, snapshot.players, snapshot.fixtures),
+    [room.profileId, room.picks, snapshot],
+  );
+  useEffect(() => {
+    if (!inferredProfileId || room.profileId) return;
+    patch({
+      profileId: inferredProfileId,
+      ...(room.competition == null
+        ? { competition: defaultCompetition(profileById(inferredProfileId)) }
+        : {}),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inferredProfileId]);
 
   /** The review's pool — the room's own contest's window-projected, pool-
    *  restricted players. Never the active profile's board. */
