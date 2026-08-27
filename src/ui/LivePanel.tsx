@@ -250,7 +250,7 @@ function RecList({
       {recs.length === 0 ? (
         <span className="text-xs text-muted">{empty ?? '—'}</span>
       ) : (
-        recs.map(({ player, tags }) => <RecRow key={player.id} rec={{ player, tags }} />)
+        recs.map((rec) => <RecRow key={rec.player.id} rec={rec} />)
       )}
     </div>
   );
@@ -309,28 +309,33 @@ function RecRow({ rec, scenario }: { rec: Rec; scenario?: 'p10' | 'p50' | 'p90' 
           {points.toFixed(0)} · T{player.projection!.tier}
         </span>
       )}
+      {rec.antiStack.map(({ rule, club, prospective, held }) => (
+        <Tooltip key={`${rule.id}-${club}`} text={ruleTooltip(rule, club, held)}>
+          <span
+            className={`shrink-0 rounded border px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${
+              prospective ? 'border-info/40 text-info' : 'border-negative/50 text-negative'
+            }`}
+          >
+            {prospective ? '½' : ''}⚔ vs {club}
+          </span>
+        </Tooltip>
+      ))}
       {tags.map((tag) => (
         <Tooltip
           key={tag}
           text={
             tag === 'CS corr'
               ? 'Same-club G + D: their clean-sheet points are the same event'
-              : tag.startsWith('½⚔')
-                ? `Half a CS stack — you hold one of the G+D pair from ${tag.slice('½⚔ vs '.length)}; completing it would erase this attacker's returns`
-                : tag.startsWith('⚔')
-                ? `Faces your G+D clean-sheet stack from ${tag.slice('⚔ vs '.length)} — if they keep a clean sheet, this pick's attacking returns are gone`
-                : tag.endsWith('left')
+              : tag.endsWith('left')
                 ? 'Tier scarcity — few players of this tier left on the board'
                 : `Would be your ${tag.split(' ')[0]} player from this club — correlated outcomes`
           }
         >
           <span
             className={`shrink-0 rounded border px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${
-              tag.startsWith('½⚔')
-                ? 'border-info/40 text-info'
-                : tag === 'CS corr' || tag.startsWith('⚔') || tag.endsWith('left')
-                  ? 'border-negative/50 text-negative'
-                  : 'border-default text-muted'
+              tag === 'CS corr' || tag.endsWith('left')
+                ? 'border-negative/50 text-negative'
+                : 'border-default text-muted'
             }`}
           >
             {tag}

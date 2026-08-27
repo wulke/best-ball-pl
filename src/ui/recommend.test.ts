@@ -124,7 +124,7 @@ const fixture = (home: string, away: string): SnapshotFixture => ({
   kickoff: '2026-08-22T14:00:00Z',
 });
 
-test('anti-stack tags an opponent attacker once the roster holds the G+D CS stack', () => {
+test('anti-stack flags an opponent attacker once the roster holds the G+D CS stack', () => {
   const livFw = {
     ...player('3', 'FW', 'LIV'),
     projection: { tournamentScore: 5, tier: 1 },
@@ -134,7 +134,10 @@ test('anti-stack tags an opponent attacker once the roster holds the G+D CS stac
     fixture('MCI', 'LIV'),
   ]).bpa;
   const candidate = bpa.find((r) => r.player.id === '3')!;
-  assert.ok(candidate.tags.includes('⚔ vs MCI'));
+  assert.deepEqual(
+    candidate.antiStack.map((m) => [m.club, m.prospective]),
+    [['MCI', false]],
+  );
 });
 
 test('oppWarnings lists the opponent club whose attackers face a roster stack', () => {
@@ -153,7 +156,7 @@ test('oppWarnings lists the opponent club whose attackers face a roster stack', 
   );
 });
 
-test('a half-held stack gets the light ½⚔ tag and no panel warning chip', () => {
+test('a half-held stack flags prospectively with no panel warning chip', () => {
   const livFw = {
     ...player('3', 'FW', 'LIV'),
     projection: { tournamentScore: 5, tier: 1 },
@@ -163,7 +166,10 @@ test('a half-held stack gets the light ½⚔ tag and no panel warning chip', () 
     fixture('MCI', 'LIV'),
   ]);
   const candidate = recs.bpa.find((r) => r.player.id === '3')!;
-  assert.ok(candidate.tags.includes('½⚔ vs MCI'));
+  assert.deepEqual(
+    candidate.antiStack.map((m) => [m.club, m.prospective, m.held]),
+    [['MCI', true, 'a GK']],
+  );
   assert.deepEqual(recs.oppWarnings, []);
 });
 

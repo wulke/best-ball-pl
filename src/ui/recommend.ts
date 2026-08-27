@@ -12,6 +12,7 @@ import {
   matchOpponentClubRules,
   matchSameClubRules,
   opponentClubSources,
+  type AntiStackMatch,
   type Rule,
 } from '../stacking/rules.js';
 
@@ -21,6 +22,9 @@ export type Rec = {
   player: SnapshotPlayer;
   /** Short annotation chips: club cluster, CS correlation, scarcity, need. */
   tags: string[];
+  /** Anti-stack matches against this candidate (#120) — rendered as ⚔/½⚔
+   *  chips by the panel, copy straight from the rule (single source). */
+  antiStack: AntiStackMatch[];
 };
 
 export type LiveRecs = {
@@ -161,13 +165,6 @@ export function buildRecommendations(
       const withPick = { ...myClub.positions, [player.position]: (myClub.positions[player.position] ?? 0) + 1 };
       for (const rule of matchSameClubRules(withPick)) tags.push(rule.label);
     }
-    // Does this pick face a roster stack? (#120 — attackers vs a G+D CS pair;
-    //  half-held stacks get the light ½⚔ tag.)
-    if (fixtures.length > 0) {
-      for (const m of matchOpponentClubRules(player, rosterByClub, fixtures)) {
-        tags.push(`${m.prospective ? '½' : ''}⚔ vs ${m.club}`);
-      }
-    }
     if (player.projection) {
       const left = tierLeft.get(`${player.position}:${player.projection.tier}`) ?? 0;
       if (left <= 3) tags.push(`T${player.projection.tier} ×${left} left`);
@@ -176,13 +173,24 @@ export function buildRecommendations(
   };
 
   const ranked = [...board].sort(byScore);
+  /** Candidate anti-stack matches (#120) — structured so the panel renders
+   *  the rule's own copy instead of a second hardcoded string. */
+  const antiStackFor = (player: SnapshotPlayer): AntiStackMatch[] =>
+    fixtures.length > 0 ? matchOpponentClubRules(player, rosterByClub, fixtures) : [];
+
+  const recFor = (player: SnapshotPlayer): Rec => ({
+    player,
+    tags: tagsFor(player),
+    antiStack: antiStackFor(player),
+  });
+
   const queued = board
     .filter((p) => queue.has(p.id))
     .sort(byScore)
     .slice(0, 8)
-    .map((player) => ({ player, tags: tagsFor(player) }));
+    .map(recFor);
 
-  const bpa = ranked.slice(0, 3).map((player) => ({ player, tags: tagsFor(player) }));
+  const bpa = ranked.slice(0, 3).map(recFor);
 
   const byFloor = (a: SnapshotPlayer, b: SnapshotPlayer) =>
     (b.projection?.points.p10 ?? 0) - (a.projection?.points.p10 ?? 0);
@@ -198,9 +206,9 @@ export function buildRecommendations(
     return {
       pos,
       state,
-      rec: best ? { player: best, tags: tagsFor(best) } : null,
-      floor: floor ? { player: floor, tags: tagsFor(floor) } : null,
-      ceiling: ceiling ? { player: ceiling, tags: tagsFor(ceiling) } : null,
+      rec: best ? recFor(best) : null,
+      floor: floor ? recFor(floor) : null,
+      ceiling: ceiling ? recFor(ceiling) : null,
     };
   });
 
