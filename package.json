@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "etl": "node --import tsx src/etl/index.ts",
+    "positions:audit": "node --import tsx src/ui/drafts/position-audit.ts",
     "odds": "node --import tsx src/etl/odds-cli.ts",
     "lineups": "node --import tsx src/etl/lineups-cli.ts",
     "etl:sanity-check": "node --import tsx src/etl/sanity-check.ts",

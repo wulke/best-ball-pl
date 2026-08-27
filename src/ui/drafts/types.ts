@@ -5,7 +5,7 @@
  */
 import type { ContestProfile } from '../../contest/profiles.js';
 import { PROFILES, resolveContest } from '../../contest/profiles.js';
-import type { SnapshotFixture, SnapshotPlayer } from '../types.js';
+import type { Position, SnapshotFixture, SnapshotPlayer } from '../types.js';
 
 /** One pick in a parsed draft-recap log. Persisted in the room record. */
 export type PickLogEntry = {
@@ -22,6 +22,15 @@ export type PickLogEntry = {
   /** True when no confident match exists. Transfer-insurance non-EPL picks
    *  land here by design — excluded from deviation math, never blocking. */
   unmatched: boolean;
+  /** Underdog's own position tag from the recap's position-club line
+   *  ("MD - NFO" → "MD"), #132. Where it disagrees with the snapshot's
+   *  FPL-derived position, the player belongs in the override table
+   *  (src/etl/position-overrides.ts — run `npm run positions:audit`).
+ *  Optional: legacy room records predate the field; re-parse back-fills. */
+  udPosition?: Position;
+  /** Underdog's club abbreviation from the same line ("MD - NFO" → "NFO") —
+ *  the matcher join's second, independent verification. Optional as above. */
+  udClub?: string;
 };
 
 /** Transient matcher candidates — preview-time only, never persisted. */

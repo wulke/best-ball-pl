@@ -8,7 +8,9 @@
  *     WULKE            <- drafting team (username)
  *     1.6|6            <- round.pickInRound | overall pick
  *     A. Semenyo       <- player name, verbatim
- *     MD - MCI         <- position - club (consumed by the parser, not stored)
+ *     MD - MCI         <- position - club (Underdog's own tags — stored on the
+ *                          pick as udPosition/udClub, the position-override
+ *                          audit's raw signal (#132))
  *
  * Nav junk, an ADP "Players" table, the logged-in team's recap summary, and
  * footer text can surround the board — the scan keys on the `round.pick|overall`
@@ -47,8 +49,9 @@ export type ParseResult =
 
 /** A `round.pickInRound|overall` board anchor, e.g. "1.6|6". */
 const ANCHOR = /^(\d{1,2})\.(\d{1,2})\s*\|\s*(\d{1,3})$/;
-/** The line under a player name, e.g. "MD - MCI". */
-const POS_CLUB = /^(G|D|MD|FW) - [A-Z]{3}$/;
+/** The line under a player name, e.g. "MD - MCI" — Underdog's own position
+ *  tag and club abbreviation, captured per pick (#132). */
+const POS_CLUB = /^(G|D|MD|FW) - ([A-Z]{3})$/;
 /** Draft URLs on both the current (underdogsports) and legacy hosts. */
 const DRAFT_URL =
   /https?:\/\/(?:www\.)?app\.underdog(?:fantasy|sports)\.com\/draft\/[0-9a-f-]{36}/i;
@@ -237,7 +240,8 @@ export function parseRecap(rawPaste: string, pool: SnapshotPlayer[]): ParseResul
     const team = (lines[i - 1] ?? '').trim();
     const rawName = (lines[i + 1] ?? '').trim();
     const posClub = (lines[i + 2] ?? '').trim();
-    if (!team || !rawName || !POS_CLUB.test(posClub)) {
+    const posClubMatch = posClub.match(POS_CLUB);
+    if (!team || !rawName || !posClubMatch) {
       return {
         status: 'error',
         message: `Recap parse stopped at pick ${overall} ("${line}") — the pasted text looks truncated. Paste the whole recap page.`,
@@ -252,6 +256,8 @@ export function parseRecap(rawPaste: string, pool: SnapshotPlayer[]): ParseResul
       rawName,
       playerId: nameMatch.kind === 'confident' ? nameMatch.playerId : null,
       unmatched: nameMatch.kind === 'unmatched',
+      udPosition: posClubMatch[1] as PreviewPick['udPosition'],
+      udClub: posClubMatch[2],
       ...(nameMatch.kind === 'ambiguous' ? { candidates: nameMatch.candidates } : {}),
     });
   }
