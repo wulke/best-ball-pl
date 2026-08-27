@@ -92,6 +92,27 @@ test('fixture parses to the full 180-pick log with the 10 recap teams', () => {
   assert.equal(mine[3].rawName, 'V. Van Dijk');
 });
 
+test('every pick carries Underdog's own position-club tag (udPosition/udClub)', () => {
+  const parsed = result();
+  assert.ok(parsed);
+  for (const pick of parsed.picks) {
+    assert.ok(pick.udPosition, `pick ${pick.pick} (${pick.rawName}) has udPosition`);
+    assert.match(pick.udPosition!, /^(G|D|MD|FW)$/);
+    assert.match(pick.udClub!, /^[A-Z]{3}$/);
+  }
+  // First board cell: E. Haaland, "FW - MCI" (the fixture's opening pick).
+  assert.equal(parsed.picks[0].rawName, 'E. Haaland');
+  assert.equal(parsed.picks[0].udPosition, 'FW');
+  assert.equal(parsed.picks[0].udClub, 'MCI');
+  // The tag disagrees with FPL where Underdog classifies differently — the
+  // position-override audit's raw signal (e.g. Mathys Tel, FPL MD / Underdog FW).
+  const tel = parsed.picks.find((p) => p.rawName === 'M. Tel');
+  assert.ok(tel);
+  assert.equal(tel.udPosition, 'FW');
+  const telPlayer = pool.find((p) => p.id === tel!.playerId);
+  assert.equal(telPlayer?.position, 'MD'); // pre-override FPL derivation
+});
+
 test('all 18 of my picks (WULKE) resolve confident, roster matches the recap', () => {
   const parsed = result();
   assert.ok(parsed);
