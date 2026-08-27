@@ -9,6 +9,10 @@
  * 1 ambiguous (J. Pedro → both João Pedros), 3 genuinely unmatched (names
  * absent from the FPL pool: B. Barcola, F. Kadioglu, V. Osimhen). All 18 of
  * my team's picks (WULKE) resolve confident.
+ *
+ * Pool drift since: the 2026-08-27 bootstrap refresh dropped Savinho (TOT)
+ * from FPL's list, moving his pick to unmatched — 175 confident, 4 unmatched
+ * against the live snapshot. The drift test documents the move.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -92,7 +96,7 @@ test('fixture parses to the full 180-pick log with the 10 recap teams', () => {
   assert.equal(mine[3].rawName, 'V. Van Dijk');
 });
 
-test('every pick carries Underdog's own position-club tag (udPosition/udClub)', () => {
+test('every pick carries the Underdog position-club tag (udPosition/udClub)', () => {
   const parsed = result();
   assert.ok(parsed);
   for (const pick of parsed.picks) {
@@ -104,13 +108,13 @@ test('every pick carries Underdog's own position-club tag (udPosition/udClub)', 
   assert.equal(parsed.picks[0].rawName, 'E. Haaland');
   assert.equal(parsed.picks[0].udPosition, 'FW');
   assert.equal(parsed.picks[0].udClub, 'MCI');
-  // The tag disagrees with FPL where Underdog classifies differently — the
-  // position-override audit's raw signal (e.g. Mathys Tel, FPL MD / Underdog FW).
+  // The tag can disagree with the sheet where Underdog classifies
+  // differently — the position-override audit's raw signal (e.g. Mathys
+  // Tel, Underdog FW; whether the snapshot agrees is the audit's question,
+  // not the parser's — see position-audit.test.ts).
   const tel = parsed.picks.find((p) => p.rawName === 'M. Tel');
   assert.ok(tel);
   assert.equal(tel.udPosition, 'FW');
-  const telPlayer = pool.find((p) => p.id === tel!.playerId);
-  assert.equal(telPlayer?.position, 'MD'); // pre-override FPL derivation
 });
 
 test('all 18 of my picks (WULKE) resolve confident, roster matches the recap', () => {
@@ -252,9 +256,13 @@ test('names absent from the FPL pool stay unmatched and flagged', () => {
   const unmatched = parsed.picks
     .filter((p) => p.unmatched)
     .map((p) => `${p.rawName} (${p.team})`);
+  // Ground truth drifts with the live pool: Savinho (TOT) left FPL's player
+  // list in the 2026-08-27 bootstrap refresh, so his fixture pick moved from
+  // confident to unmatched — the documented behavior for pool departures.
   assert.deepEqual(unmatched, [
     'B. Barcola (BIFFRENYLDS)',
     'F. Kadioglu (DANNYOSHEA23)',
+    'Savinho (JEFONEF)',
     'V. Osimhen (BFITZER)',
   ]);
 });
