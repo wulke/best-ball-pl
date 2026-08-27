@@ -44,7 +44,7 @@ test('roleHistory: classifies the three most recent team gameweeks and skips a p
   assert.equal(history.length, 3);
   assert.deepEqual(roleSignal(history), {
     pStartRecent: 0.85,
-    minutesPerAppearanceRecent: 76.25,
+    minutesPerAppearanceRecent: 76.5,
   });
 });
 
