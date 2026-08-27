@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 /**
  * Daily-slate team checklist. Its controlled exclusion set is intentionally
  * shared with MatchupStrip: both surfaces toggle the same App-owned state.
@@ -15,11 +17,30 @@ export function TeamsFilter({
   onOpenChange: (open: boolean) => void;
   onToggleTeam: (team: string) => void;
 }) {
+  const popoverRef = useRef<HTMLDivElement>(null);
   const slateTeams = [...teams].sort();
   const includedCount = slateTeams.filter((team) => !excludedTeams.has(team)).length;
 
+  // Match the header menu's expected popover behavior: a click anywhere else
+  // or Escape dismisses the checklist without changing the selected teams.
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: MouseEvent) => {
+      if (!popoverRef.current?.contains(event.target as Node)) onOpenChange(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onOpenChange(false);
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, onOpenChange]);
+
   return (
-    <div className="relative shrink-0">
+    <div ref={popoverRef} className="relative shrink-0">
       <button
         type="button"
         onClick={() => onOpenChange(!open)}
