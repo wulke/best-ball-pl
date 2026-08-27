@@ -22,6 +22,7 @@ import { FALSE_NINE, profileById, resolveContest } from '../contest/profiles.js'
 import type { OddsSlate } from '../etl/odds.js';
 import { matchupContext } from './matchupContext.js';
 import { MatchupStrip } from './MatchupStrip.js';
+import { excludedTeamsForFixtures, filterSheetPlayers, useExcludedTeams } from './excludedTeams.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
@@ -204,6 +205,14 @@ export function App() {
     [windowFixtures, players, odds],
   );
 
+  // The only selectable clubs are the two sides of fixtures in this slate.
+  // False Nine supplies no namespace, so exclusions never exist there.
+  const slateTeams = useMemo(() => excludedTeamsForFixtures(windowFixtures), [windowFixtures]);
+  const { excludedTeams, toggle: toggleExcludedTeam, clear: clearExcludedTeams } = useExcludedTeams(
+    profile.kind === 'daily' ? profile.id : undefined,
+    slateTeams,
+  );
+
   const toggleMatchupStrip = useCallback(() => {
     setMatchupOpen((open) => {
       try {
@@ -273,7 +282,7 @@ export function App() {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const filtered = players.filter((player) => {
+    const filtered = filterSheetPlayers(players, excludedTeams).filter((player) => {
       if (positionFilter !== 'ALL' && player.position !== positionFilter) return false;
       if (queueOnly && !queue.has(player.id)) return false;
       if (hideDrafted && drafted.has(player.id)) return false;
@@ -300,7 +309,7 @@ export function App() {
         : (a.projection!.posRank - b.projection!.posRank),
     );
     return filtered;
-  }, [players, positionFilter, hideDrafted, queueOnly, query, drafted, queue, rankMode]);
+  }, [players, excludedTeams, positionFilter, hideDrafted, queueOnly, query, drafted, queue, rankMode]);
 
   return (
     <div className="min-h-screen bg-app px-4 py-6">
@@ -503,7 +512,13 @@ export function App() {
                 top-11 only worked when the stack was exactly the 44px bar. */}
             <div ref={stickyStackRef} className="sticky top-0 z-20 bg-app print:hidden">
               {matchups.length > 0 && (
-                <MatchupStrip matchups={matchups} open={matchupOpen} onToggle={toggleMatchupStrip} />
+                <MatchupStrip
+                  matchups={matchups}
+                  open={matchupOpen}
+                  onToggle={toggleMatchupStrip}
+                  excludedTeams={excludedTeams}
+                  onToggleTeam={toggleExcludedTeam}
+                />
               )}
 
               <div className="flex h-11 flex-nowrap items-center gap-2 overflow-x-auto py-2">
@@ -561,6 +576,16 @@ export function App() {
               >
                 Hide off-board ({drafted.size})
               </button>
+
+              {profile.kind === 'daily' && excludedTeams.size > 0 && (
+                <button
+                  onClick={clearExcludedTeams}
+                  className="rounded border border-default px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-secondary transition hover:border-strong hover:text-primary"
+                  title="Show every team in this slate on the cheat sheet"
+                >
+                  {excludedTeams.size} team{excludedTeams.size === 1 ? '' : 's'} hidden — reset
+                </button>
+              )}
 
               {(drafted.size > 0 || mine.size > 0) && (
                 <button

@@ -27,8 +27,27 @@ import type { MatchupContext } from './matchupContext.js';
 /** Percentage label — every probability in the strip carries an explicit %. */
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
-function MatchupChip({ matchup }: { matchup: MatchupContext }) {
+function MatchupChip({ matchup, excludedTeams, onToggleTeam }: {
+  matchup: MatchupContext;
+  excludedTeams: ReadonlySet<string>;
+  onToggleTeam: (team: string) => void;
+}) {
   const { fixture, market } = matchup;
+  const teamButton = (team: string, sideClass: string) => {
+    const excluded = excludedTeams.has(team);
+    return (
+      <button
+        type="button"
+        onClick={() => onToggleTeam(team)}
+        aria-pressed={excluded}
+        aria-label={`${excluded ? 'Show' : 'Hide'} ${team} players from the sheet`}
+        title={`${excluded ? 'Show' : 'Hide'} ${team} players on the cheat sheet`}
+        className={`${sideClass} rounded transition hover:text-primary ${excluded ? 'line-through opacity-60' : ''}`}
+      >
+        {team}
+      </button>
+    );
+  };
   return (
     <div
       className="min-w-44 rounded border border-strong bg-surface-raised px-2 py-1"
@@ -38,11 +57,11 @@ function MatchupChip({ matchup }: { matchup: MatchupContext }) {
     >
       <div className="whitespace-nowrap">
         <span className="font-condensed text-base font-bold leading-none tabular-nums">
-          <span className="text-info">{fixture.home}</span>
+          {teamButton(fixture.home, 'text-info')}
           <span className="mx-1 font-semibold text-secondary">
             {matchup.homeXg.toFixed(1)}–{matchup.awayXg.toFixed(1)}
           </span>
-          <span className="text-positive">{fixture.away}</span>
+          {teamButton(fixture.away, 'text-positive')}
         </span>
       </div>
       {/* 1X2 stacked bar — segments share the % colors below: home blue /
@@ -75,10 +94,14 @@ export function MatchupStrip({
   matchups,
   open,
   onToggle,
+  excludedTeams = new Set(),
+  onToggleTeam = () => {},
 }: {
   matchups: MatchupContext[];
   open: boolean;
   onToggle: () => void;
+  excludedTeams?: ReadonlySet<string>;
+  onToggleTeam?: (team: string) => void;
 }) {
   return (
     <div className="rounded-md border border-accent/30 bg-accent/5 px-2 py-1.5">
@@ -98,7 +121,7 @@ export function MatchupStrip({
       {open && (
         <div className="mt-1.5 flex gap-2 overflow-x-auto pb-0.5">
           {matchups.map((m) => (
-            <MatchupChip key={m.fixture.id} matchup={m} />
+            <MatchupChip key={m.fixture.id} matchup={m} excludedTeams={excludedTeams} onToggleTeam={onToggleTeam} />
           ))}
         </div>
       )}
