@@ -60,6 +60,9 @@ export type TeamSeasonActuals = {
 export type SeasonActuals = {
   players: Map<string, PlayerSeasonActuals>;
   teams: Map<string, TeamSeasonActuals>;
+  /** Retained completed GW rows for the short recent-role window. Every row
+   * belongs to a fully completed GW, so each club had its scheduled match. */
+  gameweeks: SnapshotActuals['gameweeks'];
 };
 
 /** Aggregate the snapshot's actuals + played fixtures for the model. Returns
@@ -125,5 +128,5 @@ export function aggregateSeasonActuals(
   }
 
   if (teams.size === 0 && rows.size === 0) return null;
-  return { players: rows, teams };
+  return { players: rows, teams, gameweeks: actuals.gameweeks };
 }
