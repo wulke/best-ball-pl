@@ -23,6 +23,7 @@ import type { OddsSlate } from '../etl/odds.js';
 import { matchupContext } from './matchupContext.js';
 import { MatchupStrip } from './MatchupStrip.js';
 import { excludedTeamsForFixtures, filterSheetPlayers, useExcludedTeams } from './excludedTeams.js';
+import { TeamsFilter } from './TeamsFilter.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
 type PositionFilter = 'ALL' | Position;
@@ -59,6 +60,7 @@ export function App() {
     }
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [teamsFilterOpen, setTeamsFilterOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   /** The sticky strip+filter stack's measured height — published as the
    *  `--bbpl-sticky-top` custom property so PlayerTable's <thead> sticks
@@ -521,8 +523,19 @@ export function App() {
                 />
               )}
 
-              <div className="flex h-11 flex-nowrap items-center gap-2 overflow-x-auto py-2">
-              <div className="flex items-center gap-0.5 rounded border border-default p-0.5">
+              <div className="flex h-11 items-center gap-2 py-2">
+                {profile.kind === 'daily' && slateTeams.size > 0 && (
+                  <TeamsFilter
+                    teams={slateTeams}
+                    excludedTeams={excludedTeams}
+                    open={teamsFilterOpen}
+                    onOpenChange={setTeamsFilterOpen}
+                    onToggleTeam={toggleExcludedTeam}
+                  />
+                )}
+
+                <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-x-auto">
+                <div className="flex items-center gap-0.5 rounded border border-default p-0.5">
                 {POSITION_FILTERS.map((position) => (
                   <button
                     key={position}
@@ -617,6 +630,7 @@ export function App() {
               <span className="ml-auto text-xs tabular-nums text-muted">
                 {visible.length} shown · {drafted.size} off board · {mine.size} mine · {queue.size} queued
               </span>
+                </div>
               </div>
             </div>
 
