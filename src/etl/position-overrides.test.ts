@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { applyPositionOverride, POSITION_OVERRIDES } from './position-overrides.js';
+import type { Snapshot } from './types.js';
 
 /**
  * The table is data, not code — these tests pin its invariants (every entry
@@ -48,4 +50,28 @@ test('representative audited corrections apply after the FPL mapping', () => {
 
 test('players without an override retain their FPL-derived position', () => {
   assert.equal(applyPositionOverride('999', 'D'), 'D');
+});
+
+test('the committed snapshot reflects every override whose player is in the pool', () => {
+  // The permanence guard (#132): overrides live in code, the snapshot is
+  // rebuilt daily by the scheduled refresh — if a refresh ever dropped or
+  // bypassed the correction table, positions would silently revert to FPL's
+  // tags mid-season and this fails CI on that refresh PR. Entries whose player
+  // has left the FPL pool (transfer-window departures) simply no longer apply.
+  const snapshot = JSON.parse(
+    readFileSync(new URL('../../data/snapshot.json', import.meta.url), 'utf8'),
+  ) as Snapshot;
+  const byId = new Map(snapshot.players.map((p) => [p.id, p]));
+  let applied = 0;
+  for (const entry of POSITION_OVERRIDES) {
+    const player = byId.get(entry.fplId);
+    if (!player) continue;
+    assert.equal(
+      player.position,
+      entry.overridePosition,
+      `${player.name} (${entry.fplId}) lost its override in the snapshot — did the ETL apply the table?`,
+    );
+    applied += 1;
+  }
+  assert.ok(applied >= 30, `expected the audited wave in the pool, applied=${applied}`);
 });

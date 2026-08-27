@@ -23,7 +23,7 @@ import { applyFbrefEnrichment } from './fbref-merge.js';
 import { readFbrefCache } from './fbref.js';
 import { applyPlEnrichment, readPlCache } from './pl-stats.js';
 import { readOverrides } from './match.js';
-import { applyPositionOverride } from './position-overrides.js';
+import { applyPositionOverride, POSITION_OVERRIDES } from './position-overrides.js';
 import { FALSE_NINE, modelConfigFor, replacementConfigFor, resolveContest } from '../contest/profiles.js';
 import { buildProjections } from '../model/project.js';
 import { aggregateSeasonActuals } from '../model/actuals.js';
@@ -218,6 +218,12 @@ async function main() {
     (acc, p) => ({ ...acc, [p.position]: (acc[p.position] ?? 0) + 1 }),
     {} as Record<Position, number>,
   );
+  // Override visibility: every daily refresh PR shows the correction table is
+  // still in effect — and flags entries whose player left the FPL pool
+  // (transfer-window departures; harmless, prunable at season's end).
+  const overrideIds = new Set(POSITION_OVERRIDES.map((o) => o.fplId));
+  const overridesApplied = players.filter((p) => overrideIds.has(p.id)).length;
+  const staleOverrides = POSITION_OVERRIDES.length - overridesApplied;
   const playersWithHistory = players.filter((p) => p.seasons.length > 0).length;
 
   const snapshot: Snapshot = {
@@ -251,7 +257,9 @@ async function main() {
   console.log(
     `[ETL] Positions: ${Object.entries(positionCounts)
       .map(([pos, count]) => `${pos}=${count}`)
-      .join(' ')}`,
+      .join(' ')} · ${overridesApplied} Underdog overrides applied${
+      staleOverrides > 0 ? ` (${staleOverrides} stale — id no longer in pool)` : ''
+    }`,
   );
 }
 
