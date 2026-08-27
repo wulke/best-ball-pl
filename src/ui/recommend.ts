@@ -5,9 +5,16 @@
  * players") with model-default targets, and the correlation bias ("I drafted
  * three players from the same club") with club-cluster tags.
  */
-import type { Position, SnapshotPlayer } from './types.js';
+import type { Position, SnapshotFixture, SnapshotPlayer } from './types.js';
 import { FALSE_NINE, POSITIONS, type ContestProfile } from '../contest/profiles.js';
-import { matchSameClubRules, type Rule } from '../stacking/rules.js';
+import {
+  clubPositionCounts,
+  matchOpponentClubRules,
+  matchSameClubRules,
+  opponentClubSources,
+  type AntiStackMatch,
+  type Rule,
+} from '../stacking/rules.js';
 
 export type TargetState = 'need' | 'ok' | 'full';
 
@@ -15,6 +22,9 @@ export type Rec = {
   player: SnapshotPlayer;
   /** Short annotation chips: club cluster, CS correlation, scarcity, need. */
   tags: string[];
+  /** Anti-stack matches against this candidate (#120) — rendered as ⚔/½⚔
+   *  chips by the panel, copy straight from the rule (single source). */
+  antiStack: AntiStackMatch[];
 };
 
 export type LiveRecs = {
@@ -22,6 +32,9 @@ export type LiveRecs = {
   shape: ShapeEntry[];
   /** Clubs on my roster worth flagging for correlation. */
   clubChips: { club: string; count: number; attackers: number; matchedRules: Rule[] }[];
+  /** For each roster stack rule that matched, the opponent club whose
+   *  attackers now carry the anti-stack warning (#120). */
+  oppWarnings: { oppClub: string; club: string; rule: Rule }[];
   /** My queue ∩ board, best first (the drafting pool). */
   queued: Rec[];
   /** Best players on the board, whatever the position. */
@@ -59,6 +72,9 @@ export function buildRecommendations(
   mine: ReadonlySet<string>,
   queue: ReadonlySet<string>,
   profile: ContestProfile = FALSE_NINE,
+  /** Slate window fixtures — drive the opponent-club anti-stack matches
+   *  (#120). Empty (season-long) matches nothing. */
+  fixtures: SnapshotFixture[] = [],
 ): LiveRecs {
   // Starter minimums, balanced-shape targets, and roster size come from the
   // contest profile (#39) — False Nine's shape by default.
@@ -127,6 +143,11 @@ export function buildRecommendations(
     }))
     .sort((a, b) => b.count - a.count);
 
+  // Opponent-attacker anti-stack warnings (#120): a matched roster stack at
+  // club X makes X's fixture opponent's attackers a correlated-against pick.
+  const rosterByClub = clubPositionCounts(roster);
+  const oppWarnings = opponentClubSources(rosterByClub, fixtures);
+
   // How many board players remain in each position-tier (scarcity).
   const tierLeft = new Map<string, number>();
   for (const p of board) {
@@ -152,13 +173,24 @@ export function buildRecommendations(
   };
 
   const ranked = [...board].sort(byScore);
+  /** Candidate anti-stack matches (#120) — structured so the panel renders
+   *  the rule's own copy instead of a second hardcoded string. */
+  const antiStackFor = (player: SnapshotPlayer): AntiStackMatch[] =>
+    fixtures.length > 0 ? matchOpponentClubRules(player, rosterByClub, fixtures) : [];
+
+  const recFor = (player: SnapshotPlayer): Rec => ({
+    player,
+    tags: tagsFor(player),
+    antiStack: antiStackFor(player),
+  });
+
   const queued = board
     .filter((p) => queue.has(p.id))
     .sort(byScore)
     .slice(0, 8)
-    .map((player) => ({ player, tags: tagsFor(player) }));
+    .map(recFor);
 
-  const bpa = ranked.slice(0, 3).map((player) => ({ player, tags: tagsFor(player) }));
+  const bpa = ranked.slice(0, 3).map(recFor);
 
   const byFloor = (a: SnapshotPlayer, b: SnapshotPlayer) =>
     (b.projection?.points.p10 ?? 0) - (a.projection?.points.p10 ?? 0);
@@ -174,11 +206,11 @@ export function buildRecommendations(
     return {
       pos,
       state,
-      rec: best ? { player: best, tags: tagsFor(best) } : null,
-      floor: floor ? { player: floor, tags: tagsFor(floor) } : null,
-      ceiling: ceiling ? { player: ceiling, tags: tagsFor(ceiling) } : null,
+      rec: best ? recFor(best) : null,
+      floor: floor ? recFor(floor) : null,
+      ceiling: ceiling ? recFor(ceiling) : null,
     };
   });
 
-  return { picksLeft: Math.max(0, ROSTER_SIZE - roster.length), shape, clubChips, queued, bpa, byPosition };
+  return { picksLeft: Math.max(0, ROSTER_SIZE - roster.length), shape, clubChips, oppWarnings, queued, bpa, byPosition };
 }

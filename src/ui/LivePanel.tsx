@@ -127,6 +127,16 @@ export function LivePanel({
                   </span>
                 </Tooltip>
               ))}
+              {recs.oppWarnings.map((w) => (
+                <Tooltip
+                  key={`${w.oppClub}-${w.rule.id}`}
+                  text={`${ruleTooltip(w.rule, w.club)} — flagged ⚔ on their rows in the sheet`}
+                >
+                  <span className="rounded border border-negative/30 bg-negative/10 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tabular-nums tracking-wide text-negative">
+                    ⚔ {w.oppClub} attackers
+                  </span>
+                </Tooltip>
+              ))}
             </div>
           )}
 
@@ -240,7 +250,7 @@ function RecList({
       {recs.length === 0 ? (
         <span className="text-xs text-muted">{empty ?? '—'}</span>
       ) : (
-        recs.map(({ player, tags }) => <RecRow key={player.id} rec={{ player, tags }} />)
+        recs.map((rec) => <RecRow key={rec.player.id} rec={rec} />)
       )}
     </div>
   );
@@ -299,6 +309,17 @@ function RecRow({ rec, scenario }: { rec: Rec; scenario?: 'p10' | 'p50' | 'p90' 
           {points.toFixed(0)} · T{player.projection!.tier}
         </span>
       )}
+      {rec.antiStack.map(({ rule, club, prospective, held }) => (
+        <Tooltip key={`${rule.id}-${club}`} text={ruleTooltip(rule, club, held)}>
+          <span
+            className={`shrink-0 rounded border px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${
+              prospective ? 'border-info/40 text-info' : 'border-negative/50 text-negative'
+            }`}
+          >
+            {prospective ? '½' : ''}⚔ vs {club}
+          </span>
+        </Tooltip>
+      ))}
       {tags.map((tag) => (
         <Tooltip
           key={tag}
@@ -312,7 +333,9 @@ function RecRow({ rec, scenario }: { rec: Rec; scenario?: 'p10' | 'p50' | 'p90' 
         >
           <span
             className={`shrink-0 rounded border px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${
-              tag === 'CS corr' || tag.endsWith('left') ? 'border-negative/50 text-negative' : 'border-default text-muted'
+              tag === 'CS corr' || tag.endsWith('left')
+                ? 'border-negative/50 text-negative'
+                : 'border-default text-muted'
             }`}
           >
             {tag}

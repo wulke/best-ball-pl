@@ -4,6 +4,7 @@ import { Tooltip } from './Tooltip.js';
 import { PlayerBreakdownModal } from './PlayerBreakdownModal.js';
 import { startCallForFixture, type LineupSlate, type StartOverrideMap } from '../model/lineups.js';
 import type { ManualStartCall } from './startOverrides.js';
+import { ruleTooltip, type AntiStackMatch } from '../stacking/rules.js';
 
 /**
  * The ranked tier table — the cheat sheet itself.
@@ -89,6 +90,9 @@ type Props = {
   /** Exposure lookup scoped by App to the active profile's competition label. */
   exposureByPlayer: ReadonlyMap<string, PlayerExposureBadge>;
   exposureCompetition: string;
+  /** Anti-stack matches per player (#120): computed by App from the live
+   *  roster + slate fixtures; present only on daily slates. */
+  antiStackByPlayer?: ReadonlyMap<string, AntiStackMatch[]>;
 };
 
 const TH_BASE =
@@ -110,6 +114,7 @@ export function PlayerTable({
   startSurface,
   exposureByPlayer,
   exposureCompetition,
+  antiStackByPlayer,
 }: Props) {
   const [breakdownPlayer, setBreakdownPlayer] = useState<SnapshotPlayer | null>(null);
   // Fixture labels for the breakdown modal's start-call audit (e.g.
@@ -176,6 +181,7 @@ export function PlayerTable({
         onShowBreakdown={setBreakdownPlayer}
         exposure={exposureByPlayer.get(row.player.id)}
         exposureCompetition={exposureCompetition}
+        antiStack={antiStackByPlayer?.get(row.player.id)}
       />,
     );
   });
@@ -323,6 +329,7 @@ function PlayerRow({
   onShowBreakdown,
   exposure,
   exposureCompetition,
+  antiStack,
 }: {
   row: Row;
   showTierColumn: boolean;
@@ -337,6 +344,7 @@ function PlayerRow({
   onShowBreakdown: (player: SnapshotPlayer) => void;
   exposure: PlayerExposureBadge | undefined;
   exposureCompetition: string;
+  antiStack: AntiStackMatch[] | undefined;
 }) {
   const { player } = row;
   const projection = player.projection!; // upstream filters projection-less players
@@ -471,6 +479,19 @@ function PlayerRow({
               </span>
             </Tooltip>
           )}
+          {antiStack?.map(({ rule, club, prospective, held }) => (
+            <Tooltip key={`${rule.id}-${club}`} text={ruleTooltip(rule, club, held)} wide>
+              <span
+                className={`rounded border px-1 py-0.5 text-[0.65rem] font-semibold leading-none ${
+                  prospective
+                    ? 'border-info/30 bg-info/10 text-info'
+                    : 'border-negative/30 bg-negative/10 text-negative'
+                }`}
+              >
+                ⚔
+              </span>
+            </Tooltip>
+          ))}
           {exposure && exposure.pickedRooms > 0 && (
             <Tooltip
               text={`Exposure: ${exposure.pickedRooms}/${exposure.totalRooms} rooms in ${exposureCompetition}`}
