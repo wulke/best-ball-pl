@@ -9,8 +9,7 @@
  * destination but isn't read anywhere yet — ranking-influence is deferred
  * fog until badges are validated live.
  */
-import type { Position } from '../ui/types.js';
-import type { SnapshotPlayer } from '../ui/types.js';
+import type { Position, SnapshotPlayer } from '../ui/types.js';
 import type { SnapshotFixture } from '../etl/types.js';
 import { getOpponentClub } from '../ui/opponent.js';
 

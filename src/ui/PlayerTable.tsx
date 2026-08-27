@@ -480,7 +480,7 @@ function PlayerRow({
             </Tooltip>
           )}
           {antiStack?.map(({ rule, club, prospective, held }) => (
-            <Tooltip key={rule.id} text={ruleTooltip(rule, club, held)} wide>
+            <Tooltip key={`${rule.id}-${club}`} text={ruleTooltip(rule, club, held)} wide>
               <span
                 className={`rounded border px-1 py-0.5 text-[0.65rem] font-semibold leading-none ${
                   prospective
