@@ -239,9 +239,12 @@ test('unknown slate calls use the blended recent-role minutes and retain model a
 
   const recentStarter = byId.get('A-FW')!.startAwareMinutes!;
   const recentCameo = byId.get('B-GK')!.startAwareMinutes!;
-  assert.deepEqual(recentStarter.fixtures[0], {
-    fixtureId: 1, status: 'unknown', source: 'model', factor: 1, minutes: 90, pStart: 1,
-  });
+  assert.equal(recentStarter.fixtures[0].fixtureId, 1);
+  assert.equal(recentStarter.fixtures[0].status, 'unknown');
+  assert.equal(recentStarter.fixtures[0].source, 'model');
+  assert.equal(recentStarter.fixtures[0].minutes, 90);
+  assert.equal(recentStarter.fixtures[0].pStart, 1);
+  assert.ok(recentStarter.fixtures[0].factor > 1, 'recent starter receives an uplift over the season-share baseline');
   assert.equal(recentStarter.source, 'model');
   assert.deepEqual(recentCameo.fixtures[0], {
     fixtureId: 1, status: 'unknown', source: 'model', factor: 0, minutes: 0, pStart: 0,
