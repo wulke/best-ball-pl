@@ -19,12 +19,10 @@ export type RoleSignal = {
   minutesPerAppearanceRecent: number | null;
 };
 
-/** The window is deliberately permanent: it must not accumulate over a season. */
-const HISTORY_LIMIT = 3;
-const RECENCY_WEIGHTS = [0.6, 0.25, 0.15] as const;
-
 /**
- * Builds a player's most recent role history from finalized GW actuals.
+ * Builds a player's most recent role history from finalized GW actuals. The
+ * window is deliberately short-lived (`cfg.roleWindowGames`, default 3): it
+ * must not accumulate over a season.
  *
  * `teamPlayed` is optional because the retained FPL rows name featured players
  * but do not retain a player's club. A caller with fixture context supplies it
@@ -35,6 +33,7 @@ export function roleHistory(
   playerId: string,
   gameweeks: readonly GwActuals[],
   teamPlayed: (gameweek: GwActuals) => boolean = () => true,
+  cfg: RoleConfig = DEFAULT_ROLE,
 ): RoleHistoryEntry[] {
   const recent: RoleHistoryEntry[] = [];
   const mostRecentFirst = [...gameweeks].sort((a, b) => b.event - a.event);
@@ -47,7 +46,7 @@ export function roleHistory(
     const role: RecentRole = minutes >= 60 ? 'start' : minutes >= 1 ? 'cameo' : 'dnp';
     recent.push({ gw: gameweek.event, role, minutes });
 
-    if (recent.length === HISTORY_LIMIT) break;
+    if (recent.length === cfg.roleWindowGames) break;
   }
 
   return recent;
@@ -58,9 +57,9 @@ export function roleHistory(
  * signals. DNPs inform the start chance but are excluded from the conditional
  * minutes average.
  */
-export function roleSignal(history: readonly RoleHistoryEntry[]): RoleSignal {
-  const window = history.slice(0, HISTORY_LIMIT);
-  const weightedEntries = window.map((entry, index) => ({ entry, weight: RECENCY_WEIGHTS[index] }));
+export function roleSignal(history: readonly RoleHistoryEntry[], cfg: RoleConfig = DEFAULT_ROLE): RoleSignal {
+  const window = history.slice(0, cfg.roleWindowGames);
+  const weightedEntries = window.map((entry, index) => ({ entry, weight: cfg.roleRecencyWeights[index] }));
   const availableWeight = weightedEntries.reduce((sum, { weight }) => sum + weight, 0);
   if (availableWeight === 0) {
     return { pStartRecent: null, minutesPerAppearanceRecent: null };

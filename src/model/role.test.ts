@@ -179,6 +179,28 @@ test('blendRoleSignal: a null minutesPerAppearanceRecent (all-DNP window) leaves
   assert.ok(blended.pStart < seasonPrior.pStart);
 });
 
+test('roleHistory/roleSignal: cfg.roleWindowGames and cfg.roleRecencyWeights are actually consumed', () => {
+  const gameweeks = [
+    gameweek(1, { 'player-1': 90 }),
+    gameweek(2, { 'player-1': 90 }),
+    gameweek(3, { 'player-1': 90 }),
+    gameweek(4), // would fall inside a wider window but outside a 2-GW cap
+  ];
+
+  const cappedAt2 = { ...DEFAULT_ROLE, roleWindowGames: 2, roleRecencyWeights: [0.6, 0.25, 0.15] as [number, number, number] };
+  const history = roleHistory('player-1', gameweeks, undefined, cappedAt2);
+  assert.equal(history.length, 2); // stops at the configured window, not the default 3
+
+  // A recency-weight config that inverts the default's emphasis flips the
+  // conditional-minutes average when the two GWs' minutes differ.
+  const gws = [gameweek(1, { 'player-1': 30 }), gameweek(2, { 'player-1': 90 })];
+  const h2 = roleHistory('player-1', gws, undefined, cappedAt2);
+
+  const defaultWeighted = roleSignal(h2, cappedAt2);
+  const inverted = roleSignal(h2, { ...cappedAt2, roleRecencyWeights: [0.15, 0.85, 0] as [number, number, number] });
+  assert.notEqual(defaultWeighted.minutesPerAppearanceRecent, inverted.minutesPerAppearanceRecent);
+});
+
 test('blendRoleSignal: config knobs are wired through (not hardcoded)', () => {
   const seasonPrior = { pStart: 0, minutesPerAppearance: 0 };
   const signal = { pStartRecent: 1, minutesPerAppearanceRecent: 90 };

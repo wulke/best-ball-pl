@@ -247,9 +247,10 @@ export const DEFAULT_ACTUALS: ActualsConfig = {
  */
 export type RoleConfig = {
   /** Recency weights over the role window's up-to-3 GWs (most recent first).
-   *  Mirrors role.ts's own weights — kept here for config-surface parity. */
+   *  Consumed directly by `roleSignal` in role.ts. */
   roleRecencyWeights: [number, number, number];
-  /** Team-GWs retained in the recent-role window (role.ts's HISTORY_LIMIT). */
+  /** Team-GWs retained in the recent-role window. Consumed directly by
+   *  `roleHistory` (window cap) and `blendRoleSignal` (clamps `gamesObserved`). */
   roleWindowGames: number;
   /** Pseudo-count at gamesObserved=1 — small by design (see above). */
   roleK0: number;
