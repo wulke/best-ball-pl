@@ -14,12 +14,14 @@ test('lists only slate teams with included counts and checked state', () => {
     />,
   );
 
-  assert.ok(html.includes('Teams (3/4)'));
+  assert.ok(html.includes('Teams ('));
+  assert.ok(html.includes('>3/4<'));
   assert.match(html, /aria-expanded="true"/);
   assert.match(html, /aria-label="Include LIV players on the sheet"/);
-  assert.match(html, /name="teams-filter"[^>]*value="LIV"[^>]*>/);
-  assert.ok(!html.includes('checked=""'));
-  assert.match(html, /name="teams-filter"[^>]*value="NFO"[^>]*checked=""/);
+  const livInput = html.match(/<input[^>]*aria-label="Include LIV players on the sheet"[^>]*>/)?.[0];
+  assert.ok(livInput);
+  assert.ok(!livInput.includes('checked=""'));
+  assert.match(html, /aria-label="Exclude NFO players on the sheet"[^>]*name="teams-filter"[^>]*checked=""[^>]*value="NFO"/);
   assert.match(html, />BOU</);
   assert.match(html, />EVE</);
 });
@@ -35,7 +37,8 @@ test('closed control does not render its checklist', () => {
     />,
   );
 
-  assert.ok(html.includes('Teams (2/2)'));
+  assert.ok(html.includes('Teams ('));
+  assert.ok(html.includes('>2/2<'));
   assert.match(html, /aria-expanded="false"/);
   assert.ok(!html.includes('name="teams-filter"'));
 });
