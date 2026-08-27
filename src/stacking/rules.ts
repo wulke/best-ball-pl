@@ -10,6 +10,9 @@
  * fog until badges are validated live.
  */
 import type { Position } from '../ui/types.js';
+import type { SnapshotPlayer } from '../ui/types.js';
+import type { SnapshotFixture } from '../etl/types.js';
+import { getOpponentClub } from '../ui/opponent.js';
 
 export type Rule = {
   id: string;
@@ -21,6 +24,10 @@ export type Rule = {
   slots: Partial<Record<Position, number>>;
   direction: 'stack' | 'antiStack';
   scope: 'sameClub' | 'opponentClub';
+  /** Candidate positions an opponentClub rule flags (attackers for the
+   *  anti-CS rule). Same-club rules leave this unset — they flag any pick
+   *  at the club that satisfies the slots. */
+  appliesTo?: Position[];
   /** Unused in v1 — reserved for ranking-influence, once badges are validated live. */
   weight: number;
 };
@@ -37,7 +44,27 @@ export const GK_DEF_CS_STACK: Rule = {
   weight: 1,
 };
 
-export const STACK_RULES: Rule[] = [GK_DEF_CS_STACK];
+/** Opponent-attacker anti-CS warning (#120): once the roster holds a G+D
+ *  clean-sheet pair from a club, that club's fixture opponent's attackers
+ *  (MD/FW) are negatively correlated with the stack — their attacking
+ *  returns evaporate exactly when the stack pays off. */
+export const OPP_ATT_CS_ANTISTACK: Rule = {
+  id: 'opp-att-cs-antistack',
+  label: 'CS clash',
+  tooltip:
+    'Faces your G+D clean-sheet stack from {club} — if {club} keeps a clean sheet, their attacking returns are gone',
+  slots: { G: 1, D: 1 },
+  direction: 'antiStack',
+  scope: 'opponentClub',
+  appliesTo: ['MD', 'FW'],
+  weight: 1,
+};
+
+export const STACK_RULES: Rule[] = [GK_DEF_CS_STACK, OPP_ATT_CS_ANTISTACK];
+
+/** One anti-stack match against a candidate: which rule fired and the club
+ *  whose stack the candidate opposes. */
+export type AntiStackMatch = { rule: Rule; club: string };
 
 /** Does this per-position count satisfy every one of the rule's slots? */
 function satisfiesSlots(counts: Partial<Record<Position, number>>, rule: Rule): boolean {
@@ -52,6 +79,64 @@ export function matchSameClubRules(
   rules: Rule[] = STACK_RULES,
 ): Rule[] {
   return rules.filter((rule) => rule.scope === 'sameClub' && satisfiesSlots(counts, rule));
+}
+
+/** Opponent-club anti-stack rules matched by a candidate (#120): fires when
+ *  the roster already holds the rule's stack slots at some club and the
+ *  candidate is an attacker (`appliesTo`) from that club's fixture opponent.
+ *  Empty when the stack club has no window fixture — no opponent to face. */
+export function matchOpponentClubRules(
+  candidate: Pick<SnapshotPlayer, 'team' | 'position'>,
+  rosterByClub: ReadonlyMap<string, Partial<Record<Position, number>>>,
+  fixtures: SnapshotFixture[],
+  rules: Rule[] = STACK_RULES,
+): AntiStackMatch[] {
+  const matches: AntiStackMatch[] = [];
+  for (const rule of rules) {
+    if (rule.scope !== 'opponentClub' || rule.direction !== 'antiStack') continue;
+    if (rule.appliesTo && !rule.appliesTo.includes(candidate.position)) continue;
+    for (const [club, counts] of rosterByClub) {
+      if (!satisfiesSlots(counts, rule)) continue;
+      if (getOpponentClub({ team: club }, fixtures) === candidate.team) {
+        matches.push({ rule, club });
+      }
+    }
+  }
+  return matches;
+}
+
+/** Clubs whose roster satisfies an opponent-club rule's slots and whose
+ *  club has a window fixture — the sources the anti-stack warning chips
+ *  render from (#120). Mirrors matchOpponentClubRules from the club side. */
+export function opponentClubSources(
+  rosterByClub: ReadonlyMap<string, Partial<Record<Position, number>>>,
+  fixtures: SnapshotFixture[],
+  rules: Rule[] = STACK_RULES,
+): { rule: Rule; club: string; oppClub: string }[] {
+  const sources: { rule: Rule; club: string; oppClub: string }[] = [];
+  for (const rule of rules) {
+    if (rule.scope !== 'opponentClub' || rule.direction !== 'antiStack') continue;
+    for (const [club, counts] of rosterByClub) {
+      if (!satisfiesSlots(counts, rule)) continue;
+      const oppClub = getOpponentClub({ team: club }, fixtures);
+      if (oppClub) sources.push({ rule, club, oppClub });
+    }
+  }
+  return sources;
+}
+
+/** Per-club position counts for a set of players (roster or otherwise) —
+ *  the input shape the stack/anti-stack evaluators match against. */
+export function clubPositionCounts(
+  players: readonly Pick<SnapshotPlayer, 'team' | 'position'>[],
+): Map<string, Partial<Record<Position, number>>> {
+  const counts = new Map<string, Partial<Record<Position, number>>>();
+  for (const p of players) {
+    const entry = counts.get(p.team) ?? {};
+    entry[p.position] = (entry[p.position] ?? 0) + 1;
+    counts.set(p.team, entry);
+  }
+  return counts;
 }
 
 /** Fill `{club}` into a rule's tooltip template. */

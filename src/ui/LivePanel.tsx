@@ -127,6 +127,16 @@ export function LivePanel({
                   </span>
                 </Tooltip>
               ))}
+              {recs.oppWarnings.map((w) => (
+                <Tooltip
+                  key={`${w.oppClub}-${w.rule.id}`}
+                  text={`${ruleTooltip(w.rule, w.club)} — flagged ⚔ on their rows in the sheet`}
+                >
+                  <span className="rounded border border-negative/30 bg-negative/10 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tabular-nums tracking-wide text-negative">
+                    ⚔ {w.oppClub} attackers
+                  </span>
+                </Tooltip>
+              ))}
             </div>
           )}
 
@@ -305,14 +315,16 @@ function RecRow({ rec, scenario }: { rec: Rec; scenario?: 'p10' | 'p50' | 'p90' 
           text={
             tag === 'CS corr'
               ? 'Same-club G + D: their clean-sheet points are the same event'
-              : tag.endsWith('left')
+              : tag.startsWith('⚔')
+                ? `Faces your G+D clean-sheet stack from ${tag.slice('⚔ vs '.length)} — if they keep a clean sheet, this pick's attacking returns are gone`
+                : tag.endsWith('left')
                 ? 'Tier scarcity — few players of this tier left on the board'
                 : `Would be your ${tag.split(' ')[0]} player from this club — correlated outcomes`
           }
         >
           <span
             className={`shrink-0 rounded border px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${
-              tag === 'CS corr' || tag.endsWith('left') ? 'border-negative/50 text-negative' : 'border-default text-muted'
+              tag === 'CS corr' || tag.startsWith('⚔') || tag.endsWith('left') ? 'border-negative/50 text-negative' : 'border-default text-muted'
             }`}
           >
             {tag}

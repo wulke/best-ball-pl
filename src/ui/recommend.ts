@@ -5,9 +5,15 @@
  * players") with model-default targets, and the correlation bias ("I drafted
  * three players from the same club") with club-cluster tags.
  */
-import type { Position, SnapshotPlayer } from './types.js';
+import type { Position, SnapshotFixture, SnapshotPlayer } from './types.js';
 import { FALSE_NINE, POSITIONS, type ContestProfile } from '../contest/profiles.js';
-import { matchSameClubRules, type Rule } from '../stacking/rules.js';
+import {
+  clubPositionCounts,
+  matchOpponentClubRules,
+  matchSameClubRules,
+  opponentClubSources,
+  type Rule,
+} from '../stacking/rules.js';
 
 export type TargetState = 'need' | 'ok' | 'full';
 
@@ -22,6 +28,9 @@ export type LiveRecs = {
   shape: ShapeEntry[];
   /** Clubs on my roster worth flagging for correlation. */
   clubChips: { club: string; count: number; attackers: number; matchedRules: Rule[] }[];
+  /** For each roster stack rule that matched, the opponent club whose
+   *  attackers now carry the anti-stack warning (#120). */
+  oppWarnings: { oppClub: string; club: string; rule: Rule }[];
   /** My queue ∩ board, best first (the drafting pool). */
   queued: Rec[];
   /** Best players on the board, whatever the position. */
@@ -59,6 +68,9 @@ export function buildRecommendations(
   mine: ReadonlySet<string>,
   queue: ReadonlySet<string>,
   profile: ContestProfile = FALSE_NINE,
+  /** Slate window fixtures — drive the opponent-club anti-stack matches
+   *  (#120). Empty (season-long) matches nothing. */
+  fixtures: SnapshotFixture[] = [],
 ): LiveRecs {
   // Starter minimums, balanced-shape targets, and roster size come from the
   // contest profile (#39) — False Nine's shape by default.
@@ -127,6 +139,11 @@ export function buildRecommendations(
     }))
     .sort((a, b) => b.count - a.count);
 
+  // Opponent-attacker anti-stack warnings (#120): a matched roster stack at
+  // club X makes X's fixture opponent's attackers a correlated-against pick.
+  const rosterByClub = clubPositionCounts(roster);
+  const oppWarnings = opponentClubSources(rosterByClub, fixtures);
+
   // How many board players remain in each position-tier (scarcity).
   const tierLeft = new Map<string, number>();
   for (const p of board) {
@@ -143,6 +160,12 @@ export function buildRecommendations(
       // Would this pick complete a same-club stack rule for this club?
       const withPick = { ...myClub.positions, [player.position]: (myClub.positions[player.position] ?? 0) + 1 };
       for (const rule of matchSameClubRules(withPick)) tags.push(rule.label);
+    }
+    // Does this pick face a roster stack? (#120 — attackers vs a G+D CS pair.)
+    if (fixtures.length > 0) {
+      for (const m of matchOpponentClubRules(player, rosterByClub, fixtures)) {
+        tags.push(`⚔ vs ${m.club}`);
+      }
     }
     if (player.projection) {
       const left = tierLeft.get(`${player.position}:${player.projection.tier}`) ?? 0;
@@ -180,5 +203,5 @@ export function buildRecommendations(
     };
   });
 
-  return { picksLeft: Math.max(0, ROSTER_SIZE - roster.length), shape, clubChips, queued, bpa, byPosition };
+  return { picksLeft: Math.max(0, ROSTER_SIZE - roster.length), shape, clubChips, oppWarnings, queued, bpa, byPosition };
 }

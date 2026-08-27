@@ -23,6 +23,7 @@ import type { OddsSlate } from '../etl/odds.js';
 import { matchupContext } from './matchupContext.js';
 import { MatchupStrip } from './MatchupStrip.js';
 import { excludedTeamsForFixtures, filterSheetPlayers, useExcludedTeams } from './excludedTeams.js';
+import { clubPositionCounts, matchOpponentClubRules } from '../stacking/rules.js';
 import { TeamsFilter } from './TeamsFilter.js';
 
 const THEMES = ['pitch', 'ember', 'volt'] as const;
@@ -278,9 +279,20 @@ export function App() {
   );
 
   const recs = useMemo(
-    () => buildRecommendations(players, drafted, mine, queue, profile),
-    [players, drafted, mine, queue, profile],
+    () => buildRecommendations(players, drafted, mine, queue, profile, windowFixtures),
+    [players, drafted, mine, queue, profile, windowFixtures],
   );
+
+  /** Anti-stack matches per pool player (#120): which candidates face a
+   *  roster stack this slate. Season-long windows have no fixtures and match
+   *  nothing — the map stays undefined so PlayerTable skips the badge. */
+  const antiStackByPlayer = useMemo(() => {
+    if (windowFixtures.length === 0) return undefined;
+    const rosterByClub = clubPositionCounts(roster);
+    const map = new Map<string, ReturnType<typeof matchOpponentClubRules>>();
+    for (const p of players) map.set(p.id, matchOpponentClubRules(p, rosterByClub, windowFixtures));
+    return map;
+  }, [players, roster, windowFixtures]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -657,6 +669,7 @@ export function App() {
               }
               exposureByPlayer={exposureByPlayer}
               exposureCompetition={exposureCompetition}
+              antiStackByPlayer={antiStackByPlayer}
             />
           </>
         )}

@@ -8,8 +8,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Position, SnapshotPlayer } from './types.js';
 import { buildRecommendations } from './recommend.js';
-import { GK_DEF_CS_STACK } from '../stacking/rules.js';
+import { GK_DEF_CS_STACK, OPP_ATT_CS_ANTISTACK } from '../stacking/rules.js';
 import { FALSE_NINE, FREE_KICK_GW1_SAT } from '../contest/profiles.js';
+import type { SnapshotFixture } from '../etl/types.js';
 
 function player(id: string, position: Position, team = 'MCI'): SnapshotPlayer {
   return {
@@ -111,4 +112,50 @@ test('tagsFor tags a DEF pick that would complete the GK+DEF stack with an alrea
   const bpa = buildRecommendations(pool, new Set(), new Set(['1']), new Set()).bpa;
   const candidate = bpa.find((r) => r.player.id === '2')!;
   assert.ok(candidate.tags.includes(GK_DEF_CS_STACK.label));
+});
+
+const fixture = (home: string, away: string): SnapshotFixture => ({
+  id: 1,
+  event: 1,
+  home,
+  away,
+  homeDifficulty: 3,
+  awayDifficulty: 3,
+  kickoff: '2026-08-22T14:00:00Z',
+});
+
+test('anti-stack tags an opponent attacker once the roster holds the G+D CS stack', () => {
+  const livFw = {
+    ...player('3', 'FW', 'LIV'),
+    projection: { tournamentScore: 5, tier: 1 },
+  } as unknown as SnapshotPlayer;
+  const pool = [player('1', 'G', 'MCI'), player('2', 'D', 'MCI'), livFw];
+  const bpa = buildRecommendations(pool, new Set(), new Set(['1', '2']), new Set(), undefined, [
+    fixture('MCI', 'LIV'),
+  ]).bpa;
+  const candidate = bpa.find((r) => r.player.id === '3')!;
+  assert.ok(candidate.tags.includes('⚔ vs MCI'));
+});
+
+test('oppWarnings lists the opponent club whose attackers face a roster stack', () => {
+  const pool = [player('1', 'G', 'MCI'), player('2', 'D', 'MCI')];
+  const { oppWarnings } = buildRecommendations(
+    pool,
+    new Set(),
+    new Set(['1', '2']),
+    new Set(),
+    undefined,
+    [fixture('MCI', 'LIV')],
+  );
+  assert.deepEqual(
+    oppWarnings.map((w) => [w.oppClub, w.club, w.rule.id]),
+    [['LIV', 'MCI', OPP_ATT_CS_ANTISTACK.id]],
+  );
+});
+
+test('no fixtures (season-long) — no anti-stack tags or warnings', () => {
+  const pool = [player('1', 'G', 'MCI'), player('2', 'D', 'MCI')];
+  const recs = buildRecommendations(pool, new Set(), new Set(['1', '2']), new Set());
+  assert.deepEqual(recs.oppWarnings, []);
+  assert.deepEqual(recs.bpa, []);
 });
