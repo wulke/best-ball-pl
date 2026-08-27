@@ -1131,38 +1131,44 @@ export function buildProjections(
     const minutes = minutesByPlayer[i];
     const club = clubContexts.get(player.team)!;
     const basePerFixtureMinutes = minutes / club.calendarGames;
-    // A completed GW is a team-GW in the retained actuals contract, so the
-    // recent-role window can react to starts, cameos, and unused-sub absences
-    // without treating a postponed fixture as a DNP. With no completed GWs,
-    // blendRoleSignal returns this season-level equivalent unchanged.
-    const history = roleHistory(player.id, actuals?.gameweeks ?? [], undefined, cfg.role);
-    const blendedRole = blendRoleSignal(
-      {
-        pStart: effRates.startFraction,
-        // Keep the no-history model default exactly equal to the prior's
-        // normal per-fixture minutes: pStart × minutes/appearance = base.
-        minutesPerAppearance: basePerFixtureMinutes / effRates.startFraction,
-      },
-      roleSignal(history, cfg.role),
-      history.length,
-      cfg.role,
-    );
+    const needsStartAwareMinutes = lineupSlate != null || startOverrides != null;
+    const blendedRole = needsStartAwareMinutes
+      ? (() => {
+        // A completed GW is a team-GW in the retained actuals contract, so
+        // the recent-role window can react to starts, cameos, and unused-sub
+        // absences without treating a postponed fixture as a DNP. With no
+        // completed GWs, blendRoleSignal returns this season-level equivalent
+        // unchanged.
+        const history = roleHistory(player.id, actuals?.gameweeks ?? [], undefined, cfg.role);
+        return blendRoleSignal(
+          {
+            pStart: effRates.startFraction,
+            // Keep the no-history model default exactly equal to the prior's
+            // normal per-fixture minutes: pStart × minutes/appearance = base.
+            minutesPerAppearance: basePerFixtureMinutes / effRates.startFraction,
+          },
+          roleSignal(history, cfg.role),
+          history.length,
+          cfg.role,
+        );
+      })()
+      : undefined;
     const startCalls = club.windowFixtures.map((fixture) => {
       const call = startCallForFixture(player.id, fixture.id, startOverrides, lineupSlate);
       const calledMinutes = call.status === 'starter'
         ? Math.min(90, basePerFixtureMinutes / effRates.startFraction)
         : call.status === 'bench'
           ? cfg.minutes.cameoFloorMinutes
-          : blendedRole.pStart * blendedRole.minutesPerAppearance;
+          : Math.min(90, blendedRole ? blendedRole.pStart * blendedRole.minutesPerAppearance : basePerFixtureMinutes);
       // A zero-prior backup cannot express a multiplicative uplift; retain a
       // finite audit factor and its exact called minutes instead of NaN/∞.
       const factor = basePerFixtureMinutes > 0 ? calledMinutes / basePerFixtureMinutes : 0;
       // P(starts this fixture) — 1/0 for called starters/benches, the model's
       // blended recent-role start share while unknown (the #98 breakdown surface).
-      const pStart = call.status === 'starter' ? 1 : call.status === 'bench' ? 0 : blendedRole.pStart;
+      const pStart = call.status === 'starter' ? 1 : call.status === 'bench' ? 0 : blendedRole?.pStart ?? effRates.startFraction;
       return { fixtureId: fixture.id ?? null, ...call, factor, minutes: calledMinutes, pStart };
     });
-    const fixtureMinutes = lineupSlate || startOverrides ? startCalls.map((call) => call.minutes) : undefined;
+    const fixtureMinutes = needsStartAwareMinutes ? startCalls.map((call) => call.minutes) : undefined;
     const base = buildWindowStatline(
       minutes,
       player.position,
