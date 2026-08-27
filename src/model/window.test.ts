@@ -208,6 +208,46 @@ test('slate minutes are start-aware: override > lineup > model, with bench cameo
   assert.ok(fw.points.p10 < fw.points.p50 && fw.points.p50 < fw.points.p90, 'scenario minutes remain widened around the called base');
 });
 
+test('unknown slate calls use the blended recent-role minutes and retain model audit source', () => {
+  const calendar = abCalendar();
+  calendar[0].id = 1;
+  const window: ProjectionWindow = { calendar, fixtures: [calendar[0]], clubs: null };
+  const players = abPlayers();
+  const actuals = aggregateSeasonActuals(
+    players,
+    [{ id: 99, event: 1, home: 'A', away: 'B', homeDifficulty: 3, awayDifficulty: 3, kickoff: '2026-08-16T12:00:00Z', homeScore: 1, awayScore: 0 }],
+    {
+      gameweeks: [{
+        event: 1,
+        players: [
+          { id: 'A-FW', minutes: 90, goals: 0, assists: 0, cleanSheets: 0, goalsConceded: 0, saves: 0, penaltiesSaved: 0, xg: null, xa: null, fplPoints: 2 },
+          { id: 'B-GK', minutes: 1, goals: 0, assists: 0, cleanSheets: 0, goalsConceded: 0, saves: 0, penaltiesSaved: 0, xg: null, xa: null, fplPoints: 1 },
+        ],
+      }],
+    },
+    DEFAULT_MODEL_CONFIG.actuals.startMinutesThreshold,
+  )!;
+  const lineups: LineupSlate = {
+    schemaVersion: 1, profileId: 'daily', slateDate: '2026-08-22', fetchedAt: '2026-08-21T12:00:00Z',
+    fixtureCoverage: [{ fixtureId: 1, covered: true }], players: [],
+  };
+  // Zero pseudo-count makes this a crisp wiring regression: one recent 90'
+  // start is 90' for the unknown call; one cameo is 0' (P(start) = 0).
+  const cfg = { ...DEFAULT_MODEL_CONFIG, role: { ...DEFAULT_MODEL_CONFIG.role, roleK0: 0, roleKPerGame: 0 } };
+  const { projections } = buildProjections(players, cfg, window, undefined, undefined, actuals, undefined, lineups);
+  const byId = new Map(players.map((p, i) => [p.id, projections[i]] as const));
+
+  const recentStarter = byId.get('A-FW')!.startAwareMinutes!;
+  const recentCameo = byId.get('B-GK')!.startAwareMinutes!;
+  assert.deepEqual(recentStarter.fixtures[0], {
+    fixtureId: 1, status: 'unknown', source: 'model', factor: 1, minutes: 90, pStart: 1,
+  });
+  assert.equal(recentStarter.source, 'model');
+  assert.deepEqual(recentCameo.fixtures[0], {
+    fixtureId: 1, status: 'unknown', source: 'model', factor: 0, minutes: 0, pStart: 0,
+  });
+});
+
 test('season window reproduces the committed snapshot projections bit-for-bit', () => {
   const snapshot = loadSnapshot();
   const contest = resolveContest(FALSE_NINE, snapshot.fixtures);
