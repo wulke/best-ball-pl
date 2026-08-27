@@ -229,6 +229,41 @@ export const DEFAULT_ACTUALS: ActualsConfig = {
   startMinutesThreshold: 60,
 };
 
+/**
+ * Recent-role signal blending (#135): how much weight the fast-reacting
+ * role signal (#134 — `pStartRecent`, `minutesPerAppearanceRecent` over a
+ * short team-GW window) carries against the season-recency-weighted prior
+ * (`startFraction` / expected minutes from `project.ts`), expressed as its
+ * own pseudo-count shrinkage — deliberately much smaller than the #43
+ * in-season blend's `startK` (900 minutes), because this signal exists to
+ * react within a GW or two, not converge gradually over a season. A club
+ * gives out ~1 start decision per GW, so the pseudo-count here is denominated
+ * in team-GWs observed (`gamesObserved`, capped at `roleWindowGames`), not
+ * minutes: weight = n / (n + k), where k = k0 + kPerGame × (n − 1). k0 is
+ * small enough that a single GW start/bench call dominates the blended
+ * output almost immediately; k widens slightly as the window fills so a
+ * deeper 2–3 GW sample earns proportionally more trust without letting one
+ * noisy result swing the estimate to ~100% weight on the first look.
+ */
+export type RoleConfig = {
+  /** Recency weights over the role window's up-to-3 GWs (most recent first).
+   *  Mirrors role.ts's own weights — kept here for config-surface parity. */
+  roleRecencyWeights: [number, number, number];
+  /** Team-GWs retained in the recent-role window (role.ts's HISTORY_LIMIT). */
+  roleWindowGames: number;
+  /** Pseudo-count at gamesObserved=1 — small by design (see above). */
+  roleK0: number;
+  /** Pseudo-count growth per additional team-GW observed, up to roleWindowGames. */
+  roleKPerGame: number;
+};
+
+export const DEFAULT_ROLE: RoleConfig = {
+  roleRecencyWeights: [0.6, 0.25, 0.15],
+  roleWindowGames: 3,
+  roleK0: 0.1,
+  roleKPerGame: 0.05,
+};
+
 /** Percentile scenarios — parametric, deliberately simple and auditable (full
  * Monte Carlo is out of scope per the map). "Burst" terms (goals, assists,
  * shots, chances) scale with role form; "stable" terms (passing/cross/tackle
@@ -479,6 +514,7 @@ export type ModelConfig = {
   minutes: MinutesConfig;
   rates: RateConfig;
   actuals: ActualsConfig;
+  role: RoleConfig;
   odds: OddsBlendConfig;
   scenarios: ScenarioConfig;
   team: TeamRegression;
@@ -495,6 +531,7 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   minutes: DEFAULT_MINUTES,
   rates: DEFAULT_RATES,
   actuals: DEFAULT_ACTUALS,
+  role: DEFAULT_ROLE,
   odds: DEFAULT_ODDS_BLEND,
   scenarios: DEFAULT_SCENARIOS,
   team: DEFAULT_TEAM_REGRESSION,

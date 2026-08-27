@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { roleHistory, roleSignal } from './role.js';
+import { roleHistory, roleSignal, blendRoleSignal } from './role.js';
 import type { GwActuals } from '../etl/types.js';
+import { DEFAULT_ROLE } from './config.js';
 
 function gameweek(event: number, minutesByPlayer: Record<string, number> = {}): GwActuals {
   return {
@@ -115,4 +116,75 @@ test('roleSignal: all-DNP-then-starter history reacts to the new start', () => {
     pStartRecent: 0.6,
     minutesPerAppearanceRecent: 75,
   });
+});
+
+test('blendRoleSignal: 1 GW of a clear starter dominates a low preseason prior', () => {
+  const seasonPrior = { pStart: 0.4, minutesPerAppearance: 60 };
+  const signal = { pStartRecent: 1, minutesPerAppearanceRecent: 90 };
+
+  const blended = blendRoleSignal(seasonPrior, signal, 1);
+
+  const w = 1 / 1.1; // n=1, k = k0 (0.1)
+  assert.equal(blended.pStart, w * 1 + (1 - w) * 0.4);
+  assert.equal(blended.minutesPerAppearance, w * 90 + (1 - w) * 60);
+  // Dominated, not the ~85-90%-preseason-weighted shape of today's startK blend.
+  assert.ok(blended.pStart > 0.9, `expected pStart > 0.9, got ${blended.pStart}`);
+});
+
+test('blendRoleSignal: weight grows toward the signal as GWs accumulate without ever fully discarding the prior', () => {
+  const seasonPrior = { pStart: 0.3, minutesPerAppearance: 50 };
+  const signal = { pStartRecent: 1, minutesPerAppearanceRecent: 90 };
+
+  const oneGw = blendRoleSignal(seasonPrior, signal, 1);
+  const twoGw = blendRoleSignal(seasonPrior, signal, 2);
+  const threeGw = blendRoleSignal(seasonPrior, signal, 3);
+
+  assert.ok(oneGw.pStart < twoGw.pStart && twoGw.pStart < threeGw.pStart);
+  // Residual prior weight never fully vanishes within the window.
+  assert.ok(threeGw.pStart < 1);
+
+  // A window deeper than roleWindowGames clamps rather than over-trusting further.
+  const beyondWindow = blendRoleSignal(seasonPrior, signal, 10);
+  assert.equal(beyondWindow.pStart, threeGw.pStart);
+});
+
+test('blendRoleSignal: a disagreeing recent signal still eases the prior, not overrides it, and reverts as the signal weakens', () => {
+  const seasonPrior = { pStart: 0.9, minutesPerAppearance: 85 };
+  const benchedSignal = { pStartRecent: 0, minutesPerAppearanceRecent: 20 };
+
+  const blended = blendRoleSignal(seasonPrior, benchedSignal, 1);
+
+  assert.ok(blended.pStart < seasonPrior.pStart);
+  assert.ok(blended.pStart > 0); // residual prior weight prevents a full swing to 0
+});
+
+test('blendRoleSignal: no observed data returns the season prior unchanged', () => {
+  const seasonPrior = { pStart: 0.55, minutesPerAppearance: 70 };
+
+  assert.deepEqual(
+    blendRoleSignal(seasonPrior, { pStartRecent: null, minutesPerAppearanceRecent: null }, 0),
+    seasonPrior,
+  );
+  assert.deepEqual(
+    blendRoleSignal(seasonPrior, { pStartRecent: null, minutesPerAppearanceRecent: null }, 3),
+    seasonPrior,
+  );
+});
+
+test('blendRoleSignal: a null minutesPerAppearanceRecent (all-DNP window) leaves minutes at the prior', () => {
+  const seasonPrior = { pStart: 0.6, minutesPerAppearance: 65 };
+  const blended = blendRoleSignal(seasonPrior, { pStartRecent: 0, minutesPerAppearanceRecent: null }, 2);
+
+  assert.equal(blended.minutesPerAppearance, seasonPrior.minutesPerAppearance);
+  assert.ok(blended.pStart < seasonPrior.pStart);
+});
+
+test('blendRoleSignal: config knobs are wired through (not hardcoded)', () => {
+  const seasonPrior = { pStart: 0, minutesPerAppearance: 0 };
+  const signal = { pStartRecent: 1, minutesPerAppearanceRecent: 90 };
+
+  const wideK = blendRoleSignal(seasonPrior, signal, 1, { ...DEFAULT_ROLE, roleK0: 10 });
+  const narrowK = blendRoleSignal(seasonPrior, signal, 1, { ...DEFAULT_ROLE, roleK0: 0.01 });
+
+  assert.ok(narrowK.pStart > wideK.pStart);
 });
