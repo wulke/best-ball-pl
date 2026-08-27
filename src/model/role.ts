@@ -10,9 +10,11 @@ export type RoleHistoryEntry = {
   minutes: number;
 };
 
-/** Fast-reacting role signals. Null means the player has no played-GW history. */
+/** Fast-reacting role signals. */
 export type RoleSignal = {
+  /** Null only when no retained team-GW history is available. */
   pStartRecent: number | null;
+  /** Null when the history contains no appearances. */
   minutesPerAppearanceRecent: number | null;
 };
 
@@ -34,9 +36,9 @@ export function roleHistory(
   teamPlayed: (gameweek: GwActuals) => boolean = () => true,
 ): RoleHistoryEntry[] {
   const recent: RoleHistoryEntry[] = [];
-  const chronological = [...gameweeks].sort((a, b) => b.event - a.event);
+  const mostRecentFirst = [...gameweeks].sort((a, b) => b.event - a.event);
 
-  for (const gameweek of chronological) {
+  for (const gameweek of mostRecentFirst) {
     if (!teamPlayed(gameweek)) continue;
 
     const row = gameweek.players.find((player) => player.id === playerId);
@@ -57,25 +59,23 @@ export function roleHistory(
  */
 export function roleSignal(history: readonly RoleHistoryEntry[]): RoleSignal {
   const window = history.slice(0, HISTORY_LIMIT);
-  const availableWeight = window.reduce((sum, _, index) => sum + RECENCY_WEIGHTS[index], 0);
+  const weightedEntries = window.map((entry, index) => ({ entry, weight: RECENCY_WEIGHTS[index] }));
+  const availableWeight = weightedEntries.reduce((sum, { weight }) => sum + weight, 0);
   if (availableWeight === 0) {
     return { pStartRecent: null, minutesPerAppearanceRecent: null };
   }
 
-  const pStartRecent = window.reduce(
-    (sum, entry, index) => sum + (entry.role === 'start' ? RECENCY_WEIGHTS[index] : 0),
+  const pStartRecent = weightedEntries.reduce(
+    (sum, { entry, weight }) => sum + (entry.role === 'start' ? weight : 0),
     0,
   ) / availableWeight;
 
-  const featured = window.filter((entry) => entry.minutes > 0);
-  const featuredWeight = featured.reduce(
-    (sum, entry) => sum + RECENCY_WEIGHTS[window.indexOf(entry)],
-    0,
-  );
+  const featured = weightedEntries.filter(({ entry }) => entry.minutes > 0);
+  const featuredWeight = featured.reduce((sum, { weight }) => sum + weight, 0);
   const minutesPerAppearanceRecent = featuredWeight === 0
     ? null
     : featured.reduce(
-      (sum, entry) => sum + entry.minutes * RECENCY_WEIGHTS[window.indexOf(entry)],
+      (sum, { entry, weight }) => sum + entry.minutes * weight,
       0,
     ) / featuredWeight;
 
