@@ -479,9 +479,15 @@ function PlayerRow({
               </span>
             </Tooltip>
           )}
-          {antiStack?.map(({ rule, club }) => (
-            <Tooltip key={rule.id} text={ruleTooltip(rule, club)} wide>
-              <span className="rounded border border-negative/30 bg-negative/10 px-1 py-0.5 text-[0.65rem] font-semibold leading-none text-negative">
+          {antiStack?.map(({ rule, club, prospective, held }) => (
+            <Tooltip key={rule.id} text={ruleTooltip(rule, club, held)} wide>
+              <span
+                className={`rounded border px-1 py-0.5 text-[0.65rem] font-semibold leading-none ${
+                  prospective
+                    ? 'border-info/30 bg-info/10 text-info'
+                    : 'border-negative/30 bg-negative/10 text-negative'
+                }`}
+              >
                 ⚔
               </span>
             </Tooltip>

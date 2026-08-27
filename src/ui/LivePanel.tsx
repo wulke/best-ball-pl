@@ -315,7 +315,9 @@ function RecRow({ rec, scenario }: { rec: Rec; scenario?: 'p10' | 'p50' | 'p90' 
           text={
             tag === 'CS corr'
               ? 'Same-club G + D: their clean-sheet points are the same event'
-              : tag.startsWith('⚔')
+              : tag.startsWith('½⚔')
+                ? `Half a CS stack — you hold one of the G+D pair from ${tag.slice('½⚔ vs '.length)}; completing it would erase this attacker's returns`
+                : tag.startsWith('⚔')
                 ? `Faces your G+D clean-sheet stack from ${tag.slice('⚔ vs '.length)} — if they keep a clean sheet, this pick's attacking returns are gone`
                 : tag.endsWith('left')
                 ? 'Tier scarcity — few players of this tier left on the board'
@@ -324,7 +326,11 @@ function RecRow({ rec, scenario }: { rec: Rec; scenario?: 'p10' | 'p50' | 'p90' 
         >
           <span
             className={`shrink-0 rounded border px-1 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${
-              tag === 'CS corr' || tag.startsWith('⚔') || tag.endsWith('left') ? 'border-negative/50 text-negative' : 'border-default text-muted'
+              tag.startsWith('½⚔')
+                ? 'border-info/40 text-info'
+                : tag === 'CS corr' || tag.startsWith('⚔') || tag.endsWith('left')
+                  ? 'border-negative/50 text-negative'
+                  : 'border-default text-muted'
             }`}
           >
             {tag}

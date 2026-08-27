@@ -153,6 +153,20 @@ test('oppWarnings lists the opponent club whose attackers face a roster stack', 
   );
 });
 
+test('a half-held stack gets the light ½⚔ tag and no panel warning chip', () => {
+  const livFw = {
+    ...player('3', 'FW', 'LIV'),
+    projection: { tournamentScore: 5, tier: 1 },
+  } as unknown as SnapshotPlayer;
+  const pool = [player('1', 'G', 'MCI'), livFw];
+  const recs = buildRecommendations(pool, new Set(), new Set(['1']), new Set(), undefined, [
+    fixture('MCI', 'LIV'),
+  ]);
+  const candidate = recs.bpa.find((r) => r.player.id === '3')!;
+  assert.ok(candidate.tags.includes('½⚔ vs MCI'));
+  assert.deepEqual(recs.oppWarnings, []);
+});
+
 test('no fixtures (season-long) — no anti-stack tags or warnings', () => {
   const pool = [player('1', 'G', 'MCI'), player('2', 'D', 'MCI')];
   const recs = buildRecommendations(pool, new Set(), new Set(['1', '2']), new Set());

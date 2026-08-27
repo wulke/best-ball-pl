@@ -161,10 +161,11 @@ export function buildRecommendations(
       const withPick = { ...myClub.positions, [player.position]: (myClub.positions[player.position] ?? 0) + 1 };
       for (const rule of matchSameClubRules(withPick)) tags.push(rule.label);
     }
-    // Does this pick face a roster stack? (#120 — attackers vs a G+D CS pair.)
+    // Does this pick face a roster stack? (#120 — attackers vs a G+D CS pair;
+    //  half-held stacks get the light ½⚔ tag.)
     if (fixtures.length > 0) {
       for (const m of matchOpponentClubRules(player, rosterByClub, fixtures)) {
-        tags.push(`⚔ vs ${m.club}`);
+        tags.push(`${m.prospective ? '½' : ''}⚔ vs ${m.club}`);
       }
     }
     if (player.projection) {

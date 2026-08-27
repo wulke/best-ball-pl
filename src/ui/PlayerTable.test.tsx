@@ -49,13 +49,23 @@ function renderTable(
 test('anti-stack match renders the ⚔ badge with the filled tooltip (#120)', () => {
   const covered = structuredClone(snapshot.players.find((p) => p.projection)!);
   const html = renderTable([covered], false, new Map(), undefined, new Map([
-    [covered.id, [{ rule: OPP_ATT_CS_ANTISTACK, club: 'MCI' }]],
+    [covered.id, [{ rule: OPP_ATT_CS_ANTISTACK, club: 'MCI', prospective: false }]],
   ]));
   assert.ok(html.includes('⚔'));
   assert.ok(html.includes('Faces your G+D clean-sheet stack from MCI'));
+  assert.ok(html.includes('text-negative'));
   // A player with no match renders no badge — the glyph count stays at 1.
   const clean = renderTable([covered], false);
   assert.ok(!clean.includes('⚔'));
+});
+
+test('a prospective (half-held) anti-stack renders in the light info tone', () => {
+  const covered = structuredClone(snapshot.players.find((p) => p.projection)!);
+  const html = renderTable([covered], false, new Map(), undefined, new Map([
+    [covered.id, [{ rule: OPP_ATT_CS_ANTISTACK, club: 'MCI', prospective: true, held: 'a GK' }]],
+  ]));
+  assert.ok(html.includes('You hold a GK from MCI'));
+  assert.ok(html.includes('text-info'));
 });
 
 test('thead sticky top tracks the config stack height via CSS var (44px fallback)', () => {

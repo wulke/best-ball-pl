@@ -58,8 +58,8 @@ test('anti-stack fires for an attacker from the opponent of a roster G+D stack',
     [fixture('MCI', 'LIV')],
   );
   assert.deepEqual(
-    matches.map((m) => [m.rule.id, m.club]),
-    [[OPP_ATT_CS_ANTISTACK.id, 'MCI']],
+    matches.map((m) => [m.rule.id, m.club, m.prospective, m.held]),
+    [[OPP_ATT_CS_ANTISTACK.id, 'MCI', false, undefined]],
   );
 });
 
@@ -73,8 +73,37 @@ test('anti-stack does not fire for a defender or keeper of the opponent club', (
   assert.deepEqual(matchOpponentClubRules({ team: 'LIV', position: 'G' }, rosterByClub, fixtures), []);
 });
 
-test('anti-stack needs the full stack on the roster — a lone GK is not a stack', () => {
+test('a half-held stack (lone GK) matches as prospective, naming the held half', () => {
   const rosterByClub = clubPositionCounts([{ team: 'MCI', position: 'G' }]);
+  const matches = matchOpponentClubRules(
+    { team: 'LIV', position: 'FW' },
+    rosterByClub,
+    [fixture('MCI', 'LIV')],
+  );
+  assert.deepEqual(
+    matches.map((m) => [m.rule.id, m.club, m.prospective, m.held]),
+    [[OPP_ATT_CS_ANTISTACK.id, 'MCI', true, 'a GK']],
+  );
+});
+
+test('2 DEF with no GK also match as prospective (deficit 1)', () => {
+  const rosterByClub = clubPositionCounts([
+    { team: 'MCI', position: 'D' },
+    { team: 'MCI', position: 'D' },
+  ]);
+  const matches = matchOpponentClubRules(
+    { team: 'LIV', position: 'MD' },
+    rosterByClub,
+    [fixture('MCI', 'LIV')],
+  );
+  assert.deepEqual(
+    matches.map((m) => [m.prospective, m.held]),
+    [[true, 'a DEF']],
+  );
+});
+
+test('two picks away from the stack stays silent', () => {
+  const rosterByClub = clubPositionCounts([{ team: 'MCI', position: 'MD' }]);
   assert.deepEqual(
     matchOpponentClubRules({ team: 'LIV', position: 'FW' }, rosterByClub, [fixture('MCI', 'LIV')]),
     [],
