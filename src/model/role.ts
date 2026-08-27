@@ -1,4 +1,5 @@
 import type { GwActuals } from '../etl/types.js';
+import { DEFAULT_ROLE, type RoleConfig } from './config.js';
 
 /** The role inferred from a player's retained FPL live-feed row. */
 export type RecentRole = 'start' | 'cameo' | 'dnp';
@@ -80,4 +81,62 @@ export function roleSignal(history: readonly RoleHistoryEntry[]): RoleSignal {
     ) / featuredWeight;
 
   return { pStartRecent, minutesPerAppearanceRecent };
+}
+
+/** The season-level prior this blend reacts against: `project.ts`'s
+ *  recency-weighted `startFraction` and its expected-minutes-per-appearance
+ *  equivalent, computed independently of any in-season signal. */
+export type SeasonRolePrior = {
+  pStart: number;
+  minutesPerAppearance: number;
+};
+
+export type BlendedRole = {
+  pStart: number;
+  minutesPerAppearance: number;
+};
+
+/**
+ * Blends the fast-reacting recent-role signal (#134) with the season-level
+ * prior using its own pseudo-count `k` (config.ts `RoleConfig`) — much
+ * smaller than the in-season actuals blend's `startK` (`ActualsConfig`,
+ * 900 minutes), because this signal exists to react within a GW or two, not
+ * converge gradually over a season.
+ *
+ * `gamesObserved` is the count of team-GWs behind `signal`'s window
+ * (0..roleWindowGames — the caller's `roleHistory(...).length`). Weight is
+ * denominated in GWs, not minutes: w = n / (n + k), where
+ * k = k0 + kPerGame × (n − 1). k0 is small enough that a single start/bench
+ * call dominates the blended output almost immediately (by design — see
+ * config.ts); k widens slightly as the window fills so a deeper 2–3 GW
+ * sample earns proportionally more trust without letting one noisy result
+ * swing the estimate to ~100% weight on the first look. Because w never
+ * reaches 1, the season prior always retains some residual weight, so a
+ * blended value can still ease back toward the prior if the recent signal's
+ * own window later disagrees with it.
+ *
+ * No data (gamesObserved <= 0, or an all-empty history) returns the season
+ * prior unchanged — pre-season parity is structural, matching the #43
+ * in-season blends.
+ */
+export function blendRoleSignal(
+  seasonPrior: SeasonRolePrior,
+  signal: RoleSignal,
+  gamesObserved: number,
+  cfg: RoleConfig = DEFAULT_ROLE,
+): BlendedRole {
+  if (gamesObserved <= 0 || signal.pStartRecent == null) {
+    return { ...seasonPrior };
+  }
+
+  const n = Math.min(gamesObserved, cfg.roleWindowGames);
+  const k = cfg.roleK0 + cfg.roleKPerGame * (n - 1);
+  const w = n / (n + k);
+
+  const pStart = w * signal.pStartRecent + (1 - w) * seasonPrior.pStart;
+  const minutesPerAppearance = signal.minutesPerAppearanceRecent == null
+    ? seasonPrior.minutesPerAppearance
+    : w * signal.minutesPerAppearanceRecent + (1 - w) * seasonPrior.minutesPerAppearance;
+
+  return { pStart, minutesPerAppearance };
 }
