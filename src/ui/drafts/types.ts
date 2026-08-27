@@ -26,10 +26,10 @@ export type PickLogEntry = {
    *  ("MD - NFO" → "MD"), #132. Where it disagrees with the snapshot's
    *  FPL-derived position, the player belongs in the override table
    *  (src/etl/position-overrides.ts — run `npm run positions:audit`).
- *  Optional: legacy room records predate the field; re-parse back-fills. */
+   *  Optional: legacy room records predate the field; re-parse back-fills. */
   udPosition?: Position;
   /** Underdog's club abbreviation from the same line ("MD - NFO" → "NFO") —
- *  the matcher join's second, independent verification. Optional as above. */
+   *  the matcher join's second, independent verification. Optional as above. */
   udClub?: string;
 };
 

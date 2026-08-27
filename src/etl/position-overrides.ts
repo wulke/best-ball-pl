@@ -25,172 +25,172 @@ export const POSITION_OVERRIDES: readonly PositionOverride[] = [
   {
     fplId: '431',
     overridePosition: 'FW',
-    note: 'Amad (MUN): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Amad
+    note: 'Amad (MUN): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '338',
     overridePosition: 'D',
-    note: 'Ampadu (LEE): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Ampadu
+    note: 'Ampadu (LEE): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '453',
     overridePosition: 'FW',
-    note: 'Barnes (NEW): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Barnes
+    note: 'Barnes (NEW): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '286',
     overridePosition: 'FW',
-    note: 'Belloumi (HUL): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Belloumi
+    note: 'Belloumi (HUL): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '428',
     overridePosition: 'FW',
-    note: 'Cunha (MUN): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Cunha
+    note: 'Cunha (MUN): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '96',
     overridePosition: 'FW',
-    note: 'Damsgaard (BRE): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Damsgaard
+    note: 'Damsgaard (BRE): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '400',
     overridePosition: 'FW',
-    note: 'Doku (MCI): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Doku
+    note: 'Doku (MCI): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '415',
     overridePosition: 'D',
-    note: 'Dorgu (MUN): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Dorgu
+    note: 'Dorgu (MUN): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '454',
     overridePosition: 'FW',
-    note: 'Elanga (NEW): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Elanga
+    note: 'Elanga (NEW): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '157',
     overridePosition: 'FW',
-    note: 'Estêvão (CHE): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Estêvão
+    note: 'Estêvão (CHE): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '367',
     overridePosition: 'FW',
-    note: 'Gakpo (LIV): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Gakpo
+    note: 'Gakpo (LIV): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '482',
     overridePosition: 'FW',
-    note: 'Hudson-Odoi (NFO): Underdog draft recaps 2026-08-19 (2 picks) — FPL MD.', // Hudson-Odoi
+    note: 'Hudson-Odoi (NFO): Underdog draft recaps 2026-08-19 (2 picks) — FPL MD.',
   },
   {
     fplId: '261',
     overridePosition: 'FW',
-    note: 'Iwobi (FUL): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Iwobi
+    note: 'Iwobi (FUL): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '263',
     overridePosition: 'FW',
-    note: 'Kevin (FUL): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Kevin
+    note: 'Kevin (FUL): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '268',
     overridePosition: 'D',
-    note: 'King (FUL): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // King
+    note: 'King (FUL): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '78',
     overridePosition: 'FW',
-    note: 'Kroupi.Jr (BOU): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Kroupi.Jr
+    note: 'Kroupi.Jr (BOU): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '186',
     overridePosition: 'FW',
-    note: 'Mason-Clark (COV): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Mason-Clark
+    note: 'Mason-Clark (COV): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '389',
     overridePosition: 'MD',
-    note: 'Matheus N. (MCI): Underdog draft recaps 2026-08-18 (1 pick) — FPL D.', // Matheus N.
+    note: 'Matheus N. (MCI): Underdog draft recaps 2026-08-18 (1 pick) — FPL D.',
   },
   {
     fplId: '427',
     overridePosition: 'FW',
-    note: 'Mbeumo (MUN): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Mbeumo
+    note: 'Mbeumo (MUN): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '122',
     overridePosition: 'FW',
-    note: 'Minteh (BHA): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Minteh
+    note: 'Minteh (BHA): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '237',
     overridePosition: 'FW',
-    note: 'Ndiaye (EVE): Underdog draft recaps 2026-08-18..08-21 (5 picks) — FPL MD.', // Ndiaye
+    note: 'Ndiaye (EVE): Underdog draft recaps 2026-08-18..08-21 (5 picks) — FPL MD.',
   },
   {
     fplId: '483',
     overridePosition: 'FW',
-    note: 'Ndoye (NFO): Underdog draft recaps 2026-08-21 (2 picks) — FPL MD.', // Ndoye
+    note: 'Ndoye (NFO): Underdog draft recaps 2026-08-21 (2 picks) — FPL MD.',
   },
   {
     fplId: '156',
     overridePosition: 'FW',
-    note: 'Neto (CHE): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Neto
+    note: 'Neto (CHE): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '95',
     overridePosition: 'FW',
-    note: 'O.Dango (BRE): Underdog draft recaps 2026-08-18..08-21 (5 picks) — FPL MD.', // O.Dango
+    note: 'O.Dango (BRE): Underdog draft recaps 2026-08-18..08-21 (5 picks) — FPL MD.',
   },
   {
     fplId: '336',
     overridePosition: 'FW',
-    note: 'Okafor (LEE): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Okafor
+    note: 'Okafor (LEE): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '429',
     overridePosition: 'FW',
-    note: 'Rashford (MUN): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Rashford
+    note: 'Rashford (MUN): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '67',
     overridePosition: 'FW',
-    note: 'Rayan (BOU): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Rayan
+    note: 'Rayan (BOU): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '12',
     overridePosition: 'FW',
-    note: 'Saka (ARS): RotoWire Underdog EPL rankings list him F, 2026-08-19; recap capture 2026-08-18 agrees.', // Saka
+    note: 'Saka (ARS): RotoWire Underdog EPL rankings list him F, 2026-08-19; recap capture 2026-08-18 agrees.',
   },
   {
     fplId: '208',
     overridePosition: 'FW',
-    note: 'Sarr (CRY): Underdog draft recaps 2026-08-18..08-21 (5 picks) — FPL MD.', // Sarr
+    note: 'Sarr (CRY): Underdog draft recaps 2026-08-18..08-21 (5 picks) — FPL MD.',
   },
   {
     fplId: '94',
     overridePosition: 'FW',
-    note: 'Schade (BRE): Underdog draft recaps 2026-08-18..08-19 (3 picks) — FPL MD.', // Schade
+    note: 'Schade (BRE): Underdog draft recaps 2026-08-18..08-19 (3 picks) — FPL MD.',
   },
   {
     fplId: '514',
     overridePosition: 'FW',
-    note: 'Tel (TOT): Underdog draft recaps 2026-08-18..08-21 (5 picks) — FPL MD.', // Tel
+    note: 'Tel (TOT): Underdog draft recaps 2026-08-18..08-21 (5 picks) — FPL MD.',
   },
   {
     fplId: '557',
     overridePosition: 'FW',
-    note: 'Tzolis (ARS): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Tzolis
+    note: 'Tzolis (ARS): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
   {
     fplId: '260',
     overridePosition: 'FW',
-    note: 'Wilson (LEE): Underdog draft recaps 2026-08-18..08-21 (5 picks) — FPL MD.', // Wilson
+    note: 'Wilson (LEE): Underdog draft recaps 2026-08-18..08-21 (5 picks) — FPL MD.',
   },
   {
     fplId: '211',
     overridePosition: 'FW',
-    note: 'Yeremy (CRY): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.', // Yeremy
+    note: 'Yeremy (CRY): Underdog draft recaps 2026-08-18 (1 pick) — FPL MD.',
   },
 ];
 
