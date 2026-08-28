@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "profileId": "free-kick-gw2-sat",
   "slateDate": "2026-08-29",
-  "fetchedAt": "2026-08-26T18:25:14.785Z",
+  "fetchedAt": "2026-08-28T20:52:27.654Z",
   "fixtures": [
     {
       "fixtureId": 14,
@@ -14,7 +14,7 @@
         {
           "bookmaker": "mybookieag",
           "selection": "home",
-          "price": 1.48
+          "price": 1.51
         },
         {
           "bookmaker": "mybookieag",
@@ -29,7 +29,7 @@
         {
           "bookmaker": "fanduel",
           "selection": "home",
-          "price": 1.45
+          "price": 1.48
         },
         {
           "bookmaker": "fanduel",
@@ -44,72 +44,72 @@
         {
           "bookmaker": "draftkings",
           "selection": "home",
-          "price": 1.51
+          "price": 1.53
         },
         {
           "bookmaker": "draftkings",
           "selection": "away",
-          "price": 6
+          "price": 5.75
         },
         {
           "bookmaker": "draftkings",
           "selection": "draw",
-          "price": 4.7
+          "price": 4.6
         },
         {
           "bookmaker": "betrivers",
           "selection": "home",
-          "price": 1.5
+          "price": 1.49
         },
         {
           "bookmaker": "betrivers",
           "selection": "away",
-          "price": 6.25
+          "price": 6.5
         },
         {
           "bookmaker": "betrivers",
           "selection": "draw",
-          "price": 4.4
+          "price": 4.5
         },
         {
           "bookmaker": "bovada",
           "selection": "home",
-          "price": 1.5
+          "price": 1.53
         },
         {
           "bookmaker": "bovada",
           "selection": "away",
-          "price": 6
+          "price": 5.6
         },
         {
           "bookmaker": "bovada",
           "selection": "draw",
-          "price": 4.7
+          "price": 4.6
         },
         {
           "bookmaker": "betmgm",
           "selection": "home",
-          "price": 1.44
+          "price": 1.48
         },
         {
           "bookmaker": "betmgm",
           "selection": "away",
-          "price": 5.25
+          "price": 4.8
         },
         {
           "bookmaker": "betmgm",
           "selection": "draw",
-          "price": 4.33
+          "price": 4.2
         },
         {
           "bookmaker": "betonlineag",
           "selection": "home",
-          "price": 1.52
+          "price": 1.54
         },
         {
           "bookmaker": "betonlineag",
           "selection": "away",
-          "price": 6
+          "price": 5.74
         },
         {
           "bookmaker": "betonlineag",
@@ -119,12 +119,12 @@
         {
           "bookmaker": "lowvig",
           "selection": "home",
-          "price": 1.52
+          "price": 1.54
         },
         {
           "bookmaker": "lowvig",
           "selection": "away",
-          "price": 6
+          "price": 5.74
         },
         {
           "bookmaker": "lowvig",
@@ -134,55 +134,55 @@
         {
           "bookmaker": "betus",
           "selection": "home",
-          "price": 1.5
+          "price": 1.53
         },
         {
           "bookmaker": "betus",
           "selection": "away",
-          "price": 6
+          "price": 5.75
         },
         {
           "bookmaker": "betus",
           "selection": "draw",
-          "price": 4.65
+          "price": 4.6
         }
       ],
       "totalGoals": [
         {
           "bookmaker": "mybookieag",
           "side": "over",
-          "point": 2.5,
-          "price": 1.57
+          "point": 3,
+          "price": 1.93
         },
         {
           "bookmaker": "mybookieag",
           "side": "under",
-          "point": 2.5,
-          "price": 2.26
+          "point": 3,
+          "price": 1.81
         },
         {
           "bookmaker": "betrivers",
           "side": "over",
           "point": 2.5,
-          "price": 1.62
+          "price": 1.61
         },
         {
           "bookmaker": "betrivers",
           "side": "under",
           "point": 2.5,
-          "price": 2.25
+          "price": 2.28
         },
         {
           "bookmaker": "bovada",
           "side": "over",
           "point": 2.5,
-          "price": 1.62
+          "price": 1.64
         },
         {
           "bookmaker": "bovada",
           "side": "under",
           "point": 2.5,
-          "price": 2.32
+          "price": 2.3
         },
         {
           "bookmaker": "betmgm",
@@ -200,25 +200,25 @@
           "bookmaker": "betonlineag",
           "side": "over",
           "point": 3,
-          "price": 1.96
+          "price": 1.98
         },
         {
           "bookmaker": "betonlineag",
           "side": "under",
           "point": 3,
-          "price": 1.82
+          "price": 1.83
         },
         {
           "bookmaker": "lowvig",
           "side": "over",
           "point": 3,
-          "price": 1.96
+          "price": 1.98
         },
         {
           "bookmaker": "lowvig",
           "side": "under",
           "point": 3,
-          "price": 1.82
+          "price": 1.83
         },
         {
           "bookmaker": "betus",
@@ -243,7 +243,40 @@
             },
             {
               "bookmaker": "draftkings",
-              "price": 3.8
+              "price": 3.85
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 3.6
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 3.45
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 3.5
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 3.1
+            }
+          ]
+        },
+        {
+          "playerId": "369",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 3.5
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 3.7
             },
             {
               "bookmaker": "betrivers",
@@ -263,32 +296,32 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 3.1
+              "price": 3.2
             }
           ]
         },
         {
-          "playerId": "369",
+          "playerId": "368",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 3.4
+              "price": 3.6
             },
             {
               "bookmaker": "draftkings",
-              "price": 3.65
+              "price": 4.5
             },
             {
               "bookmaker": "betrivers",
-              "price": 3.4
+              "price": 3.05
             },
             {
               "bookmaker": "bovada",
-              "price": 3.35
+              "price": 3.6
             },
             {
               "bookmaker": "betmgm",
-              "price": 3.7
+              "price": 4.33
             }
           ],
           "assists": [
@@ -296,7 +329,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 3.2
+              "price": 3.7
             }
           ]
         },
@@ -309,7 +342,7 @@
             },
             {
               "bookmaker": "draftkings",
-              "price": 3.25
+              "price": 3.35
             },
             {
               "bookmaker": "betrivers",
@@ -317,7 +350,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 2.85
+              "price": 2.88
             },
             {
               "bookmaker": "betmgm",
@@ -334,93 +367,27 @@
           ]
         },
         {
-          "playerId": "368",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 3.7
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 4.4
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 3.2
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 3.6
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 4.4
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 3.8
-            }
-          ]
-        },
-        {
-          "playerId": "372",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 5.5
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 6
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 5.1
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 5.5
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 4.2
-            }
-          ]
-        },
-        {
           "playerId": "379",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 2.05
+              "price": 2.15
             },
             {
               "bookmaker": "draftkings",
-              "price": 2.3
+              "price": 2.35
             },
             {
               "bookmaker": "betrivers",
-              "price": 2.15
+              "price": 2
             },
             {
               "bookmaker": "bovada",
-              "price": 2.15
+              "price": 2.12
             },
             {
               "bookmaker": "betmgm",
-              "price": 2.35
+              "price": 2.4
             }
           ],
           "assists": [
@@ -441,7 +408,7 @@
             },
             {
               "bookmaker": "draftkings",
-              "price": 6.5
+              "price": 7
             },
             {
               "bookmaker": "betrivers",
@@ -449,11 +416,44 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 6.25
+              "price": 6.5
             },
             {
               "bookmaker": "betmgm",
-              "price": 7
+              "price": 6.75
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 4.3
+            }
+          ]
+        },
+        {
+          "playerId": "372",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 5.5
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 6
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 5.15
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 5.5
             }
           ],
           "assists": [
@@ -470,7 +470,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 8
+              "price": 8.5
             },
             {
               "bookmaker": "draftkings",
@@ -494,7 +494,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 4.7
+              "price": 4.5
             }
           ]
         },
@@ -503,7 +503,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 4.4
+              "price": 4.3
             },
             {
               "bookmaker": "draftkings",
@@ -511,7 +511,7 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 4.1
+              "price": 4.2
             },
             {
               "bookmaker": "bovada",
@@ -519,7 +519,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 4.2
+              "price": 4.1
             }
           ],
           "assists": [
@@ -544,11 +544,11 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 4.4
+              "price": 4.5
             },
             {
               "bookmaker": "bovada",
-              "price": 4.05
+              "price": 4.1
             },
             {
               "bookmaker": "betmgm",
@@ -585,7 +585,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 11
+              "price": 10.5
             }
           ],
           "assists": [
@@ -676,11 +676,11 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 7
+              "price": 7.5
             },
             {
               "bookmaker": "bovada",
-              "price": 6.25
+              "price": 6.5
             },
             {
               "bookmaker": "betmgm",
@@ -708,12 +708,8 @@
               "price": 7
             },
             {
-              "bookmaker": "betrivers",
-              "price": 7
-            },
-            {
               "bookmaker": "bovada",
-              "price": 6.25
+              "price": 6
             },
             {
               "bookmaker": "betmgm",
@@ -750,7 +746,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 11
+              "price": 10.5
             }
           ],
           "assists": [
@@ -767,7 +763,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 16
+              "price": 17
             },
             {
               "bookmaker": "draftkings",
@@ -783,7 +779,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 17
+              "price": 17.5
             }
           ],
           "assists": [
@@ -792,39 +788,6 @@
               "side": "over",
               "point": 0.5,
               "price": 10
-            }
-          ]
-        },
-        {
-          "playerId": "469",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 12
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 15
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 12
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 12
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 12.5
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 10.5
             }
           ]
         },
@@ -857,6 +820,39 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
+              "price": 10
+            }
+          ]
+        },
+        {
+          "playerId": "469",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 13
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 15
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 12
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 12
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 12.5
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
               "price": 10.5
             }
           ]
@@ -882,7 +878,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 8
+              "price": 7.75
             }
           ],
           "assists": [
@@ -906,16 +902,8 @@
               "price": 13
             },
             {
-              "bookmaker": "betrivers",
-              "price": 15
-            },
-            {
               "bookmaker": "bovada",
-              "price": 12
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 11.5
+              "price": 11
             }
           ],
           "assists": [
@@ -923,7 +911,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 13
+              "price": 12
             }
           ]
         },
@@ -940,7 +928,7 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 14
+              "price": 15
             },
             {
               "bookmaker": "bovada",
@@ -969,7 +957,7 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 14
+              "price": 15
             },
             {
               "bookmaker": "bovada",
@@ -977,7 +965,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 18
+              "price": 17.5
             }
           ],
           "assists": [
@@ -1002,15 +990,15 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 16
+              "price": 15
             },
             {
               "bookmaker": "bovada",
-              "price": 18
+              "price": 17
             },
             {
               "bookmaker": "betmgm",
-              "price": 17.5
+              "price": 16.5
             }
           ],
           "assists": [
@@ -1027,11 +1015,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 3.35
+              "price": 3.4
             },
             {
               "bookmaker": "bovada",
-              "price": 3.05
+              "price": 3.15
             }
           ],
           "assists": []
@@ -1041,11 +1029,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 3.55
+              "price": 3.6
             },
             {
               "bookmaker": "bovada",
-              "price": 3.05
+              "price": 3.15
             }
           ],
           "assists": []
@@ -1055,7 +1043,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 3.55
+              "price": 3.6
             },
             {
               "bookmaker": "betrivers",
@@ -1063,11 +1051,25 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 3.4
+              "price": 3.45
             },
             {
               "bookmaker": "betmgm",
-              "price": 3.3
+              "price": 3.25
+            }
+          ],
+          "assists": []
+        },
+        {
+          "playerId": "493",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "draftkings",
+              "price": 4.1
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 3.8
             }
           ],
           "assists": []
@@ -1095,29 +1097,15 @@
           "assists": []
         },
         {
-          "playerId": "493",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "draftkings",
-              "price": 4.2
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 3.85
-            }
-          ],
-          "assists": []
-        },
-        {
           "playerId": "383",
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 4.3
+              "price": 4.4
             },
             {
               "bookmaker": "bovada",
-              "price": 3.9
+              "price": 4
             }
           ],
           "assists": []
@@ -1127,11 +1115,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 5.25
+              "price": 5.5
             },
             {
               "bookmaker": "bovada",
-              "price": 4.6
+              "price": 4.75
             }
           ],
           "assists": []
@@ -1141,25 +1129,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 7
+              "price": 7.5
             },
             {
               "bookmaker": "bovada",
-              "price": 6
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "485",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "draftkings",
-              "price": 8.5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 7
+              "price": 6.25
             }
           ],
           "assists": []
@@ -1182,20 +1156,6 @@
             {
               "bookmaker": "betmgm",
               "price": 9
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "365",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "draftkings",
-              "price": 13
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 7
             }
           ],
           "assists": []
@@ -1227,7 +1187,7 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 10.5
+              "price": 11
             },
             {
               "bookmaker": "bovada",
@@ -1253,7 +1213,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 11.5
+              "price": 11
             }
           ],
           "assists": []
@@ -1277,7 +1237,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 26
+              "price": 23
             },
             {
               "bookmaker": "betrivers",
@@ -1285,11 +1245,11 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 18
+              "price": 16
             },
             {
               "bookmaker": "betmgm",
-              "price": 17
+              "price": 16.5
             }
           ],
           "assists": []
@@ -1335,7 +1295,17 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "bovada",
-              "price": 4.75
+              "price": 5
+            }
+          ],
+          "assists": []
+        },
+        {
+          "playerId": "365",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "bovada",
+              "price": 7
             }
           ],
           "assists": []
@@ -1375,7 +1345,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "bovada",
-              "price": 4.75
+              "price": 5
             }
           ],
           "assists": []
@@ -1407,57 +1377,57 @@
         {
           "bookmaker": "fanduel",
           "selection": "away",
-          "price": 3.5
+          "price": 3.6
         },
         {
           "bookmaker": "fanduel",
           "selection": "draw",
-          "price": 3.4
+          "price": 3.5
         },
         {
           "bookmaker": "mybookieag",
           "selection": "home",
-          "price": 2.04
+          "price": 2.07
         },
         {
           "bookmaker": "mybookieag",
-          "selection": "away",
-          "price": 3.4
-        },
-        {
-          "bookmaker": "mybookieag",
-          "selection": "draw",
-          "price": 3.38
-        },
-        {
-          "bookmaker": "draftkings",
-          "selection": "home",
-          "price": 2.1
-        },
-        {
-          "bookmaker": "draftkings",
           "selection": "away",
           "price": 3.5
         },
         {
+          "bookmaker": "mybookieag",
+          "selection": "draw",
+          "price": 3.44
+        },
+        {
+          "bookmaker": "draftkings",
+          "selection": "home",
+          "price": 2.05
+        },
+        {
+          "bookmaker": "draftkings",
+          "selection": "away",
+          "price": 3.6
+        },
+        {
           "bookmaker": "draftkings",
           "selection": "draw",
-          "price": 3.55
+          "price": 3.5
         },
         {
           "bookmaker": "betrivers",
           "selection": "home",
-          "price": 2.05
+          "price": 2.07
         },
         {
           "bookmaker": "betrivers",
           "selection": "away",
-          "price": 3.55
+          "price": 3.45
         },
         {
           "bookmaker": "betrivers",
           "selection": "draw",
-          "price": 3.55
+          "price": 3.6
         },
         {
           "bookmaker": "bovada",
@@ -1467,7 +1437,7 @@
         {
           "bookmaker": "bovada",
           "selection": "away",
-          "price": 3.55
+          "price": 3.6
         },
         {
           "bookmaker": "bovada",
@@ -1477,12 +1447,12 @@
         {
           "bookmaker": "betmgm",
           "selection": "home",
-          "price": 1.91
+          "price": 1.98
         },
         {
           "bookmaker": "betmgm",
           "selection": "away",
-          "price": 3.3
+          "price": 3.2
         },
         {
           "bookmaker": "betmgm",
@@ -1492,12 +1462,12 @@
         {
           "bookmaker": "betonlineag",
           "selection": "home",
-          "price": 2.11
+          "price": 2.07
         },
         {
           "bookmaker": "betonlineag",
           "selection": "away",
-          "price": 3.58
+          "price": 3.7
         },
         {
           "bookmaker": "betonlineag",
@@ -1507,12 +1477,12 @@
         {
           "bookmaker": "lowvig",
           "selection": "home",
-          "price": 2.11
+          "price": 2.07
         },
         {
           "bookmaker": "lowvig",
           "selection": "away",
-          "price": 3.58
+          "price": 3.7
         },
         {
           "bookmaker": "lowvig",
@@ -1527,7 +1497,7 @@
         {
           "bookmaker": "betus",
           "selection": "away",
-          "price": 3.55
+          "price": 3.65
         },
         {
           "bookmaker": "betus",
@@ -1540,19 +1510,19 @@
           "bookmaker": "mybookieag",
           "side": "over",
           "point": 2.5,
-          "price": 1.83
+          "price": 1.85
         },
         {
           "bookmaker": "mybookieag",
           "side": "under",
           "point": 2.5,
-          "price": 1.87
+          "price": 1.89
         },
         {
           "bookmaker": "betrivers",
           "side": "over",
           "point": 2.5,
-          "price": 1.78
+          "price": 1.77
         },
         {
           "bookmaker": "betrivers",
@@ -1564,49 +1534,49 @@
           "bookmaker": "bovada",
           "side": "over",
           "point": 2.5,
-          "price": 1.91
+          "price": 1.89
         },
         {
           "bookmaker": "bovada",
           "side": "under",
           "point": 2.5,
-          "price": 1.91
+          "price": 1.93
         },
         {
           "bookmaker": "betmgm",
           "side": "over",
           "point": 2.5,
-          "price": 1.8
+          "price": 1.83
         },
         {
           "bookmaker": "betmgm",
           "side": "under",
           "point": 2.5,
-          "price": 1.91
+          "price": 1.89
         },
         {
           "bookmaker": "betonlineag",
           "side": "over",
           "point": 2.5,
-          "price": 1.85
+          "price": 1.87
         },
         {
           "bookmaker": "betonlineag",
           "side": "under",
           "point": 2.5,
-          "price": 1.93
+          "price": 1.94
         },
         {
           "bookmaker": "lowvig",
           "side": "over",
           "point": 2.5,
-          "price": 1.85
+          "price": 1.87
         },
         {
           "bookmaker": "lowvig",
           "side": "under",
           "point": 2.5,
-          "price": 1.93
+          "price": 1.94
         },
         {
           "bookmaker": "betus",
@@ -1627,7 +1597,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 6
+              "price": 6.5
             },
             {
               "bookmaker": "draftkings",
@@ -1635,7 +1605,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 5.5
+              "price": 5.6
             }
           ],
           "assists": [
@@ -1643,7 +1613,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 3.7
+              "price": 3.8
             }
           ]
         },
@@ -1652,7 +1622,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 3.9
+              "price": 4.1
             },
             {
               "bookmaker": "draftkings",
@@ -1660,15 +1630,15 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 3.9
+              "price": 3.8
             },
             {
               "bookmaker": "bovada",
-              "price": 3.9
+              "price": 3.8
             },
             {
               "bookmaker": "betmgm",
-              "price": 4.1
+              "price": 4.2
             }
           ],
           "assists": [
@@ -1689,7 +1659,7 @@
             },
             {
               "bookmaker": "draftkings",
-              "price": 4
+              "price": 4.1
             },
             {
               "bookmaker": "betrivers",
@@ -1718,7 +1688,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 2.75
+              "price": 2.8
             },
             {
               "bookmaker": "draftkings",
@@ -1730,7 +1700,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 2.85
+              "price": 2.9
             },
             {
               "bookmaker": "betmgm",
@@ -1742,40 +1712,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 4.9
-            }
-          ]
-        },
-        {
-          "playerId": "236",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 5.3
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 4.5
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 4.8
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 4.4
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 5.25
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 5.2
+              "price": 5
             }
           ]
         },
@@ -1784,11 +1721,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 3.3
+              "price": 3.4
             },
             {
               "bookmaker": "draftkings",
-              "price": 3.6
+              "price": 3.65
             },
             {
               "bookmaker": "betrivers",
@@ -1808,7 +1745,40 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 5.3
+              "price": 5.2
+            }
+          ]
+        },
+        {
+          "playerId": "236",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 5.4
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 4.5
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 4.5
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 5.25
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 5.2
             }
           ]
         },
@@ -1817,7 +1787,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 10
+              "price": 9.5
             },
             {
               "bookmaker": "draftkings",
@@ -1841,7 +1811,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 5.4
+              "price": 5.3
             }
           ]
         },
@@ -1850,19 +1820,19 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 5
+              "price": 5.1
             },
             {
               "bookmaker": "draftkings",
-              "price": 7
+              "price": 6.5
             },
             {
               "bookmaker": "betrivers",
-              "price": 5.75
+              "price": 5.5
             },
             {
               "bookmaker": "bovada",
-              "price": 5.6
+              "price": 5.4
             },
             {
               "bookmaker": "betmgm",
@@ -1874,7 +1844,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 5.5
+              "price": 5.6
             }
           ]
         },
@@ -1891,7 +1861,7 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 10
+              "price": 10.5
             },
             {
               "bookmaker": "bovada",
@@ -1899,7 +1869,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 14.5
+              "price": 14
             }
           ],
           "assists": [
@@ -1907,7 +1877,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 5.6
+              "price": 5.7
             }
           ]
         },
@@ -1945,11 +1915,44 @@
           ]
         },
         {
+          "playerId": "237",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 4.8
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 5.25
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 4.75
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 5.25
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 6.5
+            }
+          ]
+        },
+        {
           "playerId": "61",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 17
+              "price": 18
             },
             {
               "bookmaker": "draftkings",
@@ -1957,7 +1960,7 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 10.5
+              "price": 10
             },
             {
               "bookmaker": "bovada",
@@ -1965,7 +1968,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 13
+              "price": 12.5
             }
           ],
           "assists": [
@@ -2015,7 +2018,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 7
+              "price": 7.5
             },
             {
               "bookmaker": "draftkings",
@@ -2044,27 +2047,27 @@
           ]
         },
         {
-          "playerId": "237",
+          "playerId": "247",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 4.8
+              "price": 14
             },
             {
               "bookmaker": "draftkings",
-              "price": 5.25
+              "price": 13
             },
             {
               "bookmaker": "betrivers",
-              "price": 4.8
+              "price": 4.7
             },
             {
               "bookmaker": "bovada",
-              "price": 4.6
+              "price": 11
             },
             {
               "bookmaker": "betmgm",
-              "price": 5.25
+              "price": 11.5
             }
           ],
           "assists": [
@@ -2073,39 +2076,6 @@
               "side": "over",
               "point": 0.5,
               "price": 7
-            }
-          ]
-        },
-        {
-          "playerId": "247",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 13
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 13
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 4.5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 11
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 11
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 7.5
             }
           ]
         },
@@ -2122,15 +2092,15 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 7.5
+              "price": 8.5
             },
             {
               "bookmaker": "bovada",
-              "price": 9
+              "price": 9.5
             },
             {
               "bookmaker": "betmgm",
-              "price": 8.75
+              "price": 9
             }
           ],
           "assists": [
@@ -2147,7 +2117,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 10.5
+              "price": 11
             },
             {
               "bookmaker": "draftkings",
@@ -2176,27 +2146,27 @@
           ]
         },
         {
-          "playerId": "233",
+          "playerId": "249",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 21
+              "price": 3.7
             },
             {
               "bookmaker": "draftkings",
-              "price": 31
+              "price": 3.65
             },
             {
               "bookmaker": "betrivers",
-              "price": 13
+              "price": 3.3
             },
             {
               "bookmaker": "bovada",
-              "price": 19
+              "price": 3.3
             },
             {
               "bookmaker": "betmgm",
-              "price": 18
+              "price": 3.7
             }
           ],
           "assists": [
@@ -2205,6 +2175,39 @@
               "side": "over",
               "point": 0.5,
               "price": 10.5
+            }
+          ]
+        },
+        {
+          "playerId": "233",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 23
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 31
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 14
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 19
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 18.5
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 11
             }
           ]
         },
@@ -2225,7 +2228,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 3.35
+              "price": 3.3
             },
             {
               "bookmaker": "betmgm",
@@ -2237,40 +2240,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 10.5
-            }
-          ]
-        },
-        {
-          "playerId": "249",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 3.6
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 3.65
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 3.8
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 3.5
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 3.7
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 10.5
+              "price": 11
             }
           ]
         },
@@ -2279,7 +2249,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 18
+              "price": 19
             },
             {
               "bookmaker": "draftkings",
@@ -2304,6 +2274,72 @@
               "side": "over",
               "point": 0.5,
               "price": 11
+            }
+          ]
+        },
+        {
+          "playerId": "230",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 21
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 18
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 9.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 13
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 14
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 15
+            }
+          ]
+        },
+        {
+          "playerId": "231",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 11
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 11
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 9.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 9
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 11
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 16
             }
           ]
         },
@@ -2341,72 +2377,6 @@
           ]
         },
         {
-          "playerId": "230",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 21
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 18
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 9.5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 13
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 13.5
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 16
-            }
-          ]
-        },
-        {
-          "playerId": "231",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 11
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 11
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 9.5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 9
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 11
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 17
-            }
-          ]
-        },
-        {
           "playerId": "81",
           "anytimeGoalscorer": [
             {
@@ -2414,12 +2384,8 @@
               "price": 2.8
             },
             {
-              "bookmaker": "betrivers",
-              "price": 3
-            },
-            {
               "bookmaker": "bovada",
-              "price": 2.76
+              "price": 2.65
             },
             {
               "bookmaker": "betmgm",
@@ -2437,7 +2403,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 2.95
+              "price": 3
             }
           ],
           "assists": []
@@ -2447,11 +2413,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 4.6
+              "price": 4.7
             },
             {
               "bookmaker": "bovada",
-              "price": 4.1
+              "price": 4.15
             }
           ],
           "assists": []
@@ -2469,7 +2435,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 4.65
+              "price": 4.7
             }
           ],
           "assists": []
@@ -2497,7 +2463,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 6.25
+              "price": 6.5
             }
           ],
           "assists": []
@@ -2524,16 +2490,12 @@
               "price": 9.5
             },
             {
-              "bookmaker": "betrivers",
-              "price": 5.75
-            },
-            {
               "bookmaker": "bovada",
-              "price": 7
+              "price": 8.25
             },
             {
               "bookmaker": "betmgm",
-              "price": 9.75
+              "price": 9.5
             }
           ],
           "assists": []
@@ -2555,7 +2517,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 11.5
+              "price": 11
             }
           ],
           "assists": []
@@ -2602,10 +2564,6 @@
             {
               "bookmaker": "draftkings",
               "price": 26
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 10
             },
             {
               "bookmaker": "bovada",
@@ -2657,7 +2615,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "bovada",
-              "price": 1.62
+              "price": 1.6
             }
           ],
           "assists": []
@@ -2677,7 +2635,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "bovada",
-              "price": 3.3
+              "price": 3.4
             }
           ],
           "assists": []
@@ -2694,137 +2652,137 @@
         {
           "bookmaker": "mybookieag",
           "selection": "home",
-          "price": 1.86
+          "price": 1.79
         },
         {
           "bookmaker": "mybookieag",
           "selection": "away",
-          "price": 3.9
+          "price": 4.5
         },
         {
           "bookmaker": "mybookieag",
           "selection": "draw",
-          "price": 3.48
+          "price": 3.6
         },
         {
           "bookmaker": "fanduel",
+          "selection": "home",
+          "price": 1.8
+        },
+        {
+          "bookmaker": "fanduel",
+          "selection": "away",
+          "price": 4.6
+        },
+        {
+          "bookmaker": "fanduel",
+          "selection": "draw",
+          "price": 3.6
+        },
+        {
+          "bookmaker": "draftkings",
+          "selection": "home",
+          "price": 1.8
+        },
+        {
+          "bookmaker": "draftkings",
+          "selection": "away",
+          "price": 4.7
+        },
+        {
+          "bookmaker": "draftkings",
+          "selection": "draw",
+          "price": 3.55
+        },
+        {
+          "bookmaker": "betrivers",
           "selection": "home",
           "price": 1.83
         },
         {
-          "bookmaker": "fanduel",
+          "bookmaker": "betrivers",
           "selection": "away",
-          "price": 4.2
-        },
-        {
-          "bookmaker": "fanduel",
-          "selection": "draw",
-          "price": 3.5
-        },
-        {
-          "bookmaker": "draftkings",
-          "selection": "home",
-          "price": 1.91
-        },
-        {
-          "bookmaker": "draftkings",
-          "selection": "away",
-          "price": 4.3
-        },
-        {
-          "bookmaker": "draftkings",
-          "selection": "draw",
-          "price": 3.5
+          "price": 4.5
         },
         {
           "bookmaker": "betrivers",
-          "selection": "home",
-          "price": 1.87
-        },
-        {
-          "bookmaker": "betrivers",
-          "selection": "away",
-          "price": 4.35
-        },
-        {
-          "bookmaker": "betrivers",
-          "selection": "draw",
-          "price": 3.5
-        },
-        {
-          "bookmaker": "bovada",
-          "selection": "home",
-          "price": 1.88
-        },
-        {
-          "bookmaker": "bovada",
-          "selection": "away",
-          "price": 4.3
-        },
-        {
-          "bookmaker": "bovada",
-          "selection": "draw",
-          "price": 3.5
-        },
-        {
-          "bookmaker": "betmgm",
-          "selection": "home",
-          "price": 1.77
-        },
-        {
-          "bookmaker": "betmgm",
-          "selection": "away",
-          "price": 3.9
-        },
-        {
-          "bookmaker": "betmgm",
-          "selection": "draw",
-          "price": 3.25
-        },
-        {
-          "bookmaker": "lowvig",
-          "selection": "home",
-          "price": 1.87
-        },
-        {
-          "bookmaker": "lowvig",
-          "selection": "away",
-          "price": 4.55
-        },
-        {
-          "bookmaker": "lowvig",
-          "selection": "draw",
-          "price": 3.57
-        },
-        {
-          "bookmaker": "betonlineag",
-          "selection": "home",
-          "price": 1.87
-        },
-        {
-          "bookmaker": "betonlineag",
-          "selection": "away",
-          "price": 4.55
-        },
-        {
-          "bookmaker": "betonlineag",
-          "selection": "draw",
-          "price": 3.57
-        },
-        {
-          "bookmaker": "betus",
-          "selection": "home",
-          "price": 1.87
-        },
-        {
-          "bookmaker": "betus",
-          "selection": "away",
-          "price": 4.55
-        },
-        {
-          "bookmaker": "betus",
           "selection": "draw",
           "price": 3.55
+        },
+        {
+          "bookmaker": "bovada",
+          "selection": "home",
+          "price": 1.82
+        },
+        {
+          "bookmaker": "bovada",
+          "selection": "away",
+          "price": 4.6
+        },
+        {
+          "bookmaker": "bovada",
+          "selection": "draw",
+          "price": 3.55
+        },
+        {
+          "bookmaker": "betmgm",
+          "selection": "home",
+          "price": 1.74
+        },
+        {
+          "bookmaker": "betmgm",
+          "selection": "away",
+          "price": 4
+        },
+        {
+          "bookmaker": "betmgm",
+          "selection": "draw",
+          "price": 3.3
+        },
+        {
+          "bookmaker": "lowvig",
+          "selection": "home",
+          "price": 1.83
+        },
+        {
+          "bookmaker": "lowvig",
+          "selection": "away",
+          "price": 4.73
+        },
+        {
+          "bookmaker": "lowvig",
+          "selection": "draw",
+          "price": 3.62
+        },
+        {
+          "bookmaker": "betonlineag",
+          "selection": "home",
+          "price": 1.83
+        },
+        {
+          "bookmaker": "betonlineag",
+          "selection": "away",
+          "price": 4.73
+        },
+        {
+          "bookmaker": "betonlineag",
+          "selection": "draw",
+          "price": 3.62
+        },
+        {
+          "bookmaker": "betus",
+          "selection": "home",
+          "price": 1.83
+        },
+        {
+          "bookmaker": "betus",
+          "selection": "away",
+          "price": 4.75
+        },
+        {
+          "bookmaker": "betus",
+          "selection": "draw",
+          "price": 3.6
         }
       ],
       "totalGoals": [
@@ -2832,85 +2790,85 @@
           "bookmaker": "mybookieag",
           "side": "over",
           "point": 2.5,
-          "price": 1.81
+          "price": 1.86
         },
         {
           "bookmaker": "mybookieag",
           "side": "under",
           "point": 2.5,
-          "price": 1.89
+          "price": 1.87
         },
         {
           "bookmaker": "betrivers",
           "side": "over",
           "point": 2.5,
-          "price": 1.83
+          "price": 1.85
         },
         {
           "bookmaker": "betrivers",
           "side": "under",
           "point": 2.5,
-          "price": 1.94
+          "price": 1.93
         },
         {
           "bookmaker": "bovada",
           "side": "over",
           "point": 2.5,
-          "price": 1.82
+          "price": 1.91
         },
         {
           "bookmaker": "bovada",
           "side": "under",
           "point": 2.5,
-          "price": 2.02
+          "price": 1.91
         },
         {
           "bookmaker": "betmgm",
           "side": "over",
           "point": 2.5,
-          "price": 1.77
+          "price": 1.85
         },
         {
           "bookmaker": "betmgm",
+          "side": "under",
+          "point": 2.5,
+          "price": 1.85
+        },
+        {
+          "bookmaker": "lowvig",
+          "side": "over",
+          "point": 2.5,
+          "price": 1.85
+        },
+        {
+          "bookmaker": "lowvig",
+          "side": "under",
+          "point": 2.5,
+          "price": 1.96
+        },
+        {
+          "bookmaker": "betonlineag",
+          "side": "over",
+          "point": 2.5,
+          "price": 1.85
+        },
+        {
+          "bookmaker": "betonlineag",
+          "side": "under",
+          "point": 2.5,
+          "price": 1.96
+        },
+        {
+          "bookmaker": "betus",
+          "side": "over",
+          "point": 2.5,
+          "price": 1.87
+        },
+        {
+          "bookmaker": "betus",
           "side": "under",
           "point": 2.5,
           "price": 1.95
-        },
-        {
-          "bookmaker": "lowvig",
-          "side": "over",
-          "point": 2.5,
-          "price": 1.84
-        },
-        {
-          "bookmaker": "lowvig",
-          "side": "under",
-          "point": 2.5,
-          "price": 1.94
-        },
-        {
-          "bookmaker": "betonlineag",
-          "side": "over",
-          "point": 2.5,
-          "price": 1.84
-        },
-        {
-          "bookmaker": "betonlineag",
-          "side": "under",
-          "point": 2.5,
-          "price": 1.94
-        },
-        {
-          "bookmaker": "betus",
-          "side": "over",
-          "point": 2.5,
-          "price": 1.83
-        },
-        {
-          "bookmaker": "betus",
-          "side": "under",
-          "point": 2.5,
-          "price": 2
         }
       ],
       "playerProps": [
@@ -2919,7 +2877,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 3.9
+              "price": 4
             },
             {
               "bookmaker": "draftkings",
@@ -2956,7 +2914,7 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 10
+              "price": 9.5
             },
             {
               "bookmaker": "bovada",
@@ -2977,7 +2935,7 @@
           ]
         },
         {
-          "playerId": "185",
+          "playerId": "183",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
@@ -2985,7 +2943,7 @@
             },
             {
               "bookmaker": "draftkings",
-              "price": 5.25
+              "price": 4.9
             },
             {
               "bookmaker": "betrivers",
@@ -2993,40 +2951,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 4.65
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 4.75
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 4.6
-            }
-          ]
-        },
-        {
-          "playerId": "183",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 3.7
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 5
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 5.5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 4.6
+              "price": 4.5
             },
             {
               "bookmaker": "betmgm",
@@ -3043,11 +2968,11 @@
           ]
         },
         {
-          "playerId": "190",
+          "playerId": "185",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 4.1
+              "price": 3.9
             },
             {
               "bookmaker": "draftkings",
@@ -3055,11 +2980,11 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 4.8
+              "price": 5.3
             },
             {
               "bookmaker": "bovada",
-              "price": 4.55
+              "price": 4.7
             },
             {
               "bookmaker": "betmgm",
@@ -3071,40 +2996,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 5
-            }
-          ]
-        },
-        {
-          "playerId": "282",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 21
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 21
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 14
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 16
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 16
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 5.1
+              "price": 4.7
             }
           ]
         },
@@ -3113,15 +3005,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 4
-            },
-            {
-              "bookmaker": "draftkings",
               "price": 4.2
             },
             {
-              "bookmaker": "betrivers",
-              "price": 3.7
+              "bookmaker": "draftkings",
+              "price": 4.1
             },
             {
               "bookmaker": "bovada",
@@ -3137,7 +3025,40 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 5.1
+              "price": 4.9
+            }
+          ]
+        },
+        {
+          "playerId": "190",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 4.2
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 5
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 4.8
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 4.5
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 4.5
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 5
             }
           ]
         },
@@ -3154,7 +3075,7 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 6
+              "price": 5.75
             },
             {
               "bookmaker": "bovada",
@@ -3162,7 +3083,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 6.75
+              "price": 6.5
             }
           ],
           "assists": [
@@ -3175,27 +3096,27 @@
           ]
         },
         {
-          "playerId": "492",
+          "playerId": "282",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 2.3
+              "price": 23
             },
             {
               "bookmaker": "draftkings",
-              "price": 2.25
+              "price": 23
             },
             {
               "bookmaker": "betrivers",
-              "price": 2.7
+              "price": 14
             },
             {
               "bookmaker": "bovada",
-              "price": 2.33
+              "price": 16
             },
             {
               "bookmaker": "betmgm",
-              "price": 2.45
+              "price": 16.5
             }
           ],
           "assists": [
@@ -3203,7 +3124,40 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 5.4
+              "price": 5.5
+            }
+          ]
+        },
+        {
+          "playerId": "492",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 2.4
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 2.2
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 2.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 2.27
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 2.4
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 5.5
             }
           ]
         },
@@ -3216,7 +3170,7 @@
             },
             {
               "bookmaker": "draftkings",
-              "price": 8
+              "price": 7.5
             },
             {
               "bookmaker": "betrivers",
@@ -3224,77 +3178,11 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 7.5
+              "price": 7.25
             },
             {
               "bookmaker": "betmgm",
-              "price": 8
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 6
-            }
-          ]
-        },
-        {
-          "playerId": "295",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 3.4
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 3.05
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 3.2
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 3
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 3.5
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 6
-            }
-          ]
-        },
-        {
-          "playerId": "195",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 2.3
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 2.55
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 2.9
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 2.53
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 2.4
+              "price": 7.75
             }
           ],
           "assists": [
@@ -3311,7 +3199,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 26
+              "price": 28
             },
             {
               "bookmaker": "draftkings",
@@ -3340,27 +3228,27 @@
           ]
         },
         {
-          "playerId": "286",
+          "playerId": "295",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 5.8
+              "price": 3.7
             },
             {
               "bookmaker": "draftkings",
-              "price": 7
+              "price": 3.3
             },
             {
               "bookmaker": "betrivers",
-              "price": 4.9
+              "price": 3.3
             },
             {
               "bookmaker": "bovada",
-              "price": 5.5
+              "price": 3.15
             },
             {
               "bookmaker": "betmgm",
-              "price": 5.5
+              "price": 3.7
             }
           ],
           "assists": [
@@ -3373,6 +3261,72 @@
           ]
         },
         {
+          "playerId": "195",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 2.4
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 2.5
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 2.65
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 2.45
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 2.4
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 6.5
+            }
+          ]
+        },
+        {
+          "playerId": "286",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 6.5
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 7.5
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 5.75
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 5.75
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 7
+            }
+          ]
+        },
+        {
           "playerId": "175",
           "anytimeGoalscorer": [
             {
@@ -3381,7 +3335,7 @@
             },
             {
               "bookmaker": "draftkings",
-              "price": 20
+              "price": 19
             },
             {
               "bookmaker": "betrivers",
@@ -3401,40 +3355,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 6.5
-            }
-          ]
-        },
-        {
-          "playerId": "576",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 5.2
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 5.5
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 4.8
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 5.5
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 7.5
+              "price": 7
             }
           ]
         },
@@ -3467,6 +3388,39 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
+              "price": 8
+            }
+          ]
+        },
+        {
+          "playerId": "576",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 5.7
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 5.75
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 5.2
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 5.15
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 5.75
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
               "price": 8.5
             }
           ]
@@ -3476,15 +3430,15 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 15
-            },
-            {
-              "bookmaker": "draftkings",
               "price": 16
             },
             {
+              "bookmaker": "draftkings",
+              "price": 17
+            },
+            {
               "bookmaker": "betrivers",
-              "price": 14
+              "price": 13
             },
             {
               "bookmaker": "bovada",
@@ -3492,7 +3446,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 12.5
+              "price": 13
             }
           ],
           "assists": [
@@ -3500,7 +3454,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 9
+              "price": 9.5
             }
           ]
         },
@@ -3509,7 +3463,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 26
+              "price": 28
             },
             {
               "bookmaker": "draftkings",
@@ -3517,11 +3471,15 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 15
+              "price": 14
             },
             {
               "bookmaker": "bovada",
               "price": 14
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 21
             }
           ],
           "assists": [
@@ -3529,7 +3487,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 9
+              "price": 10
             }
           ]
         },
@@ -3538,11 +3496,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 6.5
+              "price": 7.5
             },
             {
               "bookmaker": "draftkings",
-              "price": 7.5
+              "price": 8
             },
             {
               "bookmaker": "betrivers",
@@ -3550,11 +3508,11 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 6.25
+              "price": 6.5
             },
             {
               "bookmaker": "betmgm",
-              "price": 7.25
+              "price": 7.75
             }
           ],
           "assists": [
@@ -3562,7 +3520,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 9
+              "price": 10
             }
           ]
         },
@@ -3571,7 +3529,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 16
+              "price": 17
             },
             {
               "bookmaker": "draftkings",
@@ -3583,7 +3541,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 14
+              "price": 15
             },
             {
               "bookmaker": "betmgm",
@@ -3596,39 +3554,6 @@
               "side": "over",
               "point": 0.5,
               "price": 11
-            }
-          ]
-        },
-        {
-          "playerId": "586",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 11
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 17
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 12
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 12
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 12.5
-            }
-          ],
-          "assists": [
-            {
-              "bookmaker": "fanduel",
-              "side": "over",
-              "point": 0.5,
-              "price": 17
             }
           ]
         },
@@ -3637,19 +3562,52 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 15
+              "price": 16
             },
             {
               "bookmaker": "draftkings",
-              "price": 14
+              "price": 16
             },
             {
               "bookmaker": "betrivers",
-              "price": 14
+              "price": 15
             },
             {
               "bookmaker": "bovada",
+              "price": 14
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 13.5
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 17
+            }
+          ]
+        },
+        {
+          "playerId": "586",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
               "price": 12
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 19
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 12
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 13
             },
             {
               "bookmaker": "betmgm",
@@ -3661,7 +3619,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 17
+              "price": 18
             }
           ]
         },
@@ -3670,11 +3628,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 18
+              "price": 21
             },
             {
               "bookmaker": "draftkings",
-              "price": 17
+              "price": 19
             },
             {
               "bookmaker": "betrivers",
@@ -3682,11 +3640,11 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 14
+              "price": 15
             },
             {
               "bookmaker": "betmgm",
-              "price": 14.5
+              "price": 15.5
             }
           ],
           "assists": [
@@ -3694,7 +3652,7 @@
               "bookmaker": "fanduel",
               "side": "over",
               "point": 0.5,
-              "price": 20
+              "price": 21
             }
           ]
         },
@@ -3703,19 +3661,15 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 2.7
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 3.1
+              "price": 2.65
             },
             {
               "bookmaker": "bovada",
-              "price": 2.72
+              "price": 2.55
             },
             {
               "bookmaker": "betmgm",
-              "price": 3.1
+              "price": 3
             }
           ],
           "assists": []
@@ -3725,15 +3679,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 2.95
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 3.6
+              "price": 2.9
             },
             {
               "bookmaker": "bovada",
-              "price": 3
+              "price": 2.76
             },
             {
               "bookmaker": "betmgm",
@@ -3747,7 +3697,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 3.95
+              "price": 3.85
             },
             {
               "bookmaker": "betrivers",
@@ -3755,11 +3705,11 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 3.8
+              "price": 3.85
             },
             {
               "bookmaker": "betmgm",
-              "price": 3.8
+              "price": 3.75
             }
           ],
           "assists": []
@@ -3774,56 +3724,6 @@
             {
               "bookmaker": "bovada",
               "price": 5
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "288",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "draftkings",
-              "price": 6.5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 5.6
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "296",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "draftkings",
-              "price": 7
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 5.75
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "287",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "draftkings",
-              "price": 7
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 5.2
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 5.6
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 6.25
             }
           ],
           "assists": []
@@ -3847,7 +3747,43 @@
           "assists": []
         },
         {
-          "playerId": "294",
+          "playerId": "288",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "draftkings",
+              "price": 7.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 6.25
+            }
+          ],
+          "assists": []
+        },
+        {
+          "playerId": "287",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "draftkings",
+              "price": 7.5
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 5.3
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 5.75
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 6.5
+            }
+          ],
+          "assists": []
+        },
+        {
+          "playerId": "296",
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
@@ -3861,7 +3797,7 @@
           "assists": []
         },
         {
-          "playerId": "292",
+          "playerId": "294",
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
@@ -3869,33 +3805,25 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 6.75
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 7.75
+              "price": 7
             }
           ],
           "assists": []
         },
         {
-          "playerId": "585",
+          "playerId": "292",
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 14
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 14
+              "price": 9.5
             },
             {
               "bookmaker": "bovada",
-              "price": 12
+              "price": 7.5
             },
             {
               "bookmaker": "betmgm",
-              "price": 12.5
+              "price": 8.25
             }
           ],
           "assists": []
@@ -3905,11 +3833,11 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "draftkings",
-              "price": 17
+              "price": 16
             },
             {
               "bookmaker": "betrivers",
-              "price": 10.5
+              "price": 10
             },
             {
               "bookmaker": "bovada",
@@ -3917,7 +3845,25 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 10.5
+              "price": 11
+            }
+          ],
+          "assists": []
+        },
+        {
+          "playerId": "585",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "draftkings",
+              "price": 16
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 13
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 13
             }
           ],
           "assists": []
@@ -3948,16 +3894,12 @@
               "price": 36
             },
             {
-              "bookmaker": "betrivers",
-              "price": 14
-            },
-            {
               "bookmaker": "bovada",
-              "price": 21
+              "price": 26
             },
             {
               "bookmaker": "betmgm",
-              "price": 19
+              "price": 20
             }
           ],
           "assists": []
@@ -3971,7 +3913,7 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 26
+              "price": 17
             }
           ],
           "assists": []
@@ -3991,7 +3933,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "bovada",
-              "price": 1.94
+              "price": 2
             }
           ],
           "assists": []
@@ -4001,7 +3943,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "bovada",
-              "price": 2.9
+              "price": 3.1
             }
           ],
           "assists": []
@@ -4011,7 +3953,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "bovada",
-              "price": 13
+              "price": 16
             }
           ],
           "assists": []
@@ -4031,7 +3973,7 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "bovada",
-              "price": 7
+              "price": 8
             }
           ],
           "assists": []
@@ -4053,62 +3995,62 @@
         {
           "bookmaker": "fanduel",
           "selection": "home",
-          "price": 2.2
+          "price": 2.25
         },
         {
           "bookmaker": "fanduel",
           "selection": "draw",
-          "price": 3.6
-        },
-        {
-          "bookmaker": "mybookieag",
-          "selection": "away",
-          "price": 2.94
-        },
-        {
-          "bookmaker": "mybookieag",
-          "selection": "home",
-          "price": 2.2
-        },
-        {
-          "bookmaker": "mybookieag",
-          "selection": "draw",
-          "price": 3.5
-        },
-        {
-          "bookmaker": "draftkings",
-          "selection": "away",
-          "price": 3.05
-        },
-        {
-          "bookmaker": "draftkings",
-          "selection": "home",
-          "price": 2.25
-        },
-        {
-          "bookmaker": "draftkings",
-          "selection": "draw",
           "price": 3.7
         },
         {
-          "bookmaker": "betrivers",
+          "bookmaker": "mybookieag",
           "selection": "away",
-          "price": 3.1
+          "price": 2.88
         },
         {
-          "bookmaker": "betrivers",
+          "bookmaker": "mybookieag",
           "selection": "home",
-          "price": 2.23
+          "price": 2.28
         },
         {
-          "bookmaker": "betrivers",
+          "bookmaker": "mybookieag",
           "selection": "draw",
           "price": 3.65
         },
         {
+          "bookmaker": "draftkings",
+          "selection": "away",
+          "price": 2.9
+        },
+        {
+          "bookmaker": "draftkings",
+          "selection": "home",
+          "price": 2.3
+        },
+        {
+          "bookmaker": "draftkings",
+          "selection": "draw",
+          "price": 3.75
+        },
+        {
+          "bookmaker": "betrivers",
+          "selection": "away",
+          "price": 2.95
+        },
+        {
+          "bookmaker": "betrivers",
+          "selection": "home",
+          "price": 2.28
+        },
+        {
+          "bookmaker": "betrivers",
+          "selection": "draw",
+          "price": 3.7
+        },
+        {
           "bookmaker": "bovada",
           "selection": "away",
-          "price": 3.05
+          "price": 2.95
         },
         {
           "bookmaker": "bovada",
@@ -4123,12 +4065,12 @@
         {
           "bookmaker": "betmgm",
           "selection": "away",
-          "price": 2.85
+          "price": 2.75
         },
         {
           "bookmaker": "betmgm",
           "selection": "home",
-          "price": 2.1
+          "price": 2.15
         },
         {
           "bookmaker": "betmgm",
@@ -4168,7 +4110,7 @@
         {
           "bookmaker": "betus",
           "selection": "away",
-          "price": 3.05
+          "price": 2.95
         },
         {
           "bookmaker": "betus",
@@ -4185,99 +4127,260 @@
         {
           "bookmaker": "mybookieag",
           "side": "over",
-          "point": 2.5,
-          "price": 1.62
+          "point": 3,
+          "price": 1.94
         },
         {
           "bookmaker": "mybookieag",
           "side": "under",
-          "point": 2.5,
-          "price": 2.16
+          "point": 3,
+          "price": 1.8
         },
         {
           "bookmaker": "betrivers",
           "side": "over",
           "point": 2.5,
-          "price": 1.68
+          "price": 1.63
         },
         {
           "bookmaker": "betrivers",
           "side": "under",
           "point": 2.5,
-          "price": 2.15
+          "price": 2.25
         },
         {
           "bookmaker": "bovada",
           "side": "over",
           "point": 2.5,
-          "price": 1.68
+          "price": 1.64
         },
         {
           "bookmaker": "bovada",
           "side": "under",
           "point": 2.5,
-          "price": 2.22
+          "price": 2.3
         },
         {
           "bookmaker": "betmgm",
           "side": "over",
           "point": 2.5,
-          "price": 1.62
+          "price": 1.61
         },
         {
           "bookmaker": "betmgm",
           "side": "under",
           "point": 2.5,
-          "price": 2.15
+          "price": 2.2
         },
         {
           "bookmaker": "lowvig",
           "side": "over",
           "point": 3,
-          "price": 2.06
+          "price": 1.98
         },
         {
           "bookmaker": "lowvig",
           "side": "under",
           "point": 3,
-          "price": 1.73
+          "price": 1.83
         },
         {
           "bookmaker": "betonlineag",
           "side": "over",
           "point": 3,
-          "price": 2.06
+          "price": 1.98
         },
         {
           "bookmaker": "betonlineag",
           "side": "under",
           "point": 3,
-          "price": 1.73
+          "price": 1.83
         },
         {
           "bookmaker": "betus",
           "side": "over",
           "point": 3,
-          "price": 2.15
+          "price": 2
         },
         {
           "bookmaker": "betus",
           "side": "under",
           "point": 3,
-          "price": 1.74
+          "price": 1.83
         }
       ],
       "playerProps": [
+        {
+          "playerId": "514",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 3.2
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 3.7
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 3.6
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 3.4
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 3.6
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 4.3
+            }
+          ]
+        },
+        {
+          "playerId": "464",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 2.95
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 3.4
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 2.9
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 3
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 3.3
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 4.6
+            }
+          ]
+        },
+        {
+          "playerId": "499",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 10.5
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 15
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 8.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 10
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 11.5
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 4.9
+            }
+          ]
+        },
+        {
+          "playerId": "460",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 6
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 8.5
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 7.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 7
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 6.5
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 5.1
+            }
+          ]
+        },
+        {
+          "playerId": "455",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 7
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 10
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 6.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 7.25
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 8.25
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 5.1
+            }
+          ]
+        },
         {
           "playerId": "527",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
               "price": 2.45
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 2.67
             },
             {
               "bookmaker": "draftkings",
@@ -4289,25 +4392,127 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 2.4
+              "price": 2.43
             },
             {
               "bookmaker": "betmgm",
-              "price": 2.45
+              "price": 2.5
             }
           ],
-          "assists": []
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 5.4
+            }
+          ]
+        },
+        {
+          "playerId": "454",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 5.2
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 7.5
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 4.2
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 5.3
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 5.5
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 5.6
+            }
+          ]
+        },
+        {
+          "playerId": "502",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 11
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 19
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 10
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 12
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 12
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 5.7
+            }
+          ]
+        },
+        {
+          "playerId": "449",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 12
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 20
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 10.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 13
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 12
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 5.9
+            }
+          ]
         },
         {
           "playerId": "526",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 2.8
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 2.91
+              "price": 2.75
             },
             {
               "bookmaker": "draftkings",
@@ -4315,105 +4520,300 @@
             },
             {
               "bookmaker": "betrivers",
-              "price": 2.85
+              "price": 2.7
             },
             {
               "bookmaker": "bovada",
-              "price": 2.61
+              "price": 2.58
             },
             {
               "bookmaker": "betmgm",
               "price": 2.95
             }
           ],
-          "assists": []
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 6
+            }
+          ]
         },
         {
-          "playerId": "464",
+          "playerId": "453",
           "anytimeGoalscorer": [
             {
               "bookmaker": "fanduel",
-              "price": 3
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 3.2
+              "price": 3.8
             },
             {
               "bookmaker": "draftkings",
-              "price": 3.5
+              "price": 4.1
             },
             {
               "bookmaker": "betrivers",
-              "price": 3.1
+              "price": 3.7
             },
             {
               "bookmaker": "bovada",
-              "price": 3.12
+              "price": 3.7
             },
             {
               "bookmaker": "betmgm",
-              "price": 3.4
+              "price": 3.9
             }
           ],
-          "assists": []
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 6
+            }
+          ]
+        },
+        {
+          "playerId": "516",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 8
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 9.5
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 7.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 7.5
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 8
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 6.5
+            }
+          ]
+        },
+        {
+          "playerId": "593",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 12
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 21
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 11.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 14
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 12
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 7
+            }
+          ]
+        },
+        {
+          "playerId": "459",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 8.5
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 16
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 9.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 11
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 10
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 7
+            }
+          ]
+        },
+        {
+          "playerId": "456",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 8
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 6.5
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 7
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 6
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 6.75
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 7
+            }
+          ]
+        },
+        {
+          "playerId": "503",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 9
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 10
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 8.5
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 8
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 10.5
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 7.5
+            }
+          ]
+        },
+        {
+          "playerId": "447",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 15
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 23
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 11
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 15
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 13
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 13
+            }
+          ]
+        },
+        {
+          "playerId": "445",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "fanduel",
+              "price": 15
+            },
+            {
+              "bookmaker": "draftkings",
+              "price": 11
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 9
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 9.25
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 11
+            }
+          ],
+          "assists": [
+            {
+              "bookmaker": "fanduel",
+              "side": "over",
+              "point": 0.5,
+              "price": 13
+            }
+          ]
         },
         {
           "playerId": "465",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 3.1
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 3.06
-            },
-            {
               "bookmaker": "draftkings",
-              "price": 2.7
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 3
+              "price": 2.6
             },
             {
               "bookmaker": "bovada",
-              "price": 2.78
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 3
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "514",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 3.3
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 3.65
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 3.65
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 3.7
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 3.4
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 3.7
+              "price": 2.5
             }
           ],
           "assists": []
@@ -4422,24 +4822,16 @@
           "playerId": "463",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 3.5
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 3.44
-            },
-            {
               "bookmaker": "draftkings",
-              "price": 3.35
+              "price": 3.25
             },
             {
               "bookmaker": "betrivers",
-              "price": 3.7
+              "price": 3.4
             },
             {
               "bookmaker": "bovada",
-              "price": 3.35
+              "price": 3.15
             },
             {
               "bookmaker": "betmgm",
@@ -4449,23 +4841,15 @@
           "assists": []
         },
         {
-          "playerId": "512",
+          "playerId": "515",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 3.9
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 4
-            },
-            {
               "bookmaker": "draftkings",
-              "price": 4.4
+              "price": 3.35
             },
             {
               "bookmaker": "bovada",
-              "price": 3.9
+              "price": 3.2
             }
           ],
           "assists": []
@@ -4473,10 +4857,6 @@
         {
           "playerId": "601",
           "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 3.9
-            },
             {
               "bookmaker": "draftkings",
               "price": 3.95
@@ -4492,14 +4872,6 @@
           "playerId": "523",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 3.9
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 3.95
-            },
-            {
               "bookmaker": "draftkings",
               "price": 4.1
             },
@@ -4510,70 +4882,20 @@
             {
               "bookmaker": "bovada",
               "price": 3.85
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 4.1
             }
           ],
           "assists": []
         },
         {
-          "playerId": "453",
+          "playerId": "512",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 4
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 3.9
-            },
-            {
               "bookmaker": "draftkings",
-              "price": 4.2
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 4
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 3.8
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 4
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "515",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 4.1
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 4.3
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 3.35
-            },
-            {
-              "bookmaker": "betrivers",
               "price": 4.4
             },
             {
               "bookmaker": "bovada",
-              "price": 3.65
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 3.9
+              "price": 3.85
             }
           ],
           "assists": []
@@ -4582,58 +4904,20 @@
           "playerId": "461",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
+              "bookmaker": "draftkings",
               "price": 4.6
             },
             {
-              "bookmaker": "mybookieag",
-              "price": 4.5
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 4.8
-            },
-            {
               "bookmaker": "betrivers",
-              "price": 5
+              "price": 4.7
             },
             {
               "bookmaker": "bovada",
+              "price": 4.3
+            },
+            {
+              "bookmaker": "betmgm",
               "price": 4.5
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 4.6
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "457",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 4.8
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 5.4
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 6
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 4.9
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 4.95
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 5.25
             }
           ],
           "assists": []
@@ -4642,24 +4926,16 @@
           "playerId": "519",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 5.4
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 5.4
-            },
-            {
               "bookmaker": "draftkings",
               "price": 6
             },
             {
               "bookmaker": "betrivers",
-              "price": 5.2
+              "price": 5
             },
             {
               "bookmaker": "bovada",
-              "price": 5.15
+              "price": 5.1
             },
             {
               "bookmaker": "betmgm",
@@ -4669,19 +4945,11 @@
           "assists": []
         },
         {
-          "playerId": "454",
+          "playerId": "457",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 5.4
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 5.3
-            },
-            {
               "bookmaker": "draftkings",
-              "price": 7.5
+              "price": 6
             },
             {
               "bookmaker": "betrivers",
@@ -4689,11 +4957,11 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 5.5
+              "price": 5
             },
             {
               "bookmaker": "betmgm",
-              "price": 5.75
+              "price": 5.5
             }
           ],
           "assists": []
@@ -4701,14 +4969,6 @@
         {
           "playerId": "520",
           "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 5.9
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 6.4
-            },
             {
               "bookmaker": "draftkings",
               "price": 7
@@ -4729,285 +4989,41 @@
           "assists": []
         },
         {
-          "playerId": "455",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 7
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 7.3
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 10
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 6.5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 7.5
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 8.75
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "522",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 7
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 9.5
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 17
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 7
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 6.5
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 8.75
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "460",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 7.5
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 7.8
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 8.5
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 8
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 7.25
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 6.75
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "516",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 8
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 8.8
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 9.5
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 8
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 7.75
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 8.5
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "456",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 8
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 7.1
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 6.5
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 7
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 6
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 6.75
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "446",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 9
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 11.25
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 17
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 7
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "503",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 9
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 7.6
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 10
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 8
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 8
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "459",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 9
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 10.9
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 17
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 10
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 8.5
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 10.5
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "502",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 11
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 13
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 18
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 10.5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 12
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 12
-            }
-          ],
-          "assists": []
-        },
-        {
           "playerId": "559",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 11
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 9.9
-            },
-            {
               "bookmaker": "draftkings",
               "price": 11
             },
             {
               "bookmaker": "betrivers",
-              "price": 9
+              "price": 8.5
             },
             {
               "bookmaker": "bovada",
-              "price": 9
+              "price": 8.75
+            },
+            {
+              "bookmaker": "betmgm",
+              "price": 9.25
+            }
+          ],
+          "assists": []
+        },
+        {
+          "playerId": "462",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "draftkings",
+              "price": 12
+            },
+            {
+              "bookmaker": "betrivers",
+              "price": 7
+            },
+            {
+              "bookmaker": "bovada",
+              "price": 8.5
             },
             {
               "bookmaker": "betmgm",
@@ -5017,75 +5033,25 @@
           "assists": []
         },
         {
-          "playerId": "499",
+          "playerId": "446",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 11
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 9.6
-            },
-            {
               "bookmaker": "draftkings",
-              "price": 15
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 8.5
+              "price": 16
             },
             {
               "bookmaker": "bovada",
-              "price": 11
+              "price": 12
             }
           ],
           "assists": []
         },
         {
-          "playerId": "593",
+          "playerId": "522",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 12
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 14
-            },
-            {
               "bookmaker": "draftkings",
-              "price": 23
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 12
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 15
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 12.5
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "462",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 12
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 9.2
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 12
+              "price": 17
             },
             {
               "bookmaker": "betrivers",
@@ -5093,97 +5059,11 @@
             },
             {
               "bookmaker": "bovada",
-              "price": 8.75
+              "price": 6.75
             },
             {
               "bookmaker": "betmgm",
-              "price": 10
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "501",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 12
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 14.25
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 20
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 15
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 12.5
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "449",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 12
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 14.25
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 21
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 11
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 14
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 12.5
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "445",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 14
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 11.5
-            },
-            {
-              "bookmaker": "draftkings",
-              "price": 11
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 9.5
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 9.5
-            },
-            {
-              "bookmaker": "betmgm",
-              "price": 11.5
+              "price": 9
             }
           ],
           "assists": []
@@ -5192,14 +5072,6 @@
           "playerId": "508",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 15
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 13.75
-            },
-            {
               "bookmaker": "draftkings",
               "price": 20
             },
@@ -5211,23 +5083,11 @@
           "assists": []
         },
         {
-          "playerId": "447",
+          "playerId": "501",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 15
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 16
-            },
-            {
               "bookmaker": "draftkings",
-              "price": 23
-            },
-            {
-              "bookmaker": "betrivers",
-              "price": 12
+              "price": 20
             },
             {
               "bookmaker": "bovada",
@@ -5235,7 +5095,7 @@
             },
             {
               "bookmaker": "betmgm",
-              "price": 13
+              "price": 12.5
             }
           ],
           "assists": []
@@ -5243,14 +5103,6 @@
         {
           "playerId": "506",
           "anytimeGoalscorer": [
-            {
-              "bookmaker": "fanduel",
-              "price": 17
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 14.25
-            },
             {
               "bookmaker": "draftkings",
               "price": 23
@@ -5274,20 +5126,12 @@
           "playerId": "609",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 19
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 19
-            },
-            {
               "bookmaker": "draftkings",
               "price": 26
             },
             {
               "bookmaker": "bovada",
-              "price": 19
+              "price": 11
             }
           ],
           "assists": []
@@ -5296,80 +5140,12 @@
           "playerId": "450",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "fanduel",
-              "price": 21
-            },
-            {
-              "bookmaker": "mybookieag",
-              "price": 14.25
-            },
-            {
               "bookmaker": "draftkings",
               "price": 26
             },
             {
-              "bookmaker": "betrivers",
-              "price": 12
-            },
-            {
               "bookmaker": "bovada",
-              "price": 17
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "513",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "mybookieag",
-              "price": 3.95
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 3
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "517",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "mybookieag",
-              "price": 4.2
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 3.25
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "511",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "mybookieag",
-              "price": 9.6
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 7
-            }
-          ],
-          "assists": []
-        },
-        {
-          "playerId": "458",
-          "anytimeGoalscorer": [
-            {
-              "bookmaker": "mybookieag",
-              "price": 6.3
-            },
-            {
-              "bookmaker": "bovada",
-              "price": 4.75
+              "price": 13
             }
           ],
           "assists": []
@@ -5378,16 +5154,38 @@
           "playerId": "448",
           "anytimeGoalscorer": [
             {
-              "bookmaker": "mybookieag",
-              "price": 13.75
-            },
-            {
               "bookmaker": "bovada",
               "price": 9
-            },
+            }
+          ],
+          "assists": []
+        },
+        {
+          "playerId": "458",
+          "anytimeGoalscorer": [
             {
-              "bookmaker": "betmgm",
-              "price": 12
+              "bookmaker": "bovada",
+              "price": 4.75
+            }
+          ],
+          "assists": []
+        },
+        {
+          "playerId": "513",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "bovada",
+              "price": 3.1
+            }
+          ],
+          "assists": []
+        },
+        {
+          "playerId": "517",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "bovada",
+              "price": 3.25
             }
           ],
           "assists": []
@@ -5407,7 +5205,17 @@
           "anytimeGoalscorer": [
             {
               "bookmaker": "bovada",
-              "price": 2.15
+              "price": 2.1
+            }
+          ],
+          "assists": []
+        },
+        {
+          "playerId": "511",
+          "anytimeGoalscorer": [
+            {
+              "bookmaker": "bovada",
+              "price": 6
             }
           ],
           "assists": []
