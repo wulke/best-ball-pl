@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "profileId": "free-kick-gw2-sat",
   "slateDate": "2026-08-29",
-  "fetchedAt": "2026-08-26T16:32:38.387Z",
+  "fetchedAt": "2026-08-29T10:33:54.922Z",
   "fixtureCoverage": [
     {
       "fixtureId": 14,
-      "covered": false
+      "covered": true
     },
     {
       "fixtureId": 12,
@@ -21,5 +21,206 @@
       "covered": false
     }
   ],
-  "players": []
+  "players": [
+    {
+      "fixtureId": 14,
+      "playerId": "362",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "372",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "356",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "350",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "379",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "366",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "368",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "358",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "377",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "367",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "357",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "579",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "351",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "374",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "369",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "378",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "371",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "381",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "375",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "364",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "471",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "480",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "474",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "483",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "558",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "469",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "473",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "486",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "472",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "467",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "491",
+      "status": "starter"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "167",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "489",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "477",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "482",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "468",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "487",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "581",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "478",
+      "status": "bench"
+    },
+    {
+      "fixtureId": 14,
+      "playerId": "490",
+      "status": "bench"
+    }
+  ]
 }
