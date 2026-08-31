@@ -3,6 +3,9 @@ name: Scheduled snapshot refresh
 # Daily 06:00 UTC ETL + re-projection in-season (#41): pulls fresh FPL
 # data, runs guardrail checks, and — only if everything passes and the
 # snapshot actually changed — opens a PR with the refreshed data/snapshot.json.
+# Before opening, it supersedes (closes) any still-open refresh/snapshot-* PRs:
+# the snapshot is full-state, so the newest refresh contains all prior data and
+# stacking dated refresh PRs only breeds merge conflicts once one lands.
 # Days with no completed gameweeks (early season, international breaks) produce
 # no diff and are no-ops. Never pushes to main directly (AGENTS.md merge
 # protocol): a human still reviews and merges every data update, same as a
@@ -16,6 +19,12 @@ permissions:
   contents: write
   pull-requests: write
   actions: write
+
+# One refresh pipeline at a time — a manual dispatch overlapping the cron run
+# must not race the supersede / branch-push / PR-open sequence.
+concurrency:
+  group: scheduled-refresh
+  cancel-in-progress: false
 
 env:
   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
@@ -50,6 +59,23 @@ jobs:
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Supersede stale refresh PRs
+        # snapshot.json is full-state: today's refresh contains everything
+        # yesterday's did, so still-open refresh PRs are obsolete, not a merge
+        # queue. Close them before opening today's so the open set is always
+        # exactly one PR cut from current main — conflicts are then impossible.
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr list --state open --json number,headRefName \
+            | jq -r '.[] | select(.headRefName | startswith("refresh/snapshot-")) | .number' \
+            | while read -r pr; do
+                echo "Superseding stale refresh PR #$pr"
+                gh pr close "$pr" --delete-branch \
+                  --comment "Superseded by today's scheduled refresh — snapshot.json is full-state, so the newest PR contains all prior data."
+              done
 
       - name: Open refresh PR
         if: steps.diff.outputs.changed == 'true'
