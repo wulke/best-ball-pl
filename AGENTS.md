@@ -32,7 +32,7 @@ When completing any feature or issue, update `README.md` to reflect changes: new
 
 - **Agents open PRs; humans merge.** Verification — typecheck, tests, build, green CI — is not review. The agent never merges, force-merges, or admin-bypasses (`gh pr merge --admin`) its own PR. It opens the PR, posts the review summary, and stops; the human merges, or explicitly instructs the merge in-session.
 - **The PR body is the review summary**: what changed and why, what a reviewer should look at, and how it was verified (bit-for-bit / additive-only proofs included while the flagship window is live).
-- **Never push to `main` directly** — including snapshot refreshes. Data updates land via PR (`npm run etl` → commit → PR → review → merge), which CI-guards every data change. Scheduled refresh (#41) must open PRs, not push.
+- **Never push to `main` directly** — including snapshot refreshes. Data updates land via PR (`npm run etl` → commit → PR → review → merge), which CI-guards every data change. Scheduled refresh (#41) must open PRs, not push; each run first supersedes (closes) still-open `refresh/snapshot-*` PRs — the snapshot is full-state, so older refresh PRs are obsolete rather than a merge queue.
 - **Additive-only until the flagship draft completes** (pre-2026-08-21 15:29 UTC): the default view stays exactly today's False Nine pre-draft experience.
 
 ## UI Development
