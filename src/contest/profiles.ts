@@ -230,8 +230,57 @@ export const FREE_KICK_GW2_SAT: ContestProfile = {
   sheetPerfectFlagPercent: 72,
 };
 
+/**
+ * Profile #4 — Match Day Mania (Underdog FIFA Daily V2, real EPL fixtures),
+ * GW3 Saturday Main slate: this week's daily brand — The Free Kick gave way
+ * to Match Day Mania, same game-type family and ruleset shape. The six
+ * 2026-09-05 fixtures kicking off after the 13:41Z close (8:41AM CDT):
+ * BRE-SUN, BHA-LEE, FUL-CRY, MCI-COV, NFO-TOT @14:00Z and HUL-AVL @16:30Z.
+ * Like GW1 there is a pre-close exclusion — NEW-BOU's 11:30Z kickoff lands
+ * before the contest locks — and unlike GW1/GW2 the slate runs six games, so
+ * the pool is 12 clubs (the biggest daily pool yet). Same roster family:
+ * 1 G / 1 D / 1 MD / 1 FW / 2 FLEX = 6 rounds, **no bench**, draft size 6,
+ * 30-second clock, scoring primary-confirmed identical to False Nine.
+ * Contest deltas vs GW2: $10 entry (3), 84-entry max (3), $25k prizes with
+ * $3k = 12% to first (GW1 10%, GW2 15%) — same GPP direction, so the #46
+ * short-window calibration carries over unchanged (still one-slate
+ * provisional; retune once a few dailies have results). Odds and lineup
+ * assets key off this id: data/odds/match-day-mania-gw3-sat.json,
+ * data/lineups/match-day-mania-gw3-sat.json.
+ */
+export const MATCH_DAY_MANIA_GW3_SAT: ContestProfile = {
+  id: 'match-day-mania-gw3-sat',
+  name: 'Match Day Mania — GW3 Saturday Main slate (Sep 5)',
+  kind: 'daily',
+  window: { kind: 'slate', date: '2026-09-05', notBefore: '13:41:00Z' },
+  scoring: DEFAULT_SCORING,
+  roster: {
+    starters: { G: 1, D: 1, MD: 1, FW: 1 },
+    flex: 2,
+    rosterSize: 6, // no bench — 6 drafted, 6 start
+    targets: { G: 1, D: 1, MD: 1, FW: 1 },
+  },
+  draft: { draftSize: 6, clockSeconds: 30 },
+  tournament: { ...DEFAULT_TOURNAMENT, ceilingWeight: 0.4 },
+  tiering: { ...DEFAULT_TIERING, minGap: 1.0, maxTiers: 4, maxTierSize: 8 },
+  scenarios: {
+    p10: { ...DEFAULT_SCENARIOS.p10, burstFactor: 0.65 },
+    p90: {
+      ...DEFAULT_SCENARIOS.p90,
+      burstByPosition: { G: 1.1, D: 1.45, MD: 1.8, FW: 2.0 },
+    },
+  },
+  // Same GPP shape and 6×6 no-bench room — carry the window-scaled baseline.
+  sheetPerfectFlagPercent: 72,
+};
+
 /** The registry — the switcher's option list, in display order. */
-export const PROFILES: readonly ContestProfile[] = [FALSE_NINE, FREE_KICK_GW1_SAT, FREE_KICK_GW2_SAT];
+export const PROFILES: readonly ContestProfile[] = [
+  FALSE_NINE,
+  FREE_KICK_GW1_SAT,
+  FREE_KICK_GW2_SAT,
+  MATCH_DAY_MANIA_GW3_SAT,
+];
 
 /** Look up a profile by id. Throws on unknown ids — fail loudly, never silently default. */
 export function profileById(id: string): ContestProfile {
