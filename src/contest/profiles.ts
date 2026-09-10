@@ -274,12 +274,59 @@ export const MATCH_DAY_MANIA_GW3_SAT: ContestProfile = {
   sheetPerfectFlagPercent: 72,
 };
 
+/**
+ * Profile #5 — The Clean Sheet (Underdog FIFA Daily V2, real EPL fixtures),
+ * GW4 Saturday Main slate: this week's daily brand — The Free Kick (GW1-2)
+ * and Match Day Mania (GW3) gave way to The Clean Sheet, same game-type
+ * family and ruleset shape. The seven 2026-09-12 fixtures kicking off after
+ * the 13:41Z close (8:41AM CDT): AVL-NFO, BOU-BRE, CHE-HUL, CRY-IPS,
+ * LIV-FUL @14:00Z, TOT-EVE @16:30Z and SUN-ARS @19:00Z — unlike GW1/GW3
+ * there is no pre-close exclusion (no 11:30Z Saturday kickoff exists that
+ * week; GW4's early kickoffs are Sunday's COV-BHA 13:00Z and MUN-MCI
+ * 15:30Z). Seven games means a 14-club pool — the biggest daily pool yet,
+ * passing GW3's 12. Same roster family: 1 G / 1 D / 1 MD / 1 FW / 2 FLEX =
+ * 6 rounds, **no bench**, draft size 6, 30-second clock, scoring
+ * primary-confirmed identical to False Nine. Contest deltas vs GW3: $5
+ * entry (10), 6-entry max (84), $1k prizes with $200 = 20% to first (GW1
+ * 10%, GW2 15%, GW3 12%) and 7.4% rake (11%) — the most top-heavy prize
+ * shape yet but the same GPP direction, so the #46 short-window calibration
+ * carries over unchanged (still one-slate provisional; retune once a few
+ * dailies have results). Odds and lineup assets key off this id:
+ * data/odds/clean-sheet-gw4-sat.json, data/lineups/clean-sheet-gw4-sat.json.
+ */
+export const CLEAN_SHEET_GW4_SAT: ContestProfile = {
+  id: 'clean-sheet-gw4-sat',
+  name: 'The Clean Sheet — GW4 Saturday Main slate (Sep 12)',
+  kind: 'daily',
+  window: { kind: 'slate', date: '2026-09-12', notBefore: '13:41:00Z' },
+  scoring: DEFAULT_SCORING,
+  roster: {
+    starters: { G: 1, D: 1, MD: 1, FW: 1 },
+    flex: 2,
+    rosterSize: 6, // no bench — 6 drafted, 6 start
+    targets: { G: 1, D: 1, MD: 1, FW: 1 },
+  },
+  draft: { draftSize: 6, clockSeconds: 30 },
+  tournament: { ...DEFAULT_TOURNAMENT, ceilingWeight: 0.4 },
+  tiering: { ...DEFAULT_TIERING, minGap: 1.0, maxTiers: 4, maxTierSize: 8 },
+  scenarios: {
+    p10: { ...DEFAULT_SCENARIOS.p10, burstFactor: 0.65 },
+    p90: {
+      ...DEFAULT_SCENARIOS.p90,
+      burstByPosition: { G: 1.1, D: 1.45, MD: 1.8, FW: 2.0 },
+    },
+  },
+  // Same GPP shape and 6×6 no-bench room — carry the window-scaled baseline.
+  sheetPerfectFlagPercent: 72,
+};
+
 /** The registry — the switcher's option list, in display order. */
 export const PROFILES: readonly ContestProfile[] = [
   FALSE_NINE,
   FREE_KICK_GW1_SAT,
   FREE_KICK_GW2_SAT,
   MATCH_DAY_MANIA_GW3_SAT,
+  CLEAN_SHEET_GW4_SAT,
 ];
 
 /** Look up a profile by id. Throws on unknown ids — fail loudly, never silently default. */

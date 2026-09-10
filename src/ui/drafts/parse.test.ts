@@ -11,8 +11,10 @@
  * my team's picks (WULKE) resolve confident.
  *
  * Pool drift since: the 2026-08-27 bootstrap refresh dropped Savinho (TOT)
- * from FPL's list, moving his pick to unmatched — 175 confident, 4 unmatched
- * against the live snapshot. The drift test documents the move.
+ * from FPL's list, moving his pick to unmatched; the 2026-09-02 refresh
+ * added Barcola (MD) to the list, moving his pick back to confident —
+ * 176 confident, 3 unmatched against the live snapshot. The drift tests
+ * document the moves.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -258,9 +260,11 @@ test('names absent from the FPL pool stay unmatched and flagged', () => {
     .map((p) => `${p.rawName} (${p.team})`);
   // Ground truth drifts with the live pool: Savinho (TOT) left FPL's player
   // list in the 2026-08-27 bootstrap refresh, so his fixture pick moved from
-  // confident to unmatched — the documented behavior for pool departures.
+  // confident to unmatched — the documented behavior for pool departures —
+  // and Barcola (MD) joined the list in the 2026-09-02 refresh, so his pick
+  // moved from unmatched to confident — the documented behavior for pool
+  // arrivals.
   assert.deepEqual(unmatched, [
-    'B. Barcola (BIFFRENYLDS)',
     'F. Kadioglu (DANNYOSHEA23)',
     'Savinho (JEFONEF)',
     'V. Osimhen (BFITZER)',
