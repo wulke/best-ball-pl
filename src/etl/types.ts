@@ -184,6 +184,12 @@ export type SnapshotStrength = {
   /** FPL short code → season-to-date sums. Every calendar club is present
    *  whenever the section exists (the ETL fails otherwise). */
   clubs: Record<string, StrengthClubSums>;
+  /** FPL short code → chronological played team-matches on the same scale
+   *  as the sums (#174: the per-match sufficient statistics recent form,
+   *  venue splits, and walk-forward truncation derive from). Written by
+   *  both builders whenever the section exists; optional so snapshots from
+   *  before retention stay valid. */
+  matches?: Record<string, StrengthMatch[]>;
 };
 
 /** One club's strength sufficient statistics. */
@@ -193,6 +199,20 @@ export type StrengthClubSums = {
   /** Attack signal sum (npxG under Understat, goals for under the fallback). */
   attack: number;
   /** Concession signal sum (npxGA under Understat, goals against fallback). */
+  concede: number;
+};
+
+/** One played team-match on the section's source scale (#174). */
+export type StrengthMatch = {
+  /** Match date in the source's own format (Understat `"YYYY-MM-DD
+   *  HH:MM:SS"`, fixture kickoff ISO under the fallback) — lexicographic
+   *  order sorts chronologically within a club. */
+  date: string;
+  /** True when the club played at home. */
+  home: boolean;
+  /** Attack signal (npxG / goals for), round3 on the source's scale. */
+  attack: number;
+  /** Concession signal (npxGA / goals against), round3 on the source's scale. */
   concede: number;
 };
 

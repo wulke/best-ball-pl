@@ -18,6 +18,12 @@
  *     current once a match finishes). Noisier — the model shrinks it harder
  *     (goal-scale constants in config.ts).
  *
+ * Both builders also retain the per-match rows (#174, `matches` in the
+ * snapshot section): one {date, home, attack, concede} per played
+ * team-match, chronological, on the section's own scale — the sufficient
+ * statistics recent form (#176), venue splits (#177), and walk-forward
+ * truncation (#175) derive from. The sums stay the primary contract.
+ *
  * The section is omitted while no current-season match has been played
  * (pre-season parity: the model runs its FDR-only path bit-for-bit). If
  * matches ARE played and neither source yields aggregates, the run fails —
@@ -29,7 +35,7 @@
  */
 
 import { launchLocalChromium } from './fbref.js';
-import type { SnapshotFixture, SnapshotStrength, StrengthClubSums } from './types.js';
+import type { SnapshotFixture, SnapshotStrength, StrengthClubSums, StrengthMatch } from './types.js';
 
 /** Understat team titles → FPL short codes. Exact-title keys the page is
  *  known to use, plus common variants matched case/diacritic-insensitively.
@@ -229,6 +235,7 @@ export function understatStrengthFromPage(
   calendarClubs: ReadonlySet<string>,
 ): SnapshotStrength | null {
   const clubs: Record<string, StrengthClubSums> = {};
+  const matches: Record<string, StrengthMatch[]> = {};
   let totalAttack = 0;
   let totalN = 0;
   let through = '';
@@ -240,6 +247,7 @@ export function understatStrengthFromPage(
     let n = 0;
     let attack = 0;
     let concede = 0;
+    const clubMatches: StrengthMatch[] = [];
     for (const row of team.history) {
       const rowAttack = Number.parseFloat(row.npxG ?? row.xG ?? '');
       const rowConcede = Number.parseFloat(row.npxGA ?? row.xGA ?? '');
@@ -248,10 +256,23 @@ export function understatStrengthFromPage(
       attack += rowAttack;
       concede += rowConcede;
       if (row.date && row.date > through) through = row.date;
+      // Per-match retention (#174): same finite-signal criterion as the
+      //  sums, but a date is load-bearing here (recency windows sort by
+      //  it) — a dateless played row still counts in the sums above,
+      //  it just isn't retained per-match.
+      if (row.date) {
+        clubMatches.push({
+          date: row.date,
+          home: row.h_a === 'h',
+          attack: round3(rowAttack),
+          concede: round3(rowConcede),
+        });
+      }
     }
     totalAttack += attack;
     totalN += n;
     clubs[code] = { n, attack: round3(attack), concede: round3(concede) };
+    matches[code] = clubMatches.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   }
   for (const club of calendarClubs) {
     if (!mapped.has(club)) return null; // incomplete page — fall through
@@ -262,6 +283,7 @@ export function understatStrengthFromPage(
     leagueAttackPerMatch: round3(totalAttack / totalN),
     through: through || `${page.startYear}-07-01 00:00:00`,
     clubs: pruneToCalendar(clubs, calendarClubs),
+    matches: pruneToCalendar(matches, calendarClubs),
   };
 }
 
@@ -269,6 +291,7 @@ export function understatStrengthFromPage(
  *  per club. Noisier than xG (the model shrinks goal-scale sums harder). */
 export function fixtureGoalsStrength(fixtures: SnapshotFixture[]): SnapshotStrength | null {
   const clubs: Record<string, StrengthClubSums> = {};
+  const matches: Record<string, StrengthMatch[]> = {};
   let totalGoals = 0;
   let totalN = 0;
   let through = '';
@@ -285,23 +308,30 @@ export function fixtureGoalsStrength(fixtures: SnapshotFixture[]): SnapshotStren
     totalN += 2;
     totalGoals += f.homeScore + f.awayScore;
     if (f.kickoff > through) through = f.kickoff;
+    // Mirrored per-match rows on the goal scale (#174) — kickoff as date.
+    (matches[f.home] ??= []).push({ date: f.kickoff, home: true, attack: f.homeScore, concede: f.awayScore });
+    (matches[f.away] ??= []).push({ date: f.kickoff, home: false, attack: f.awayScore, concede: f.homeScore });
   }
   if (totalN === 0) return null;
   const rounded = Object.fromEntries(
     Object.entries(clubs).map(([code, c]) => [code, { n: c.n, attack: round3(c.attack), concede: round3(c.concede) }]),
+  );
+  const sortedMatches = Object.fromEntries(
+    Object.entries(matches).map(([code, rows]) => [
+      code,
+      rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+    ]),
   );
   return {
     source: 'fixture-goals',
     leagueAttackPerMatch: round3(totalGoals / totalN),
     through,
     clubs: rounded,
+    matches: sortedMatches,
   };
 }
 
-function pruneToCalendar(
-  clubs: Record<string, StrengthClubSums>,
-  calendarClubs: ReadonlySet<string>,
-): Record<string, StrengthClubSums> {
+function pruneToCalendar<T>(clubs: Record<string, T>, calendarClubs: ReadonlySet<string>): Record<string, T> {
   return Object.fromEntries(Object.entries(clubs).filter(([code]) => calendarClubs.has(code)));
 }
 

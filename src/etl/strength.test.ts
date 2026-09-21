@@ -7,7 +7,10 @@
  * 3. Incomplete page — a page missing calendar clubs falls through to null.
  * 4. Fixture-scores fallback — GF/GA aggregates, mean, through, always
  *    current once a match finishes.
- * 5. Section builder — omitted with zero played matches; hard-fails when
+ * 5. Per-match retention (#174) — both builders keep chronological
+ *    {date, home, attack, concede} rows alongside the sums, pruned to the
+ *    calendar; sums stay bit-identical to the pre-retention builders.
+ * 6. Section builder — omitted with zero played matches; hard-fails when
  *    matches are played but no source yields aggregates.
  */
 import { test } from 'node:test';
@@ -130,6 +133,76 @@ test('understatStrengthFromPage: incomplete page (missing calendar club) → nul
   assert.equal(understatStrengthFromPage(page(2026, t, ['2026-08-16 15:00:00']), new Set(['MCI', 'ARS'])), null);
 });
 
+test('understatStrengthFromPage: retains chronological, calendar-pruned match rows without changing sums', () => {
+  const p = page(2026, {
+    m1: {
+      title: 'Manchester City',
+      history: [
+        { h_a: 'a', npxG: '1.23456', npxGA: '0.44444', date: '2026-08-23 15:00:00' },
+        { h_a: 'h', npxG: '2.34567', npxGA: '1.55555', date: '2026-08-16 15:00:00' },
+      ],
+    },
+    a1: {
+      title: 'Arsenal',
+      history: [{ h_a: 'h', npxG: '0.5', npxGA: '0.6', date: '2026-08-16 15:00:00' }],
+    },
+    x1: {
+      title: 'Tottenham',
+      history: [{ h_a: 'h', npxG: '1', npxGA: '1', date: '2026-08-16 15:00:00' }],
+    },
+  }, ['2026-08-23 15:00:00']);
+
+  const section = understatStrengthFromPage(p, new Set(['MCI', 'ARS']));
+  assert.ok(section);
+  assert.deepEqual(section.clubs['MCI'], { n: 2, attack: 3.58, concede: 2 });
+  assert.deepEqual(section.matches, {
+    MCI: [
+      { date: '2026-08-16 15:00:00', home: true, attack: 2.346, concede: 1.556 },
+      { date: '2026-08-23 15:00:00', home: false, attack: 1.235, concede: 0.444 },
+    ],
+    ARS: [{ date: '2026-08-16 15:00:00', home: true, attack: 0.5, concede: 0.6 }],
+  });
+});
+
+test('understatStrengthFromPage: retains chronological per-match rows (#174)', () => {
+  const td: UnderstatTeamsData = {
+    m1: {
+      title: 'Manchester City',
+      history: [
+        // Deliberately out of order — retention sorts ascending.
+        { h_a: 'a', npxG: '1.111111', npxGA: '0.909090', date: '2026-08-30 14:00:00' },
+        { h_a: 'h', npxG: '2.5', npxGA: '0.5', date: '2026-08-16 15:00:00' },
+        { h_a: 'h', npxG: '1.5', npxGA: '1.0' }, // finite but dateless: counts in sums, not retained
+      ],
+    },
+    a1: {
+      title: 'Arsenal',
+      history: [
+        { h_a: 'h', npxG: '1.8', npxGA: '0.9', date: '2026-08-16 15:00:00' },
+        { h_a: 'a', npxG: '1.8', npxGA: '0.9', date: '2026-08-16 15:00:00' },
+      ],
+    },
+  };
+  const section = understatStrengthFromPage(page(2026, td, ['2026-08-30 14:00:00']), new Set(['MCI', 'ARS']));
+  assert.ok(section);
+  assert.ok(section.matches);
+  // Dateless row still counted in the sums (n=3) but only dated rows retained.
+  assert.equal(section.clubs['MCI'].n, 3);
+  assert.deepEqual(section.matches['MCI'], [
+    { date: '2026-08-16 15:00:00', home: true, attack: 2.5, concede: 0.5 },
+    { date: '2026-08-30 14:00:00', home: false, attack: 1.111, concede: 0.909 }, // round3
+  ]);
+  assert.deepEqual(section.matches['ARS'].map((m) => m.home), [true, false]);
+  // Pruned to calendar clubs like the sums.
+  const withStray: UnderstatTeamsData = {
+    ...td,
+    x1: { title: 'Tottenham', history: [{ h_a: 'h', npxG: '1.0', npxGA: '1.0', date: '2026-08-16 15:00:00' }] },
+  };
+  const section2 = understatStrengthFromPage(page(2026, withStray, ['2026-08-30 14:00:00']), new Set(['MCI', 'ARS']));
+  assert.ok(section2?.matches);
+  assert.deepEqual(Object.keys(section2.matches).sort(), ['ARS', 'MCI']);
+});
+
 test('fixtureGoalsStrength: GF/GA sums, mean, through', () => {
   const f = [
     fixture({ home: 'MCI', away: 'ARS', homeScore: 2, awayScore: 1, kickoff: '2026-08-15T14:00:00Z' }),
@@ -150,11 +223,35 @@ test('fixtureGoalsStrength: GF/GA sums, mean, through', () => {
   assert.equal(section.leagueAttackPerMatch, 0.75);
   assert.equal(section.through, '2026-08-16T14:00:00Z');
   assert.equal(section.clubs['CHE'], undefined); // unplayed club absent
+  // Per-match retention (#174): mirrored rows per played fixture, kickoff
+  // as date, home flag per side.
+  assert.ok(section.matches);
+  assert.deepEqual(section.matches['MCI'], [{ date: '2026-08-15T14:00:00Z', home: true, attack: 2, concede: 1 }]);
+  assert.deepEqual(section.matches['ARS'], [{ date: '2026-08-15T14:00:00Z', home: false, attack: 1, concede: 2 }]);
+  assert.deepEqual(section.matches['WOL'], [{ date: '2026-08-16T14:00:00Z', home: true, attack: 0, concede: 0 }]);
+  assert.equal(section.matches['CHE'], undefined);
 });
 
 test('fixtureGoalsStrength: null with nothing played', () => {
   const f = [fixture({ home: 'A', away: 'B', kickoff: '2026-08-17T14:00:00Z' })];
   assert.equal(fixtureGoalsStrength(f), null);
+});
+
+test('fixtureGoalsStrength: retains mirrored chronological match rows without changing sums', () => {
+  const section = fixtureGoalsStrength([
+    fixture({ home: 'MCI', away: 'ARS', homeScore: 2, awayScore: 1, kickoff: '2026-08-23T14:00:00Z' }),
+    fixture({ home: 'MCI', away: 'CHE', homeScore: 0, awayScore: 3, kickoff: '2026-08-16T14:00:00Z' }),
+  ]);
+  assert.ok(section);
+  assert.deepEqual(section.clubs['MCI'], { n: 2, attack: 2, concede: 4 });
+  assert.deepEqual(section.matches, {
+    MCI: [
+      { date: '2026-08-16T14:00:00Z', home: true, attack: 0, concede: 3 },
+      { date: '2026-08-23T14:00:00Z', home: true, attack: 2, concede: 1 },
+    ],
+    ARS: [{ date: '2026-08-23T14:00:00Z', home: false, attack: 1, concede: 2 }],
+    CHE: [{ date: '2026-08-16T14:00:00Z', home: false, attack: 3, concede: 0 }],
+  });
 });
 
 test('buildStrengthSection: zero played → undefined (parity path)', async () => {
