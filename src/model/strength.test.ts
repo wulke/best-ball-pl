@@ -223,6 +223,51 @@ test('n=0 seed: a club with no matches equals its FDR seed multiplier', () => {
   assert.equal(seedDefense, 1 - DEFAULT_FIXTURE_STRENGTH.seedSlope * (2 - 3), 'WOL defense seed');
 });
 
+test('recent form: recency-weighted retained matches move a club away from its season multiplier', () => {
+  // BHA's season aggregate is league average, but its last three retained
+  // matches are a clear surge. The form layer must react to the chronological
+  // sufficient statistics rather than treating August production as current.
+  const strength = strengthFor(
+    {
+      MCI: MID,
+      ARS: MID,
+      WOL: MID,
+      BHA: MID,
+    },
+    1.5,
+  );
+  strength.matches = {
+    MCI: [], ARS: [], WOL: [],
+    BHA: [
+      { date: '2026-08-01 12:00:00', home: true, attack: 0.5, concede: 2.5 },
+      { date: '2026-08-08 12:00:00', home: false, attack: 0.5, concede: 2.5 },
+      { date: '2026-08-15 12:00:00', home: true, attack: 0.5, concede: 2.5 },
+      { date: '2026-08-22 12:00:00', home: false, attack: 2.5, concede: 0.5 },
+      { date: '2026-08-29 12:00:00', home: true, attack: 2.5, concede: 0.5 },
+      { date: '2026-09-05 12:00:00', home: false, attack: 2.5, concede: 0.5 },
+    ],
+  };
+
+  const model = buildStrengthModel(strength, CALENDAR, DEFAULT_FIXTURE_STRENGTH);
+  const seasonOnly = buildStrengthModel({ ...strength, matches: undefined }, CALENDAR, DEFAULT_FIXTURE_STRENGTH);
+  assert.ok(model.attack.get('BHA')! > seasonOnly.attack.get('BHA')!, 'recent scoring surge lifts attack');
+  assert.ok(model.defense.get('BHA')! < seasonOnly.defense.get('BHA')!, 'recently stingy defense lowers concession');
+});
+
+test('recent form: no retained matches or a zero window preserve season multipliers bit-for-bit', () => {
+  const strength = strengthFor({ MCI: MID, ARS: MID, WOL: MID, BHA: MID }, 1.5);
+  const seasonOnly = buildStrengthModel(strength, CALENDAR, DEFAULT_FIXTURE_STRENGTH);
+  strength.matches = { MCI: [], ARS: [], WOL: [], BHA: [] };
+  const noMatches = buildStrengthModel(strength, CALENDAR, DEFAULT_FIXTURE_STRENGTH);
+  const zeroWindow = buildStrengthModel(
+    strength,
+    CALENDAR,
+    { ...DEFAULT_FIXTURE_STRENGTH, recentFormWindow: 0 },
+  );
+  assert.deepEqual(noMatches, seasonOnly);
+  assert.deepEqual(zeroWindow, seasonOnly);
+});
+
 test('full pipeline: buildProjections with a strength section runs on the committed snapshot', () => {
   const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8')) as Snapshot;
   const contest = resolveContest(FALSE_NINE, snapshot.fixtures);
