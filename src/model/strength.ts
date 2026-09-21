@@ -21,8 +21,8 @@
  * (γ curvature would otherwise bias season means ~1% low). M is keyed off
  * the OPPONENT and the venue:
  *
- *   M_attack(f)  = v_own  × D_opp          (leaky opponent + home boost)
- *   M_defense(f) = v_opp  × A_opp          (their attack, boosted at home)
+ *   M_attack(f)  = v_own  × D_opp          (leaky opponent + own venue split)
+ *   M_defense(f) = v_opp  × A_opp          (their attack + their venue split)
  *   M_win(f)     = (v_own × D_opp) / (v_opp × A_opp)
  *
  * Own-club strength cancels in the ratio (A_own/D_own are constant across a
@@ -44,13 +44,54 @@ export type FixtureFactors = { attack: number; cs: number; gc: number; saves: nu
 export type StrengthModel = {
   attack: Map<string, number>;
   defense: Map<string, number>;
+  /** Club-specific attack venue multipliers. Counts make the CLI audit able
+   *  to distinguish a genuine split from a heavily shrunk thin sample. */
+  venue: Map<string, VenueSplit>;
 };
 
-/** Venue multiplier for the club playing at home (`homeBoost`) or away
- *  (arithmetic mirror `2 − homeBoost`) — the pair averages exactly 1 over a
- *  balanced calendar, keeping the mean-1 normalization venue-clean. */
-function venueMultiplier(isHome: boolean, cfg: FixtureStrengthConfig): number {
-  return isHome ? cfg.homeBoost : 2 - cfg.homeBoost;
+export type VenueSplit = { home: number; away: number; homeMatches: number; awayMatches: number };
+
+/**
+ * Derive a club's home/away attack split from retained team-match rows. Each
+ * venue rate is first expressed relative to the club's season attack rate so
+ * team quality remains in `model.attack`, then receives `venueK` pseudo rows
+ * at the league arithmetic-mirror target. Missing rows therefore land
+ * exactly on the former league-wide pair; on balanced samples the two
+ * applied values still average exactly one before fixture normalization.
+ */
+function venueSplit(
+  rows: StrengthMatch[] | undefined,
+  sums: { n: number; attack: number },
+  cfg: FixtureStrengthConfig,
+): VenueSplit {
+  const target = { home: cfg.venueHomeTarget, away: 2 - cfg.venueHomeTarget };
+  const split = {
+    home: { n: 0, attack: 0 },
+    away: { n: 0, attack: 0 },
+  };
+  for (const row of rows ?? []) {
+    const side = row.home ? split.home : split.away;
+    side.n += 1;
+    side.attack += row.attack;
+  }
+  const baseline = sums.n > 0 ? sums.attack / sums.n : 0;
+  const multiplier = (side: 'home' | 'away') => {
+    const sample = split[side];
+    if (!(baseline > 0) || sample.n === 0) return target[side];
+    return (sample.attack / baseline + cfg.venueK * target[side]) / (sample.n + cfg.venueK);
+  };
+  return {
+    home: multiplier('home'),
+    away: multiplier('away'),
+    homeMatches: split.home.n,
+    awayMatches: split.away.n,
+  };
+}
+
+function venueMultiplier(club: string, isHome: boolean, model: StrengthModel): number {
+  const split = model.venue.get(club);
+  if (!split) throw new Error(`No venue split for club ${club} — calendar/strength mismatch.`);
+  return isHome ? split.home : split.away;
 }
 
 /** Extract each club's quality rating from FPL FDR: a fixture's difficulty
@@ -136,6 +177,7 @@ export function buildStrengthModel(
 
   const attack = new Map<string, number>();
   const defense = new Map<string, number>();
+  const venue = new Map<string, VenueSplit>();
   for (const [club, q] of quality) {
     const sums = strength.clubs[club];
     if (!sums) {
@@ -151,10 +193,11 @@ export function buildStrengthModel(
     const seasonDefense = (sums.concede + kD * mu * seedDefense) / (sums.n + kD) / mu;
     attack.set(club, blendRecentForm(strength.matches?.[club], seasonAttack, mu, kA, cfg, 'attack'));
     defense.set(club, blendRecentForm(strength.matches?.[club], seasonDefense, mu, kD, cfg, 'concede'));
+    venue.set(club, venueSplit(strength.matches?.[club], sums, cfg));
   }
   // Clubs present in strength but absent from the calendar are harmless
   // (stray rows); clubs in the calendar but absent from strength throw above.
-  return { attack, defense };
+  return { attack, defense, venue };
 }
 
 type FixtureMultipliers = { attack: number; defense: number; win: number };
@@ -173,8 +216,8 @@ function fixtureMultipliers(
   if (dOpp == null || aOpp == null) {
     throw new Error(`No strength multiplier for club ${opponent} — calendar/strength mismatch.`);
   }
-  const vOwn = venueMultiplier(isHome, cfg);
-  const vOpp = venueMultiplier(!isHome, cfg); // opponent's venue is the mirror
+  const vOwn = venueMultiplier(club, isHome, model);
+  const vOpp = venueMultiplier(opponent, !isHome, model);
   const mAttack = vOwn * dOpp;
   const mDefense = vOpp * aOpp;
   return { attack: mAttack, defense: mDefense, win: mAttack / mDefense };

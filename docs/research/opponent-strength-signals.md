@@ -71,7 +71,13 @@ Statistical tie on the goals target (overall 1.1284 xGA vs 1.1231 GA — within 
 - Home-only xG, k=7: RMSE 1.1469
 - Pooled all-match xG × league home boost, k=10: RMSE **1.1445**
 
-Splitting halves the effective sample and buys nothing. **Fold venue into the fixture factor** (FDR already carries per-fixture venue; the observed boost 1.11 is the sanity anchor).
+The original single-season study rejected an *unshrunk* club split. #177 retains
+that warning: it estimates a club's home/away attack rates relative to its own
+season attack rate, then shrinks each venue independently to the arithmetic
+league pair 1.11 / 0.89 with k=8. A missing venue sample is exactly the target
+pair, not an inferred club effect. The frozen GW1–5 walk-forward confirms the
+small split is worth retaining: team-goals MAE improves 1.041 → 1.037 and
+rank correlation 0.207 → 0.208 (player MAE stays 2.632).
 
 ### D — the DVOA premise itself (chronological walk, 60-match burn-in)
 
@@ -95,7 +101,10 @@ A_i = (ΣnpxG_i + kA·μ·F_i) / (n_i + kA) / μ        # attack multiplier, mea
 D_j = (ΣxGA_j  + kD·μ·F_j) / (n_j + kD) / μ        # defense multiplier, mean 1.0
      kA = 6, kD = 10, μ = league npxG/team-match (Understat live)
      F = FDR-implied multiplier (pre-season seed; 1.0 mid-season, FDR for promoted)
-fixture factor: attack vs j → A_own × D_j ; CS/GC vs j → D_j ; home → ×1.11-ish (fold into venue term)
+V_i,h = (Σhome attack / (Σattack_i/n_i) + kV·1.11) / (n_i,h + kV)
+V_i,a = (Σaway attack / (Σattack_i/n_i) + kV·0.89) / (n_i,a + kV)
+     kV = 8 per venue; no rows → V = 1.11 / 0.89 exactly
+fixture factor: attack vs j → V_own × D_j ; CS/GC vs j → V_j × A_j
 zero matches → A = D = F exactly (FDR parity, #92's settled fallback)
 ```
 
