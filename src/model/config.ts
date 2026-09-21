@@ -350,8 +350,8 @@ export const DEFAULT_FIXTURE_DIFFICULTY: FixtureDifficultyConfig = {
  *   factor = (M_fixture / M̄_calendar)^γ  (then renormalized to calendar-mean
  *   exactly 1 — γ curvature would otherwise drift season means ~1% low),
  * where M is the opponent-keyed multiplier: attack family reads the
- * opponent's concession multiplier × own venue boost; cs/gc/saves read the
- * opponent's attack multiplier × their venue boost; gk-win reads the
+ * opponent's concession multiplier × own venue split; cs/gc/saves read the
+ * opponent's attack multiplier × their venue split; gk-win reads the
  * composite (own venue × opponent leakiness)/(their venue × their attack).
  * Own-club strength cancels in the ratio by construction — it lives in the
  * #43 actuals blending, so the fixture factor carries only "who you're
@@ -360,10 +360,11 @@ export const DEFAULT_FIXTURE_DIFFICULTY: FixtureDifficultyConfig = {
  * - `gamma.*` — response magnitude per family (the power dial). 0.6 ≈ the
  *   empirical shrunk spread (±40% season extremes) × FDR's ±24% response;
  *   family ratios mirror the FDR slopes' proportions.
- * - `homeBoost` — league-wide venue multiplier (arithmetic-symmetric pair
- *   homeBoost / 2 − homeBoost averages exactly 1 over a balanced calendar).
- *   Club-specific venue quality = the sample split the research measured as
- *   noise; revisit with 2+ seasons of Understat history.
+ * - `venueHomeTarget` / `venueK` — each club's retained attack rows estimate
+ *   a home/away split relative to its season attack rate. The league's
+ *   arithmetic-mirror pair (home target / `2 − home target`) is the
+ *   pseudo-count target, not the applied value; `venueK=8` keeps roughly the
+ *   first ten venue observations deliberately modest.
  * - `seedSlope` — FDR-extracted quality → seed-multiplier slope; sign
  *   symmetric (strong club: attack seed up, concession seed down).
  * - shrinkage: xG-scale constants (kA 6 = #43's teamK, kD 10) per the
@@ -380,7 +381,10 @@ export type FixtureStrengthConfig = {
   kAttackGoals: number;
   kDefenseGoals: number;
   gamma: { attack: number; cs: number; gc: number; saves: number; win: number };
-  homeBoost: number;
+  /** Home member of the league-wide arithmetic-mirror shrinkage target. */
+  venueHomeTarget: number;
+  /** Per-venue pseudo-count for club-specific home/away attack splits. */
+  venueK: number;
   seedSlope: number;
   /** Number of chronological team-matches eligible for recent-form evidence.
    *  Zero structurally disables the signal. */
@@ -397,7 +401,8 @@ export const DEFAULT_FIXTURE_STRENGTH: FixtureStrengthConfig = {
   kAttackGoals: 18,
   kDefenseGoals: 13,
   gamma: { attack: 0.6, cs: 0.75, gc: 0.6, saves: 0.4, win: 0.6 },
-  homeBoost: 1.11,
+  venueHomeTarget: 1.11,
+  venueK: 8,
   seedSlope: 0.12,
   recentFormWindow: 6,
   recentFormHalfLife: 2,

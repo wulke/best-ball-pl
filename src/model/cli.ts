@@ -24,6 +24,7 @@ import {
 import { buildProjections } from './project.js';
 import { aggregateSeasonActuals } from './actuals.js';
 import { printBacktest, runBacktest } from './backtest.js';
+import { buildStrengthModel, type VenueSplit } from './strength.js';
 import type { Position, Snapshot, SnapshotPlayer } from '../etl/types.js';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
@@ -90,15 +91,18 @@ function printTable(title: string, rows: Row[]): void {
 
 function printTeamContext(
   teamContexts: Map<string, { cleanSheetRate: number; goalsConcededPerMatch: number; gkWinRate: number }>,
+  venue?: Map<string, VenueSplit>,
 ): void {
   console.log('\nTEAM DEFENSIVE CONTEXT (p50 priors — CS/GC from the 2025/26 primary keeper, regressed; win rate from projected GF−GC)');
-  console.log('  team  CS/m  GC/m  win%');
-  console.log('  ' + '-'.repeat(26));
+  console.log(`  team  CS/m  GC/m  win%${venue ? '   vHome vAway  rows' : ''}`);
+  console.log('  ' + '-'.repeat(venue ? 48 : 26));
   const rows = [...teamContexts.entries()].sort((a, b) => b[1].cleanSheetRate - a[1].cleanSheetRate);
   for (const [team, ctx] of rows) {
-    console.log(
-      `  ${team.padEnd(5)} ${ctx.cleanSheetRate.toFixed(2).padStart(4)} ${ctx.goalsConcededPerMatch.toFixed(2).padStart(5)} ${(ctx.gkWinRate * 100).toFixed(0).padStart(4)}%`,
-    );
+    const split = venue?.get(team);
+    const venueAudit = split
+      ? `  ${split.home.toFixed(2).padStart(5)} ${split.away.toFixed(2).padStart(5)}  ${`${split.homeMatches}H/${split.awayMatches}A`.padStart(7)}`
+      : venue ? '      —     —        —' : '';
+    console.log(`  ${team.padEnd(5)} ${ctx.cleanSheetRate.toFixed(2).padStart(4)} ${ctx.goalsConcededPerMatch.toFixed(2).padStart(5)} ${(ctx.gkWinRate * 100).toFixed(0).padStart(4)}%${venueAudit}`);
   }
 }
 
@@ -143,6 +147,9 @@ function main() {
     ) ?? undefined,
     snapshot.strength,
   );
+  const venue = snapshot.strength
+    ? buildStrengthModel(snapshot.strength, contest.calendar, modelConfigFor(profile).strength).venue
+    : undefined;
 
   const players = snapshot.players.map((p, i) => ({ ...p, projection: projections[i] }));
   // Pool only — non-pool players sit unranked (rank 0) outside the contest.
@@ -155,14 +162,14 @@ function main() {
     const out: Snapshot = { ...snapshot, players, generated_at: snapshot.generated_at };
     fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(out, null, 2)}\n`);
     console.log(`[model] Projections written for ${players.length} players → data/snapshot.json`);
-    printTeamContext(teamContexts);
+    printTeamContext(teamContexts, venue);
   } else {
     console.log(
       `[model] ${profile.name} — window report only (snapshot untouched; committed projections stay season/false-nine)`,
     );
     printWindowFixtures(profile.name, contest.fixtures);
     const poolClubs = new Set(contest.clubs ?? []);
-    printTeamContext(new Map([...teamContexts].filter(([team]) => poolClubs.has(team))));
+    printTeamContext(new Map([...teamContexts].filter(([team]) => poolClubs.has(team))), venue);
   }
 
   printTable(

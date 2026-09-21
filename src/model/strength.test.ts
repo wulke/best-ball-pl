@@ -243,9 +243,12 @@ test('venue splits: club attack venue rates shrink toward the league mirror pair
   const cfg = { ...DEFAULT_FIXTURE_STRENGTH, venueK: 2 };
   const model = buildStrengthModel(strength, CALENDAR, cfg);
 
-  assert.equal(model.venue.get('MCI')?.home, 1.305);
-  assert.equal(model.venue.get('MCI')?.away, 0.695);
-  assert.deepEqual(model.venue.get('ARS'), { home: 1.11, away: 0.89 }, 'no rows remain on the league pair');
+  assert.ok(Math.abs(model.venue.get('MCI')!.home - 1.305) < 1e-12);
+  assert.ok(Math.abs(model.venue.get('MCI')!.away - 0.695) < 1e-12);
+  const arsVenue = model.venue.get('ARS')!;
+  assert.ok(Math.abs(arsVenue.home - 1.11) < 1e-12, 'no home rows remain on the league target');
+  assert.ok(Math.abs(arsVenue.away - 0.89) < 1e-12, 'no away rows remain on the league target');
+  assert.equal(arsVenue.homeMatches + arsVenue.awayMatches, 0, 'the pair has no sample rows');
 });
 
 test('venue splits: attack, defense, and win factors use the club-specific pair', () => {
@@ -265,10 +268,17 @@ test('venue splits: attack, defense, and win factors use the club-specific pair'
   const away = factors[mciFixtures.findIndex((f) => f.away === 'MCI')];
 
   assert.ok(home.attack > away.attack, 'own home split lifts attack');
-  assert.ok(home.cs > away.cs, 'opponent away split lifts clean sheets');
-  assert.ok(home.gc < away.gc, 'opponent away split suppresses goals conceded');
-  assert.ok(home.saves < away.saves, 'opponent away split suppresses saves');
-  assert.ok(home.win > away.win, 'both venue legs flow into win');
+
+  // MCI's split becomes the opponent-venue term for WOL. Same opponent on
+  // each leg isolates all defense/cs/gc/saves families from team quality.
+  const wolFixtures = CALENDAR.filter((f) => f.home === 'WOL' || f.away === 'WOL');
+  const wolFactors = strengthFixtureFactorsFor('WOL', CALENDAR, wolFixtures, model, cfg);
+  const wolHome = wolFactors[wolFixtures.findIndex((f) => f.home === 'WOL' && f.away === 'MCI')];
+  const wolAway = wolFactors[wolFixtures.findIndex((f) => f.away === 'WOL' && f.home === 'MCI')];
+  assert.ok(wolHome.cs > wolAway.cs, 'opponent away split lifts clean sheets');
+  assert.ok(wolHome.gc < wolAway.gc, 'opponent away split suppresses goals conceded');
+  assert.ok(wolHome.saves < wolAway.saves, 'opponent away split suppresses saves');
+  assert.ok(wolHome.win > wolAway.win, 'both venue legs flow into win');
 });
 
 test('recent form: recency-weighted retained matches move a club away from its season multiplier', () => {
