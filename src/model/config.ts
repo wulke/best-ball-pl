@@ -369,6 +369,10 @@ export const DEFAULT_FIXTURE_DIFFICULTY: FixtureDifficultyConfig = {
  * - shrinkage: xG-scale constants (kA 6 = #43's teamK, kD 10) per the
  *   walk-forward calibration; goal-scale (the fixture-scores fallback) needs
  *   roughly double (kA 18, kD 13) to be equally competitive.
+ * - recent form: most recent retained team-matches receive exponential
+ *   recency weights, then shrink back to this season multiplier using the
+ *   same source-appropriate k. `recentFormBlend` caps the resulting weight,
+ *   keeping early-season evidence intentionally modest.
  */
 export type FixtureStrengthConfig = {
   kAttack: number;
@@ -378,6 +382,13 @@ export type FixtureStrengthConfig = {
   gamma: { attack: number; cs: number; gc: number; saves: number; win: number };
   homeBoost: number;
   seedSlope: number;
+  /** Number of chronological team-matches eligible for recent-form evidence.
+   *  Zero structurally disables the signal. */
+  recentFormWindow: number;
+  /** Matches required for an exponential recency weight to halve. */
+  recentFormHalfLife: number;
+  /** Maximum share the shrunk recent estimate may carry (0–1). */
+  recentFormBlend: number;
 };
 
 export const DEFAULT_FIXTURE_STRENGTH: FixtureStrengthConfig = {
@@ -388,6 +399,9 @@ export const DEFAULT_FIXTURE_STRENGTH: FixtureStrengthConfig = {
   gamma: { attack: 0.6, cs: 0.75, gc: 0.6, saves: 0.4, win: 0.6 },
   homeBoost: 1.11,
   seedSlope: 0.12,
+  recentFormWindow: 6,
+  recentFormHalfLife: 2,
+  recentFormBlend: 0.5,
 };
 
 /** Team-defensive priors: last season blended with league mean. */

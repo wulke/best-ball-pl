@@ -249,8 +249,23 @@ test('recent form: recency-weighted retained matches move a club away from its s
   };
 
   const model = buildStrengthModel(strength, CALENDAR, DEFAULT_FIXTURE_STRENGTH);
-  assert.ok(model.attack.get('BHA')! > 1, 'recent scoring surge lifts attack');
-  assert.ok(model.defense.get('BHA')! < 1, 'recently stingy defense lowers concession');
+  const seasonOnly = buildStrengthModel({ ...strength, matches: undefined }, CALENDAR, DEFAULT_FIXTURE_STRENGTH);
+  assert.ok(model.attack.get('BHA')! > seasonOnly.attack.get('BHA')!, 'recent scoring surge lifts attack');
+  assert.ok(model.defense.get('BHA')! < seasonOnly.defense.get('BHA')!, 'recently stingy defense lowers concession');
+});
+
+test('recent form: no retained matches or a zero window preserve season multipliers bit-for-bit', () => {
+  const strength = strengthFor({ MCI: MID, ARS: MID, WOL: MID, BHA: MID }, 1.5);
+  const seasonOnly = buildStrengthModel(strength, CALENDAR, DEFAULT_FIXTURE_STRENGTH);
+  strength.matches = { MCI: [], ARS: [], WOL: [], BHA: [] };
+  const noMatches = buildStrengthModel(strength, CALENDAR, DEFAULT_FIXTURE_STRENGTH);
+  const zeroWindow = buildStrengthModel(
+    strength,
+    CALENDAR,
+    { ...DEFAULT_FIXTURE_STRENGTH, recentFormWindow: 0 },
+  );
+  assert.deepEqual(noMatches, seasonOnly);
+  assert.deepEqual(zeroWindow, seasonOnly);
 });
 
 test('full pipeline: buildProjections with a strength section runs on the committed snapshot', () => {

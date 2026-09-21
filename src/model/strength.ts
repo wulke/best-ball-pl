@@ -32,7 +32,7 @@
  * double-count it.
  */
 
-import type { SnapshotStrength } from '../etl/types.js';
+import type { SnapshotStrength, StrengthMatch } from '../etl/types.js';
 import type { FixtureStrengthConfig } from './config.js';
 import type { WindowFixture } from './types.js';
 
@@ -92,6 +92,37 @@ function fdrClubQuality(calendar: WindowFixture[]): {
   return { quality, leagueMean: clubs ? total / clubs : 3 };
 }
 
+/** Recent estimate from the chronological #174 sufficient statistics. The
+ * effective exponential sample size shrinks the form estimate toward the
+ * season multiplier using the source's existing k, so the signal starts
+ * inert and never needs ETL-owned state. */
+function blendRecentForm(
+  rows: StrengthMatch[] | undefined,
+  seasonMultiplier: number,
+  leagueMean: number,
+  k: number,
+  cfg: FixtureStrengthConfig,
+  signal: 'attack' | 'concede',
+): number {
+  if (!rows?.length || cfg.recentFormWindow <= 0 || cfg.recentFormHalfLife <= 0 || cfg.recentFormBlend <= 0) {
+    return seasonMultiplier;
+  }
+  const recent = [...rows]
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .slice(0, cfg.recentFormWindow);
+  let weightTotal = 0;
+  let signalTotal = 0;
+  for (let i = 0; i < recent.length; i += 1) {
+    const weight = 2 ** (-i / cfg.recentFormHalfLife);
+    weightTotal += weight;
+    signalTotal += weight * recent[i][signal];
+  }
+  if (weightTotal === 0) return seasonMultiplier;
+  const recentMultiplier = signalTotal / weightTotal / leagueMean;
+  const formWeight = cfg.recentFormBlend * weightTotal / (weightTotal + k);
+  return seasonMultiplier + formWeight * (recentMultiplier - seasonMultiplier);
+}
+
 /** Build the shrunk multiplier maps from the snapshot's strength section. */
 export function buildStrengthModel(
   strength: SnapshotStrength,
@@ -116,8 +147,10 @@ export function buildStrengthModel(
     const seedAttack = 1 + cfg.seedSlope * dq; // strong club → attacks more
     const seedDefense = 1 - cfg.seedSlope * dq; // strong club → concedes less
     const mu = strength.leagueAttackPerMatch;
-    attack.set(club, (sums.attack + kA * mu * seedAttack) / (sums.n + kA) / mu);
-    defense.set(club, (sums.concede + kD * mu * seedDefense) / (sums.n + kD) / mu);
+    const seasonAttack = (sums.attack + kA * mu * seedAttack) / (sums.n + kA) / mu;
+    const seasonDefense = (sums.concede + kD * mu * seedDefense) / (sums.n + kD) / mu;
+    attack.set(club, blendRecentForm(strength.matches?.[club], seasonAttack, mu, kA, cfg, 'attack'));
+    defense.set(club, blendRecentForm(strength.matches?.[club], seasonDefense, mu, kD, cfg, 'concede'));
   }
   // Clubs present in strength but absent from the calendar are harmless
   // (stray rows); clubs in the calendar but absent from strength throw above.
