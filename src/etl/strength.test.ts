@@ -14,6 +14,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   fetchUnderstatLeaguePages,
+  parseDateRows,
+  playedDatesFromTeamsData,
   selectCurrentSeasonPage,
   understatStrengthFromPage,
   fixtureGoalsStrength,
@@ -66,6 +68,30 @@ test('selectCurrentSeasonPage: picks by played dates, not URL year', () => {
   const current = page(2025, {}, ['2026-08-16 15:00:00']); // real current-season matches
   assert.equal(selectCurrentSeasonPage([stale, current], '2026-07-01'), current);
   assert.equal(selectCurrentSeasonPage([stale], '2026-07-01'), null);
+});
+
+test('parseDateRows: accepts both legacy array rows and current object rows', () => {
+  assert.deepEqual(
+    parseDateRows([
+      ['1', true, 'Arsenal', 'Chelsea', { h: 1, a: 0 }, {}, '2026-08-16 15:00:00'],
+      { id: '2', isResult: 'yes', h: 'Liverpool', a: 'Everton', datetime: '2026-08-17 14:00:00' },
+      { id: '3', isResult: false, datetime: '2026-08-18 14:00:00' },
+    ]),
+    ['2026-08-16 15:00:00', '2026-08-17 14:00:00'],
+  );
+});
+
+test('playedDatesFromTeamsData: selects the current-season page when datesData is unusable', () => {
+  const stale = page(2026, teamsData({
+    old: { title: 'Arsenal', npxg: 1.2, npxga: 0.7, date: '2025-05-19 16:00:00' },
+  }), []);
+  const current = page(2025, teamsData({
+    recent: { title: 'Arsenal', npxg: 1.5, npxga: 0.9, date: '2026-08-16 15:00:00' },
+  }), playedDatesFromTeamsData(teamsData({
+    recent: { title: 'Arsenal', npxg: 1.5, npxga: 0.9, date: '2026-08-16 15:00:00' },
+  })));
+
+  assert.equal(selectCurrentSeasonPage([stale, current], '2026-07-01'), current);
 });
 
 test('understatStrengthFromPage: aggregates sums, league mean, join, prune', () => {
