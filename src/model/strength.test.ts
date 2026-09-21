@@ -223,6 +223,54 @@ test('n=0 seed: a club with no matches equals its FDR seed multiplier', () => {
   assert.equal(seedDefense, 1 - DEFAULT_FIXTURE_STRENGTH.seedSlope * (2 - 3), 'WOL defense seed');
 });
 
+test('venue splits: club attack venue rates shrink toward the league mirror pair', () => {
+  // MCI's equal-count split is deliberately extreme: 3.0 attack at home,
+  // 1.0 away, against its 2.0 season rate. With k=2 per venue, the observed
+  // 1.5 / 0.5 pair moves partway toward the 1.11 / 0.89 league target.
+  const strength = strengthFor(
+    { MCI: { n: 4, attack: 8, concede: 4.8 }, ARS: MID, WOL: MID, BHA: MID },
+    1.5,
+  );
+  strength.matches = {
+    MCI: [
+      { date: '2026-08-01 12:00:00', home: true, attack: 3, concede: 1 },
+      { date: '2026-08-08 12:00:00', home: false, attack: 1, concede: 1.4 },
+      { date: '2026-08-15 12:00:00', home: true, attack: 3, concede: 1 },
+      { date: '2026-08-22 12:00:00', home: false, attack: 1, concede: 1.4 },
+    ],
+    ARS: [], WOL: [], BHA: [],
+  };
+  const cfg = { ...DEFAULT_FIXTURE_STRENGTH, venueK: 2 };
+  const model = buildStrengthModel(strength, CALENDAR, cfg);
+
+  assert.equal(model.venue.get('MCI')?.home, 1.305);
+  assert.equal(model.venue.get('MCI')?.away, 0.695);
+  assert.deepEqual(model.venue.get('ARS'), { home: 1.11, away: 0.89 }, 'no rows remain on the league pair');
+});
+
+test('venue splits: attack, defense, and win factors use the club-specific pair', () => {
+  const strength = strengthFor({ MCI: MID, ARS: MID, WOL: MID, BHA: MID }, 1.5);
+  strength.matches = {
+    MCI: [
+      { date: '2026-08-01 12:00:00', home: true, attack: 3, concede: 1 },
+      { date: '2026-08-08 12:00:00', home: false, attack: 1, concede: 1.4 },
+    ],
+    ARS: [], WOL: [], BHA: [],
+  };
+  const cfg = { ...DEFAULT_FIXTURE_STRENGTH, venueK: 0 };
+  const model = buildStrengthModel(strength, CALENDAR, cfg);
+  const mciFixtures = CALENDAR.filter((f) => f.home === 'MCI' || f.away === 'MCI');
+  const factors = strengthFixtureFactorsFor('MCI', CALENDAR, mciFixtures, model, cfg);
+  const home = factors[mciFixtures.findIndex((f) => f.home === 'MCI')];
+  const away = factors[mciFixtures.findIndex((f) => f.away === 'MCI')];
+
+  assert.ok(home.attack > away.attack, 'own home split lifts attack');
+  assert.ok(home.cs > away.cs, 'opponent away split lifts clean sheets');
+  assert.ok(home.gc < away.gc, 'opponent away split suppresses goals conceded');
+  assert.ok(home.saves < away.saves, 'opponent away split suppresses saves');
+  assert.ok(home.win > away.win, 'both venue legs flow into win');
+});
+
 test('recent form: recency-weighted retained matches move a club away from its season multiplier', () => {
   // BHA's season aggregate is league average, but its last three retained
   // matches are a clear surge. The form layer must react to the chronological
