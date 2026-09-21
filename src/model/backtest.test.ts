@@ -44,8 +44,8 @@ test('walk-forward snapshot removes target GW actuals, scores, and strength rows
 
 test('actual score uses retained Underdog-compatible fields and infers a keeper win', () => {
   const points = actualPoints(snapshot.players[0], snapshot.actuals.gameweeks[0].players[0], snapshot.fixtures, modelConfigFor(FALSE_NINE).scoring);
-  // clean sheet 5 + two saves 1 + keeper win 5.
-  assert.equal(points, 11);
+  // clean sheet 5 + two saves at 2 each + keeper win 5.
+  assert.equal(points, 14);
 });
 
 test('metric helpers use tie-aware rank correlation and complete calibration samples', () => {

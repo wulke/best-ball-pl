@@ -23,6 +23,7 @@ import {
 } from '../contest/profiles.js';
 import { buildProjections } from './project.js';
 import { aggregateSeasonActuals } from './actuals.js';
+import { printBacktest, runBacktest } from './backtest.js';
 import type { Position, Snapshot, SnapshotPlayer } from '../etl/types.js';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
@@ -121,6 +122,10 @@ function profileArg(): string {
 
 function main() {
   const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8')) as Snapshot;
+  if (process.argv.slice(2).includes('--backtest')) {
+    printBacktest(runBacktest(snapshot));
+    return;
+  }
   const profile = profileById(profileArg()); // fail loudly on unknown ids
   const contest = resolveContest(profile, snapshot.fixtures);
 
