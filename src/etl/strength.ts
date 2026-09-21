@@ -107,18 +107,37 @@ export type UnderstatPage = {
 };
 
 type LooseRow = (string | number | boolean | null | undefined)[];
+type LooseDateRow = Record<string, unknown>;
 
-function parseDateRows(datesData: unknown): string[] {
+function isResult(value: unknown): boolean {
+  return value === true || value === 'yes';
+}
+
+function datetimeFrom(value: unknown): string | null {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value) ? value : null;
+}
+
+/** Parse played match dates from both historical tuple rows and Understat's
+ * current object rows. This remains a supplemental rollover signal: the
+ * section's own teamsData rows are also probed below. */
+export function parseDateRows(datesData: unknown): string[] {
   if (!Array.isArray(datesData)) return [];
   const dates: string[] = [];
-  for (const row of datesData as LooseRow[]) {
-    if (!Array.isArray(row)) continue;
-    const isResult = row[1] === true || row[1] === 'yes';
-    if (!isResult) continue;
-    // Row shape: [id, isResult, home, away, goals, xG, datetime, forecast…]
-    // — datetime is the first date-shaped string; scan rather than trust index.
-    const datetime = row.find((cell) => typeof cell === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(cell));
-    if (typeof datetime === 'string') dates.push(datetime);
+  for (const rawRow of datesData) {
+    if (Array.isArray(rawRow)) {
+      const row = rawRow as LooseRow;
+      if (!isResult(row[1])) continue;
+      // Legacy shape: [id, isResult, home, away, goals, xG, datetime, forecast…]
+      // — datetime is the first date-shaped string; scan rather than trust index.
+      const datetime = row.map(datetimeFrom).find((value): value is string => value != null);
+      if (datetime) dates.push(datetime);
+      continue;
+    }
+    if (!rawRow || typeof rawRow !== 'object') continue;
+    const row = rawRow as LooseDateRow;
+    if (!isResult(row.isResult)) continue;
+    const datetime = datetimeFrom(row.datetime);
+    if (datetime) dates.push(datetime);
   }
   return dates;
 }
@@ -133,6 +152,22 @@ function parseTeamsData(teamsData: unknown): UnderstatTeamsData {
     out[id] = { title: t.title, history: t.history as UnderstatHistoryRow[] };
   }
   return out;
+}
+
+/** The same played-row evidence that understatStrengthFromPage aggregates.
+ * datesData has changed shape before, so teamsData is the durable rollover
+ * probe; every valid npxG/xG row carrying a date proves this page's season. */
+export function playedDatesFromTeamsData(teamsData: UnderstatTeamsData): string[] {
+  const dates = new Set<string>();
+  for (const team of Object.values(teamsData)) {
+    for (const row of team.history) {
+      const attack = Number.parseFloat(row.npxG ?? row.xG ?? '');
+      if (!Number.isFinite(attack)) continue;
+      const date = datetimeFrom(row.date);
+      if (date) dates.add(date);
+    }
+  }
+  return [...dates];
 }
 
 /** Load the league pages for the candidate start-years in ONE browser
@@ -158,7 +193,12 @@ export async function fetchUnderstatLeaguePages(
           return { teamsData: w.teamsData ?? null, datesData: w.datesData ?? null };
         });
         const teamsData = parseTeamsData(raw.teamsData);
-        const playedDates = parseDateRows(raw.datesData);
+        const dateRowsDates = parseDateRows(raw.datesData);
+        const teamsDataDates = playedDatesFromTeamsData(teamsData);
+        if (dateRowsDates.length === 0 && teamsDataDates.length > 0) {
+          onLog(`[strength] WARNING: Understat EPL ${startYear} datesData yielded 0 played matches while teamsData yielded ${teamsDataDates.length}; datesData shape may have drifted.`);
+        }
+        const playedDates = [...new Set([...dateRowsDates, ...teamsDataDates])];
         onLog(`[strength] Understat EPL ${startYear}: ${Object.keys(teamsData).length} teams, ${playedDates.length} played matches`);
         pages.push({ startYear, teamsData, playedDates });
       } finally {
