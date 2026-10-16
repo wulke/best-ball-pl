@@ -25,6 +25,10 @@
  *   resolve to exactly the five post-close 2026-10-10 fixtures (ARS-LEE
  *   11:30Z excluded — pre-close, the GW1/GW3/GW5 pattern) and match the
  *   family ruleset knobs.
+ * - Match Day Mania GW7 (the brand's second straight week) must resolve to
+ *   exactly the four post-close 2026-10-17 fixtures (EVE-CHE 11:30Z excluded
+ *   — pre-close, the GW1/GW3/GW5/GW6 pattern) and match the family ruleset
+ *   knobs.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -46,6 +50,7 @@ import {
   FREE_KICK_GW2_SAT,
   MATCH_DAY_MANIA_GW3_SAT,
   MATCH_DAY_MANIA_GW6_SAT,
+  MATCH_DAY_MANIA_GW7_SAT,
   PROFILES,
   benchSize,
   fullLogFloor,
@@ -229,6 +234,29 @@ test('Match Day Mania GW6 is ruleset-identical to GW5 (roster, room, scoring, mo
   assert.equal(MATCH_DAY_MANIA_GW6_SAT.sheetPerfectFlagPercent, CLEAN_SHEET_GW5_SAT.sheetPerfectFlagPercent);
 });
 
+test('Match Day Mania GW7 Saturday Main resolves to exactly the 4 post-close fixtures', () => {
+  const resolved = resolveContest(MATCH_DAY_MANIA_GW7_SAT, fixtures);
+  const ids = resolved.fixtures.map((f) => f.id).sort((a, b) => a - b);
+  // BRE-LIV, FUL-HUL, MCI-IPS @14:00 + NEW-AVL @16:30
+  assert.deepEqual(ids, [62, 65, 67, 68]);
+  assert.ok(
+    resolved.fixtures.every((f) => f.kickoff.startsWith('2026-10-17') && f.kickoff >= '2026-10-17T13:41:00Z'),
+  );
+  assert.ok(!ids.includes(64)); // EVE-CHE 11:30Z — kicks off pre-close
+  assert.deepEqual(resolved.clubs, ['AVL', 'BRE', 'FUL', 'HUL', 'IPS', 'LIV', 'MCI', 'NEW']);
+  assert.equal(resolved.fixtures.length, 4); // count check: modal game list = post-close count
+});
+
+test('Match Day Mania GW7 is ruleset-identical to GW6 (roster, room, scoring, model knobs)', () => {
+  assert.deepEqual(MATCH_DAY_MANIA_GW7_SAT.roster, MATCH_DAY_MANIA_GW6_SAT.roster);
+  assert.deepEqual(MATCH_DAY_MANIA_GW7_SAT.draft, MATCH_DAY_MANIA_GW6_SAT.draft);
+  assert.deepEqual(MATCH_DAY_MANIA_GW7_SAT.scoring, DEFAULT_SCORING);
+  assert.deepEqual(MATCH_DAY_MANIA_GW7_SAT.tournament, MATCH_DAY_MANIA_GW6_SAT.tournament);
+  assert.deepEqual(MATCH_DAY_MANIA_GW7_SAT.tiering, MATCH_DAY_MANIA_GW6_SAT.tiering);
+  assert.deepEqual(MATCH_DAY_MANIA_GW7_SAT.scenarios, MATCH_DAY_MANIA_GW6_SAT.scenarios);
+  assert.equal(MATCH_DAY_MANIA_GW7_SAT.sheetPerfectFlagPercent, MATCH_DAY_MANIA_GW6_SAT.sheetPerfectFlagPercent);
+});
+
 test('profileById resolves registry ids and throws on unknown ids', () => {
   assert.equal(profileById('false-nine'), FALSE_NINE);
   assert.equal(profileById('free-kick-gw1-sat'), FREE_KICK_GW1_SAT);
@@ -237,10 +265,12 @@ test('profileById resolves registry ids and throws on unknown ids', () => {
   assert.equal(profileById('clean-sheet-gw4-sat'), CLEAN_SHEET_GW4_SAT);
   assert.equal(profileById('clean-sheet-gw5-sat'), CLEAN_SHEET_GW5_SAT);
   assert.equal(profileById('match-day-mania-gw6-sat'), MATCH_DAY_MANIA_GW6_SAT);
+  assert.equal(profileById('match-day-mania-gw7-sat'), MATCH_DAY_MANIA_GW7_SAT);
   assert.throws(() => profileById('nope'), /Unknown contest profile/);
   assert.deepEqual(PROFILES.map((p) => p.id), [
     'false-nine', 'free-kick-gw1-sat', 'free-kick-gw2-sat', 'match-day-mania-gw3-sat',
     'clean-sheet-gw4-sat', 'clean-sheet-gw5-sat', 'match-day-mania-gw6-sat',
+    'match-day-mania-gw7-sat',
   ]);
 });
 
