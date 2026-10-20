@@ -194,6 +194,7 @@ test('slate minutes are start-aware: override > lineup > model, with bench cameo
   assert.ok(fw.statline.minutes < plainById.get('A-FW')!.statline.minutes, 'override bench call lowers minutes');
   assert.equal(gk.startAwareMinutes?.source, 'lineup');
   assert.equal(gk.startAwareMinutes?.fixtures[0].pStart, 0, 'a lineup bench call carries P(start) 0');
+  assert.equal(gk.statline.cleanSheets, 0, 'a called bench cannot reach the clean-sheet threshold');
   const lineupOnly = buildProjections(players, DEFAULT_MODEL_CONFIG, window, undefined, undefined, undefined, undefined, lineups);
   const lineupFw = lineupOnly.projections[players.findIndex((p) => p.id === 'A-FW')];
   assert.equal(lineupFw.startAwareMinutes?.fixtures[0].pStart, 1, 'a lineup starter carries P(start) 1');
@@ -205,7 +206,39 @@ test('slate minutes are start-aware: override > lineup > model, with bench cameo
     'an unknown call carries the model start share as P(start)',
   );
   assert.equal(untouched.statline.minutes, plainById.get('B-GK')!.statline.minutes, 'unknown remains model-default');
+  assert.equal(untouched.statline.cleanSheets, plainById.get('B-GK')!.statline.cleanSheets, 'unknown retains the prior clean-sheet eligibility');
   assert.ok(fw.points.p10 < fw.points.p50 && fw.points.p50 < fw.points.p90, 'scenario minutes remain widened around the called base');
+});
+
+test('a confirmed rotational defender start reconditions clean-sheet eligibility', () => {
+  const calendar = abCalendar();
+  calendar[0].id = 1;
+  const window: ProjectionWindow = { calendar, fixtures: [calendar[0]], clubs: null };
+  const players = [
+    ...abPlayers(),
+    player({
+      id: 'A-D',
+      team: 'A',
+      position: 'D',
+      seasons: [season({ season: '2025/26', minutes: 1710, starts: 19, cleanSheets: 5 })],
+    }),
+  ];
+  const lineups: LineupSlate = {
+    schemaVersion: 1, profileId: 'daily', slateDate: '2026-08-22', fetchedAt: '2026-08-21T12:00:00Z',
+    fixtureCoverage: [{ fixtureId: 1, covered: true }],
+    players: [{ fixtureId: 1, playerId: 'A-D', status: 'starter' }],
+  };
+
+  const plain = buildProjections(players, DEFAULT_MODEL_CONFIG, window);
+  const called = buildProjections(players, DEFAULT_MODEL_CONFIG, window, undefined, undefined, undefined, undefined, lineups);
+  const plainDefender = plain.projections[players.findIndex((p) => p.id === 'A-D')];
+  const calledDefender = called.projections[players.findIndex((p) => p.id === 'A-D')];
+
+  assert.ok(calledDefender.startAwareMinutes!.fixtures[0].minutes > 60, 'a 50% starter receives conditional starter minutes');
+  assert.ok(
+    calledDefender.statline.cleanSheets > plainDefender.statline.cleanSheets * 3,
+    'a confirmed start replaces the rotation-risk clean-sheet haircut',
+  );
 });
 
 test('unknown slate calls use the blended recent-role minutes and retain model audit source', () => {
