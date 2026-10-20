@@ -236,8 +236,9 @@ test('a confirmed rotational defender start reconditions clean-sheet eligibility
 
   assert.ok(calledDefender.startAwareMinutes!.fixtures[0].minutes > 60, 'a 50% starter receives conditional starter minutes');
   assert.ok(
-    calledDefender.statline.cleanSheets > plainDefender.statline.cleanSheets * 3,
-    'a confirmed start replaces the rotation-risk clean-sheet haircut',
+    calledDefender.statline.cleanSheets / calledDefender.statline.minutes >
+      (plainDefender.statline.cleanSheets / plainDefender.statline.minutes) * 1.1,
+    'the clean-sheet rate itself rises beyond the start-conditioned minutes uplift',
   );
 });
 
