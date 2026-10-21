@@ -548,7 +548,7 @@ function buildWindowStatline(
   const gk = position === 'G';
   const baseline = cfg.volume.baselines[position];
   const perFixtureMinutes = seasonMinutes / club.calendarGames;
-  const csEligible = gk ? 0.95 : 0.25 + 0.75 * rates.startFraction;
+  const csEligible = priorCleanSheetEligibility(position, rates.startFraction);
 
   // Attack-family coefficients (per 90 of opponent-adjusted match time).
   const goalsCoef = attack.goals / 90;
@@ -640,17 +640,26 @@ function buildWindowStatline(
  * This only conditions confirmed lineups/manual overrides. The model prior
  * remains the historical start-fraction haircut, preserving the unknown path.
  */
+function priorCleanSheetEligibility(position: Position, startFraction: number): number {
+  return position === 'G' ? 0.95 : 0.25 + 0.75 * startFraction;
+}
+
 function calledCleanSheetEligibility(
   status: 'starter' | 'bench' | 'unknown',
   source: 'override' | 'lineup' | 'model',
   calledMinutes: number,
+  prior: number,
 ): number | undefined {
   if (source === 'model' || status === 'unknown') return undefined;
   if (status === 'bench') return 0;
   // A confirmed starter has a substantial threshold chance even when the
   // conditional-minutes estimate is cautious; cap the full-90 estimate below
   // certainty for substitutions, injuries, and red cards.
-  return Math.min(0.97, Math.max(0.6, 0.6 + ((calledMinutes - 60) / 30) * 0.37));
+  const mapped = Math.min(0.97, Math.max(0.6, 0.6 + ((calledMinutes - 60) / 30) * 0.37));
+  // Minutes already scale the fixture term. A known starter must therefore
+  // never lose clean-sheet value to the pre-lineup prior solely because this
+  // conditional minutes estimate is cautious.
+  return Math.max(prior, mapped);
 }
 
 /** Round a summed raw line at the exact points the pre-#42 pipeline rounded. */
@@ -1192,8 +1201,9 @@ export function buildProjections(
       return { fixtureId: fixture.id ?? null, ...call, factor, minutes: calledMinutes, pStart };
     });
     const fixtureMinutes = needsStartAwareMinutes ? startCalls.map((call) => call.minutes) : undefined;
+    const priorCsEligibility = priorCleanSheetEligibility(player.position, effRates.startFraction);
     const fixtureCsEligibility = needsStartAwareMinutes
-      ? startCalls.map((call) => calledCleanSheetEligibility(call.status, call.source, call.minutes))
+      ? startCalls.map((call) => calledCleanSheetEligibility(call.status, call.source, call.minutes, priorCsEligibility))
       : undefined;
     const base = buildWindowStatline(
       minutes,
@@ -1318,15 +1328,18 @@ export function buildProjections(
       };
     }
     if (odds) {
-      const fixtureOddsIndex = clubContexts.get(player.team)!.windowFixtures
+      const windowFixtures = clubContexts.get(player.team)!.windowFixtures;
+      const fixtureOddsIndex = windowFixtures
         .findIndex((fixture) => fixture.id != null && odds.fixtures.has(fixture.id));
+      // The audit card compares its first odds-covered fixture; a slate
+      // window normally has one fixture per player.
       const fixtureOdds = fixtureOddsIndex < 0
         ? undefined
-        : odds.fixtures.get(clubContexts.get(player.team)!.windowFixtures[fixtureOddsIndex].id!);
+        : odds.fixtures.get(windowFixtures[fixtureOddsIndex].id!);
       const playerOdds = fixtureOdds?.player.get(player.id);
       const teamOdds = fixtureOdds?.teams.get(player.team);
       projection.oddsPoints = oddsPoints!;
-      const priorCsEligible = player.position === 'G' ? 0.95 : player.position === 'D' ? 0.25 + 0.75 * effRates.startFraction : 0;
+      const priorCsEligible = player.position === 'D' || player.position === 'G' ? priorCsEligibility : 0;
       const csEligible = fixtureOddsIndex < 0 ? priorCsEligible : fixtureCsEligibility?.[fixtureOddsIndex] ?? priorCsEligible;
       const defensive = player.position === 'G' || player.position === 'D';
       const oddsCleanSheets = teamOdds?.cleanSheets;
