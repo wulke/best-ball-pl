@@ -242,6 +242,64 @@ test('a confirmed rotational defender start reconditions clean-sheet eligibility
   );
 });
 
+test('a confirmed regular starter never loses clean-sheet value to a low minutes projection', () => {
+  const calendar = abCalendar();
+  while (calendar.length < 100) {
+    calendar.push(calendar.length % 2 === 0
+      ? { home: 'A', away: 'B', homeDifficulty: 1, awayDifficulty: 5 }
+      : { home: 'B', away: 'A', homeDifficulty: 1, awayDifficulty: 5 });
+  }
+  calendar[0].id = 1;
+  const window: ProjectionWindow = { calendar, fixtures: [calendar[0]], clubs: null };
+  const players = [
+    player({
+      id: 'A-GK', team: 'A', position: 'G', status: 'd',
+      seasons: [
+        season({ season: '2025/26', minutes: 3420, starts: 38, cleanSheets: 38, goalsConceded: 40, saves: 110 }),
+        season({ season: '2024/25', minutes: 3420, starts: 38, cleanSheets: 38, goalsConceded: 40, saves: 110 }),
+      ],
+    }),
+    player({
+      id: 'A-D', team: 'A', position: 'D',
+      seasons: [
+        season({ season: '2025/26', minutes: 3000, starts: 33, cleanSheets: 10 }),
+        season({ season: '2024/25', minutes: 3000, starts: 33, cleanSheets: 10 }),
+      ],
+    }),
+    player({
+      id: 'A-GK-2', team: 'A', position: 'G',
+      seasons: [
+        season({ season: '2025/26', minutes: 3420, starts: 38, cleanSheets: 38, goalsConceded: 40, saves: 110 }),
+        season({ season: '2024/25', minutes: 3420, starts: 38, cleanSheets: 38, goalsConceded: 40, saves: 110 }),
+      ],
+    }),
+    player({
+      id: 'B-GK', team: 'B', position: 'G',
+      seasons: [season({ season: '2025/26', minutes: 3420, starts: 38, cleanSheets: 14, goalsConceded: 30, saves: 90 })],
+    }),
+  ];
+  const lineups: LineupSlate = {
+    schemaVersion: 1, profileId: 'daily', slateDate: '2026-08-22', fetchedAt: '2026-08-21T12:00:00Z',
+    fixtureCoverage: [{ fixtureId: 1, covered: true }],
+    players: [
+      { fixtureId: 1, playerId: 'A-GK', status: 'starter' },
+      { fixtureId: 1, playerId: 'A-D', status: 'starter' },
+    ],
+  };
+  const plain = buildProjections(players, DEFAULT_MODEL_CONFIG, window);
+  const called = buildProjections(players, DEFAULT_MODEL_CONFIG, window, undefined, undefined, undefined, undefined, lineups);
+
+  for (const id of ['A-GK', 'A-D']) {
+    const i = players.findIndex((p) => p.id === id);
+    const calledMinutes = called.projections[i].startAwareMinutes!.fixtures[0].minutes;
+    assert.ok(calledMinutes < 85, `${id} retains a reduced minutes projection (${calledMinutes})`);
+    assert.ok(
+      called.projections[i].statline.cleanSheets >= plain.projections[i].statline.cleanSheets,
+      `${id}: confirmed starter clean sheets must not fall below the unknown-call prior`,
+    );
+  }
+});
+
 test('unknown slate calls use the blended recent-role minutes and retain model audit source', () => {
   const calendar = abCalendar();
   calendar[0].id = 1;
