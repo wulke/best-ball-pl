@@ -35,8 +35,10 @@ export const FALSE_NINE_POINTS = {
  *   semantics suggest blocked ≠ off target. Default: conservative (false).
  * - Cards: no published value anywhere; default 0 and flag as sensitivity.
  * - Clean-sheet minutes threshold: unconfirmed; modeled as an eligibility
- *   *fraction* of matches (see eligibilityFraction in project.ts), not a
- *   per-match cutoff — season aggregates can't express the latter.
+ *   *fraction* of matches (the start-fraction prior in project.ts) when a
+ *   fixture lineup call is unknown. Confirmed calls use a fixture-level
+ *   threshold eligibility instead; season aggregates cannot express a hard
+ *   per-match cutoff on their own.
  */
 export type ScoringConfig = typeof FALSE_NINE_POINTS & {
   blockedShotsCountOffTarget: boolean;

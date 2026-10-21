@@ -543,11 +543,12 @@ function buildWindowStatline(
   playerId?: string,
   odds?: OddsProjectionContext,
   fixtureMinutesOverride?: number[],
+  fixtureCsEligibility?: Array<number | undefined>,
 ): ProjectedStatline {
   const gk = position === 'G';
   const baseline = cfg.volume.baselines[position];
   const perFixtureMinutes = seasonMinutes / club.calendarGames;
-  const csEligible = gk ? 0.95 : 0.25 + 0.75 * rates.startFraction;
+  const csEligible = priorCleanSheetEligibility(position, rates.startFraction);
 
   // Attack-family coefficients (per 90 of opponent-adjusted match time).
   const goalsCoef = attack.goals / 90;
@@ -576,7 +577,6 @@ function buildWindowStatline(
   const passesCoef = volume?.passesCompleted?.per90 ?? baseline.passes;
 
   // Defensive coefficients (own factor family per term).
-  const csCoef = team.cleanSheetRate * csEligible;
   const gcCoef = team.goalsConcededPerMatch;
   const savesCoef = gk ? (rates.savesPer90 ?? cfg.team.meanSavesPer90) : 0;
   const winCoef = gk ? team.gkWinRate : 0;
@@ -621,13 +621,45 @@ function buildWindowStatline(
     raw.shotsOffTarget += offTargetCoef * a;
     raw.chancesCreated += chancesCoef * a;
     const teamOdds = market?.teams.get(clubName);
-    raw.cleanSheets += (teamOdds ? blendTowardMarket(csCoef, teamOdds.cleanSheets * csEligible, cfg.odds.team) : csCoef) * perFixtureMatches * f.cs;
+    // A confirmed XI tells us whether this fixture can clear the 60-minute
+    // clean-sheet threshold. Unknown calls deliberately keep the prior value
+    // so model-only and uncovered-fixture projections retain byte parity.
+    const fixtureCsEligible = fixtureCsEligibility?.[index] ?? csEligible;
+    const fixtureCsCoef = team.cleanSheetRate * fixtureCsEligible;
+    raw.cleanSheets += (teamOdds ? blendTowardMarket(fixtureCsCoef, teamOdds.cleanSheets * fixtureCsEligible, cfg.odds.team) : fixtureCsCoef) * perFixtureMatches * f.cs;
     raw.goalsConceded += (teamOdds ? blendTowardMarket(gcCoef, teamOdds.goalsConceded, cfg.odds.team) : gcCoef) * perFixtureMatches * f.gc;
     raw.saves += savesCoef * perFixtureMatches * f.saves;
     raw.gkWins += (teamOdds ? blendTowardMarket(winCoef, gk ? teamOdds.gkWins : 0, cfg.odds.team) : winCoef) * perFixtureMatches * f.win;
   }
 
   return finalizeStatline(raw, position);
+}
+
+/** P(playing at least 60 minutes) after a fixture-level lineup call.
+ *
+ * This only conditions confirmed lineups/manual overrides. The model prior
+ * remains the historical start-fraction haircut, preserving the unknown path.
+ */
+function priorCleanSheetEligibility(position: Position, startFraction: number): number {
+  return position === 'G' ? 0.95 : 0.25 + 0.75 * startFraction;
+}
+
+function calledCleanSheetEligibility(
+  status: 'starter' | 'bench' | 'unknown',
+  source: 'override' | 'lineup' | 'model',
+  calledMinutes: number,
+  prior: number,
+): number | undefined {
+  if (source === 'model' || status === 'unknown') return undefined;
+  if (status === 'bench') return 0;
+  // A confirmed starter has a substantial threshold chance even when the
+  // conditional-minutes estimate is cautious; cap the full-90 estimate below
+  // certainty for substitutions, injuries, and red cards.
+  const mapped = Math.min(0.97, Math.max(0.6, 0.6 + ((calledMinutes - 60) / 30) * 0.37));
+  // Minutes already scale the fixture term. A known starter must therefore
+  // never lose clean-sheet value to the pre-lineup prior solely because this
+  // conditional minutes estimate is cautious.
+  return Math.max(prior, mapped);
 }
 
 /** Round a summed raw line at the exact points the pre-#42 pipeline rounded. */
@@ -1169,6 +1201,10 @@ export function buildProjections(
       return { fixtureId: fixture.id ?? null, ...call, factor, minutes: calledMinutes, pStart };
     });
     const fixtureMinutes = needsStartAwareMinutes ? startCalls.map((call) => call.minutes) : undefined;
+    const priorCsEligibility = priorCleanSheetEligibility(player.position, effRates.startFraction);
+    const fixtureCsEligibility = needsStartAwareMinutes
+      ? startCalls.map((call) => calledCleanSheetEligibility(call.status, call.source, call.minutes, priorCsEligibility))
+      : undefined;
     const base = buildWindowStatline(
       minutes,
       player.position,
@@ -1182,12 +1218,13 @@ export function buildProjections(
       undefined,
       undefined,
       fixtureMinutes,
+      fixtureCsEligibility,
     );
 
     const oddsLine = odds
       ? buildWindowStatline(
           minutes, player.position, effRates, attack, team, cfg, volumeRates[i],
-          club, player.team, player.id, odds, fixtureMinutes,
+          club, player.team, player.id, odds, fixtureMinutes, fixtureCsEligibility,
         )
       : undefined;
 
@@ -1291,13 +1328,19 @@ export function buildProjections(
       };
     }
     if (odds) {
-      const fixtureOdds = clubContexts.get(player.team)!.windowFixtures
-        .map((fixture) => fixture.id == null ? undefined : odds.fixtures.get(fixture.id))
-        .find((entry) => entry != null);
+      const windowFixtures = clubContexts.get(player.team)!.windowFixtures;
+      const fixtureOddsIndex = windowFixtures
+        .findIndex((fixture) => fixture.id != null && odds.fixtures.has(fixture.id));
+      // The audit card compares its first odds-covered fixture; a slate
+      // window normally has one fixture per player.
+      const fixtureOdds = fixtureOddsIndex < 0
+        ? undefined
+        : odds.fixtures.get(windowFixtures[fixtureOddsIndex].id!);
       const playerOdds = fixtureOdds?.player.get(player.id);
       const teamOdds = fixtureOdds?.teams.get(player.team);
       projection.oddsPoints = oddsPoints!;
-      const csEligible = player.position === 'G' ? 0.95 : player.position === 'D' ? 0.25 + 0.75 * effRates.startFraction : 0;
+      const priorCsEligible = player.position === 'D' || player.position === 'G' ? priorCsEligibility : 0;
+      const csEligible = fixtureOddsIndex < 0 ? priorCsEligible : fixtureCsEligibility?.[fixtureOddsIndex] ?? priorCsEligible;
       const defensive = player.position === 'G' || player.position === 'D';
       const oddsCleanSheets = teamOdds?.cleanSheets;
       projection.odds = {
